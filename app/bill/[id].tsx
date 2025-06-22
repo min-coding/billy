@@ -497,32 +497,31 @@ export default function BillDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Bill Info */}
-        <View style={styles.section}>
-          <View style={styles.billInfo}>
+        {/* Bill Info - Redesigned */}
+        <View style={styles.billInfoSection}>
+          <View style={styles.billInfoHeader}>
             {bill.description && (
               <Text style={styles.description}>{bill.description}</Text>
             )}
-            
-            <View style={styles.infoGrid}>
-              <View style={styles.infoItem}>
-                <DollarSign size={16} color="#10B981" strokeWidth={2} />
-                <Text style={styles.infoLabel}>Total Amount</Text>
-                <Text style={styles.infoValue}>{formatCurrency(bill.totalAmount)}</Text>
+            <View style={styles.quickStats}>
+              <View style={styles.quickStat}>
+                <Text style={styles.quickStatValue}>{formatCurrency(bill.totalAmount)}</Text>
+                <Text style={styles.quickStatLabel}>Total</Text>
               </View>
-              
-              <View style={styles.infoItem}>
-                <Users size={16} color="#3B82F6" strokeWidth={2} />
-                <Text style={styles.infoLabel}>Members</Text>
-                <Text style={styles.infoValue}>{bill.participants.length}</Text>
+              <View style={styles.quickStatDivider} />
+              <View style={styles.quickStat}>
+                <Text style={styles.quickStatValue}>{bill.participants.length}</Text>
+                <Text style={styles.quickStatLabel}>Members</Text>
               </View>
-              
-              <View style={styles.infoItem}>
-                <Calendar size={16} color="#64748B" strokeWidth={2} />
-                <Text style={styles.infoLabel}>Created</Text>
-                <Text style={styles.infoValue}>
-                  {new Date(bill.createdAt).toLocaleDateString()}
+              <View style={styles.quickStatDivider} />
+              <View style={styles.quickStat}>
+                <Text style={styles.quickStatValue}>
+                  {new Date(bill.createdAt).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
                 </Text>
+                <Text style={styles.quickStatLabel}>Created</Text>
               </View>
             </View>
           </View>
@@ -721,42 +720,58 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: '500',
   },
-  billInfo: {
+  // Redesigned Bill Info Section
+  billInfoSection: {
+    backgroundColor: '#1E293B',
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#334155',
+  },
+  billInfoHeader: {
     gap: 16,
   },
   description: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#CBD5E1',
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '500',
   },
-  infoGrid: {
+  quickStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  infoItem: {
-    flex: 1,
     alignItems: 'center',
     backgroundColor: '#0F172A',
-    padding: 16,
     borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#334155',
   },
-  infoLabel: {
+  quickStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  quickStatLabel: {
     fontSize: 12,
     color: '#64748B',
     fontWeight: '600',
-    marginTop: 8,
-    marginBottom: 4,
-    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  infoValue: {
-    fontSize: 16,
-    color: '#F8FAFC',
-    fontWeight: '700',
-    textAlign: 'center',
+  quickStatDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#334155',
+    marginHorizontal: 16,
   },
   itemCard: {
     backgroundColor: '#0F172A',
