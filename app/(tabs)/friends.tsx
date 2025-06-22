@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, UserPlus, Users, Mail, Check, X, Plus } from 'lucide-react-native';
+import { Search, UserPlus, Users, Mail, Check, X, Plus, Bell } from 'lucide-react-native';
 import { Friend, FriendRequest, User } from '@/types';
 
 // Mock data - in real app, this would come from API/database
@@ -85,6 +85,7 @@ export default function FriendsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [newFriendEmail, setNewFriendEmail] = useState('');
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -174,12 +175,28 @@ export default function FriendsScreen() {
           <Text style={styles.title}>Friends</Text>
           <Text style={styles.subtitle}>Manage your friends list</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.addButton} 
-          onPress={() => setIsAddingFriend(true)}
-        >
-          <UserPlus size={18} color="#FFFFFF" strokeWidth={2.5} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {/* Friend Requests Button */}
+          {friendRequests.length > 0 && (
+            <TouchableOpacity 
+              style={styles.requestsButton} 
+              onPress={() => setShowRequestsModal(true)}
+            >
+              <Bell size={18} color="#F59E0B" strokeWidth={2} />
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationText}>{friendRequests.length}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          
+          {/* Add Friend Button */}
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={() => setIsAddingFriend(true)}
+          >
+            <UserPlus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -219,50 +236,7 @@ export default function FriendsScreen() {
           </View>
         )}
 
-        {/* Friend Requests */}
-        {friendRequests.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Friend Requests</Text>
-            <Text style={styles.sectionSubtitle}>
-              {friendRequests.length} pending request{friendRequests.length !== 1 ? 's' : ''}
-            </Text>
-            
-            {friendRequests.map((request) => (
-              <View key={request.id} style={styles.requestCard}>
-                <View style={styles.requestLeft}>
-                  <Image 
-                    source={{ uri: request.fromUser.avatar }} 
-                    style={styles.requestAvatar}
-                  />
-                  <View style={styles.requestInfo}>
-                    <Text style={styles.requestName}>{request.fromUser.name}</Text>
-                    <Text style={styles.requestEmail}>{request.fromUser.email}</Text>
-                    <Text style={styles.requestDate}>
-                      {new Date(request.createdAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.requestActions}>
-                  <TouchableOpacity 
-                    style={styles.acceptButton}
-                    onPress={() => acceptFriendRequest(request)}
-                  >
-                    <Check size={16} color="#FFFFFF" strokeWidth={2} />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.declineButton}
-                    onPress={() => declineFriendRequest(request)}
-                  >
-                    <X size={16} color="#FFFFFF" strokeWidth={2} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Search */}
+        {/* Search Section */}
         <View style={styles.section}>
           <View style={styles.searchContainer}>
             <Search size={18} color="#64748B" strokeWidth={2} />
@@ -346,6 +320,82 @@ export default function FriendsScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Friend Requests Modal */}
+      <Modal
+        visible={showRequestsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRequestsModal(false)}
+      >
+        <View style={styles.requestsModalOverlay}>
+          <View style={styles.requestsModal}>
+            <View style={styles.requestsModalHeader}>
+              <Text style={styles.requestsModalTitle}>Friend Requests</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowRequestsModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.requestsModalContent} showsVerticalScrollIndicator={false}>
+              {friendRequests.length === 0 ? (
+                <View style={styles.noRequestsContainer}>
+                  <Text style={styles.noRequestsText}>No pending requests</Text>
+                  <Text style={styles.noRequestsSubtext}>
+                    You're all caught up!
+                  </Text>
+                </View>
+              ) : (
+                friendRequests.map((request) => (
+                  <View key={request.id} style={styles.requestCard}>
+                    <View style={styles.requestLeft}>
+                      <Image 
+                        source={{ uri: request.fromUser.avatar }} 
+                        style={styles.requestAvatar}
+                      />
+                      <View style={styles.requestInfo}>
+                        <Text style={styles.requestName}>{request.fromUser.name}</Text>
+                        <Text style={styles.requestEmail}>{request.fromUser.email}</Text>
+                        <Text style={styles.requestDate}>
+                          {new Date(request.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.requestActions}>
+                      <TouchableOpacity 
+                        style={styles.acceptButton}
+                        onPress={() => {
+                          acceptFriendRequest(request);
+                          if (friendRequests.length === 1) {
+                            setShowRequestsModal(false);
+                          }
+                        }}
+                      >
+                        <Check size={16} color="#FFFFFF" strokeWidth={2} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.declineButton}
+                        onPress={() => {
+                          declineFriendRequest(request);
+                          if (friendRequests.length === 1) {
+                            setShowRequestsModal(false);
+                          }
+                        }}
+                      >
+                        <X size={16} color="#FFFFFF" strokeWidth={2} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -377,6 +427,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#64748B',
     fontWeight: '500',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  requestsButton: {
+    position: 'relative',
+    backgroundColor: '#1E293B',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#F59E0B',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#0F172A',
+  },
+  notificationText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   addButton: {
     backgroundColor: '#3B82F6',
@@ -413,12 +497,6 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     marginBottom: 8,
     letterSpacing: -0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginBottom: 20,
-    fontWeight: '500',
   },
   addFriendContainer: {
     gap: 16,
@@ -479,69 +557,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
-  },
-  requestCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  requestLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  requestAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  requestInfo: {
-    flex: 1,
-  },
-  requestName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F8FAFC',
-    marginBottom: 2,
-    letterSpacing: -0.2,
-  },
-  requestEmail: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  requestDate: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  requestActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  acceptButton: {
-    backgroundColor: '#10B981',
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  declineButton: {
-    backgroundColor: '#EF4444',
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -680,5 +695,127 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
     fontStyle: 'italic',
+  },
+  requestsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  requestsModal: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#334155',
+  },
+  requestsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  requestsModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestsModalContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  noRequestsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noRequestsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 8,
+    letterSpacing: -0.2,
+  },
+  noRequestsSubtext: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  requestCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  requestLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  requestAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  requestInfo: {
+    flex: 1,
+  },
+  requestName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+  requestEmail: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  requestDate: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  acceptButton: {
+    backgroundColor: '#10B981',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  declineButton: {
+    backgroundColor: '#EF4444',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
