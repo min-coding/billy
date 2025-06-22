@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, X, CreditCard as Edit3, Trash2, Plus, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, X, MoreVertical, Edit3, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { Bill, BillItem, User, UserCost } from '@/types';
 import { formatCurrency, calculateUserCosts } from '@/utils/billUtils';
 
@@ -37,17 +37,26 @@ const mockBill: Bill = {
 
 const currentUserId = 'user1'; // Mock current user ID
 
+// Mock submitted selections - in real app, this would come from API
+const mockSubmittedSelections = ['user1', 'user2']; // user3 hasn't submitted yet
+
 export default function BillDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [bill, setBill] = useState<Bill>(mockBill);
-  const [isEditing, setIsEditing] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [userCosts, setUserCosts] = useState<UserCost[]>([]);
   const [paymentVerifications, setPaymentVerifications] = useState<{[userId: string]: boolean}>({});
+  const [showHostMenu, setShowHostMenu] = useState(false);
+  const [submittedSelections, setSubmittedSelections] = useState<string[]>(mockSubmittedSelections);
+  const [hasUserSubmitted, setHasUserSubmitted] = useState(false);
 
   const isHost = bill.createdBy === currentUserId;
   const currentUser = bill.participants.find(p => p.id === currentUserId);
+
+  // Check if all members have submitted their selections
+  const allMembersSubmitted = bill.participants.every(p => submittedSelections.includes(p.id));
+  const canFinalizeBill = isHost && allMembersSubmitted && bill.status === 'select';
 
   useEffect(() => {
     // Initialize selected items for current user
@@ -56,9 +65,12 @@ export default function BillDetailScreen() {
       .map(item => item.id);
     setSelectedItems(userSelectedItems);
 
+    // Check if current user has submitted
+    setHasUserSubmitted(submittedSelections.includes(currentUserId));
+
     // Calculate user costs
     setUserCosts(calculateUserCosts(bill));
-  }, [bill]);
+  }, [bill, submittedSelections]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -79,7 +91,7 @@ export default function BillDetailScreen() {
   };
 
   const toggleItemSelection = (itemId: string) => {
-    if (bill.status !== 'select') return;
+    if (bill.status !== 'select' || hasUserSubmitted) return;
     
     setSelectedItems(prev => {
       const newSelection = prev.includes(itemId) 
@@ -111,6 +123,8 @@ export default function BillDetailScreen() {
         { 
           text: 'Submit', 
           onPress: () => {
+            setSubmittedSelections(prev => [...prev, currentUserId]);
+            setHasUserSubmitted(true);
             Alert.alert('Success', 'Your selections have been submitted!');
           }
         }
@@ -128,7 +142,33 @@ export default function BillDetailScreen() {
           text: 'Finalize', 
           onPress: () => {
             setBill(prev => ({ ...prev, status: 'pay' }));
+            setShowHostMenu(false);
             Alert.alert('Success', 'Bill has been finalized! Members can now see their payment amounts.');
+          }
+        }
+      ]
+    );
+  };
+
+  const editBill = () => {
+    setShowHostMenu(false);
+    // Navigate to edit screen or show edit modal
+    Alert.alert('Edit Bill', 'Edit functionality would be implemented here');
+  };
+
+  const deleteBill = () => {
+    setShowHostMenu(false);
+    Alert.alert(
+      'Delete Bill',
+      'Are you sure you want to delete this bill? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            router.back();
+            Alert.alert('Success', 'Bill has been deleted.');
           }
         }
       ]
@@ -163,32 +203,43 @@ export default function BillDetailScreen() {
     }
   };
 
-  const deleteBill = () => {
-    Alert.alert(
-      'Delete Bill',
-      'Are you sure you want to delete this bill? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            router.back();
-            Alert.alert('Success', 'Bill has been deleted.');
-          }
-        }
-      ]
-    );
-  };
-
   const renderSelectStatus = () => (
     <>
+      {/* Selection Progress */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Selection Progress</Text>
+        <View style={styles.progressContainer}>
+          {bill.participants.map((participant) => {
+            const hasSubmitted = submittedSelections.includes(participant.id);
+            const isCurrentUser = participant.id === currentUserId;
+            
+            return (
+              <View key={participant.id} style={styles.progressItem}>
+                <View style={[styles.progressIndicator, hasSubmitted && styles.progressIndicatorComplete]}>
+                  {hasSubmitted && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
+                </View>
+                <Text style={styles.progressName}>
+                  {isCurrentUser ? 'You' : participant.name}
+                </Text>
+                <Text style={[styles.progressStatus, hasSubmitted && styles.progressStatusComplete]}>
+                  {hasSubmitted ? 'Submitted' : 'Pending'}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
       {/* Items Selection */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Your Items</Text>
-        <Text style={styles.sectionSubtitle}>
-          Choose which items you want to split the cost for
+        <Text style={styles.sectionTitle}>
+          {hasUserSubmitted ? 'Your Selected Items' : 'Select Your Items'}
         </Text>
+        {!hasUserSubmitted && (
+          <Text style={styles.sectionSubtitle}>
+            Choose which items you want to split the cost for
+          </Text>
+        )}
         
         {bill.items.map((item) => {
           const isSelected = selectedItems.includes(item.id);
@@ -199,9 +250,14 @@ export default function BillDetailScreen() {
           return (
             <TouchableOpacity
               key={item.id}
-              style={[styles.itemCard, isSelected && styles.selectedItemCard]}
+              style={[
+                styles.itemCard, 
+                isSelected && styles.selectedItemCard,
+                hasUserSubmitted && styles.disabledItemCard
+              ]}
               onPress={() => toggleItemSelection(item.id)}
-              activeOpacity={0.8}
+              activeOpacity={hasUserSubmitted ? 1 : 0.8}
+              disabled={hasUserSubmitted}
             >
               <View style={styles.itemContent}>
                 <View style={styles.itemInfo}>
@@ -223,7 +279,11 @@ export default function BillDetailScreen() {
                   )}
                 </View>
                 
-                <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
+                <View style={[
+                  styles.checkbox, 
+                  isSelected && styles.checkedBox,
+                  hasUserSubmitted && styles.disabledCheckbox
+                ]}>
                   {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
                 </View>
               </View>
@@ -232,37 +292,35 @@ export default function BillDetailScreen() {
         })}
 
         {/* Submit Button */}
-        <TouchableOpacity 
-          style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
-          onPress={submitSelections}
-          disabled={selectedItems.length === 0}
-        >
-          <Check size={18} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.submitButtonText}>Submit My Selections</Text>
-        </TouchableOpacity>
+        {!hasUserSubmitted && (
+          <TouchableOpacity 
+            style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
+            onPress={submitSelections}
+            disabled={selectedItems.length === 0}
+          >
+            <Check size={18} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.submitButtonText}>Submit My Selections</Text>
+          </TouchableOpacity>
+        )}
+
+        {hasUserSubmitted && (
+          <View style={styles.submittedBanner}>
+            <CheckCircle size={18} color="#10B981" strokeWidth={2} />
+            <Text style={styles.submittedText}>Your selections have been submitted</Text>
+          </View>
+        )}
       </View>
 
-      {/* Host Actions */}
-      {isHost && (
+      {/* Finalize Button for Host */}
+      {canFinalizeBill && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Host Actions</Text>
-          
-          <View style={styles.hostActions}>
-            <TouchableOpacity style={styles.hostActionButton} onPress={() => setIsEditing(true)}>
-              <Edit3 size={16} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.hostActionText}>Edit Bill</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.hostActionButton} onPress={finalizeBill}>
-              <CheckCircle size={16} color="#10B981" strokeWidth={2} />
-              <Text style={[styles.hostActionText, { color: '#10B981' }]}>Finalize Bill</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.hostActionButton} onPress={deleteBill}>
-              <Trash2 size={16} color="#EF4444" strokeWidth={2} />
-              <Text style={[styles.hostActionText, { color: '#EF4444' }]}>Delete Bill</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.finalizeButton} onPress={finalizeBill}>
+            <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
+          </TouchableOpacity>
+          <Text style={styles.finalizeSubtext}>
+            All members have submitted their selections. You can now finalize the bill.
+          </Text>
         </View>
       )}
     </>
@@ -397,6 +455,16 @@ export default function BillDetailScreen() {
             </Text>
           </View>
         </View>
+        
+        {/* Host Menu Button */}
+        {isHost && bill.status === 'select' && (
+          <TouchableOpacity 
+            style={styles.menuButton} 
+            onPress={() => setShowHostMenu(true)}
+          >
+            <MoreVertical size={20} color="#F8FAFC" strokeWidth={2} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -436,6 +504,34 @@ export default function BillDetailScreen() {
         {bill.status === 'pay' && renderPayStatus()}
         {bill.status === 'closed' && renderClosedStatus()}
       </ScrollView>
+
+      {/* Host Menu Modal */}
+      <Modal
+        visible={showHostMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowHostMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowHostMenu(false)}
+        >
+          <View style={styles.hostMenu}>
+            <TouchableOpacity style={styles.hostMenuItem} onPress={editBill}>
+              <Edit3 size={18} color="#3B82F6" strokeWidth={2} />
+              <Text style={styles.hostMenuText}>Edit Bill</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.hostMenuDivider} />
+            
+            <TouchableOpacity style={styles.hostMenuItem} onPress={deleteBill}>
+              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+              <Text style={[styles.hostMenuText, { color: '#EF4444' }]}>Delete Bill</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -480,6 +576,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textTransform: 'capitalize',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
@@ -543,6 +647,45 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+  progressContainer: {
+    gap: 12,
+  },
+  progressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  progressIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  progressIndicatorComplete: {
+    backgroundColor: '#10B981',
+  },
+  progressName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    flex: 1,
+    letterSpacing: -0.2,
+  },
+  progressStatus: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  progressStatusComplete: {
+    color: '#10B981',
+  },
   itemCard: {
     backgroundColor: '#0F172A',
     borderRadius: 12,
@@ -554,6 +697,9 @@ const styles = StyleSheet.create({
   selectedItemCard: {
     borderColor: '#3B82F6',
     backgroundColor: '#1E293B',
+  },
+  disabledItemCard: {
+    opacity: 0.7,
   },
   itemContent: {
     flexDirection: 'row',
@@ -601,6 +747,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
+  disabledCheckbox: {
+    opacity: 0.5,
+  },
   submitButton: {
     backgroundColor: '#3B82F6',
     flexDirection: 'row',
@@ -620,25 +769,53 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  hostActions: {
-    gap: 12,
-  },
-  hostActionButton: {
+  submittedBanner: {
+    backgroundColor: '#0F172A',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    justifyContent: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
-    gap: 12,
+    borderColor: '#10B981',
+    gap: 8,
+    marginTop: 8,
   },
-  hostActionText: {
-    color: '#3B82F6',
+  submittedText: {
+    color: '#10B981',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
+  },
+  finalizeButton: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#10B981',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  finalizeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  finalizeSubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '500',
   },
   paymentCard: {
     backgroundColor: '#0F172A',
@@ -793,5 +970,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 100,
+    paddingRight: 20,
+  },
+  hostMenu: {
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    minWidth: 160,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  hostMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  hostMenuText: {
+    color: '#3B82F6',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  hostMenuDivider: {
+    height: 1,
+    backgroundColor: '#334155',
+    marginHorizontal: 16,
   },
 });
