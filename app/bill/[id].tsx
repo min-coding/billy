@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, X, MoveVertical as MoreVertical, CreditCard as Edit3, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle, Camera } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, X, EllipsisVertical, CreditCard as Edit3, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle, Camera } from 'lucide-react-native';
 import { Bill, BillItem, User, UserCost } from '@/types';
 import { formatCurrency, calculateUserCosts } from '@/utils/billUtils';
 
@@ -491,8 +491,7 @@ export default function BillDetailScreen() {
             style={styles.menuButton} 
             onPress={() => setShowHostMenu(true)}
           >
-            <MoreVertical size={20} color="#F8FAFC" strokeWidth={2} />
-            <Camera color="red" size={48} />
+            <EllipsisVertical size={20} color="#F8FAFC" strokeWidth={2} />
           </TouchableOpacity>
         )}
       </View>
