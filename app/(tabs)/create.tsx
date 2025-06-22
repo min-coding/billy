@@ -11,7 +11,6 @@ export default function CreateBillScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
-  const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [items, setItems] = useState<BillItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
@@ -101,11 +100,6 @@ export default function CreateBillScreen() {
       return;
     }
 
-    if (!bankAccountNumber.trim()) {
-      Alert.alert('Error', 'Please enter your bank account number');
-      return;
-    }
-
     if (items.length === 0) {
       Alert.alert('Error', 'Please add at least one item');
       return;
@@ -141,7 +135,6 @@ export default function CreateBillScreen() {
            totalAmount.trim() && 
            !isNaN(parseFloat(totalAmount)) && 
            parseFloat(totalAmount) > 0 &&
-           bankAccountNumber.trim() &&
            items.length > 0 &&
            bankDetails.bankName.trim() &&
            bankDetails.accountName.trim() &&
@@ -177,6 +170,19 @@ export default function CreateBillScreen() {
           </View>
 
           <View style={styles.inputGroup}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Add a description (optional)"
+              placeholderTextColor="#64748B"
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Total Amount *</Text>
             <View style={styles.inputWithIcon}>
               <DollarSign size={18} color="#64748B" strokeWidth={2} />
@@ -189,34 +195,6 @@ export default function CreateBillScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Your Bank Account Number *</Text>
-            <View style={styles.inputWithIcon}>
-              <CreditCard size={18} color="#64748B" strokeWidth={2} />
-              <TextInput
-                style={[styles.input, styles.inputWithIconText]}
-                value={bankAccountNumber}
-                onChangeText={setBankAccountNumber}
-                placeholder="Enter your account number"
-                placeholderTextColor="#64748B"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Add a description (optional)"
-              placeholderTextColor="#64748B"
-              multiline
-              numberOfLines={3}
-            />
           </View>
         </View>
 
