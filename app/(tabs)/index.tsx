@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Zap, Search, Filter, SortAsc, X, Calendar, Check, Clock, CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
+import { Plus, Zap, Search, Filter, Import as SortAsc, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { Bill } from '@/types';
