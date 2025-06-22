@@ -12,6 +12,8 @@ const mockBills: Bill[] = [
     id: '1',
     title: 'Dinner at Tony\'s',
     description: 'Italian restaurant with the team',
+    totalAmount: 120.00,
+    bankAccountNumber: '1234567890',
     createdBy: 'user1',
     createdAt: new Date('2024-01-15'),
     participants: [
@@ -20,18 +22,25 @@ const mockBills: Bill[] = [
       { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com' },
     ],
     items: [
-      { id: 'item1', name: 'Margherita Pizza', price: 18.99, selectedBy: ['user1', 'user2'] },
-      { id: 'item2', name: 'Caesar Salad', price: 12.50, selectedBy: ['user2'] },
-      { id: 'item3', name: 'Pasta Carbonara', price: 16.75, selectedBy: ['user3'] },
-      { id: 'item4', name: 'Tiramisu', price: 8.99, selectedBy: ['user1', 'user2', 'user3'] },
+      { id: 'item1', name: 'Margherita Pizza', price: 18.99, quantity: 1, selectedBy: ['user1', 'user2'] },
+      { id: 'item2', name: 'Caesar Salad', price: 12.50, quantity: 2, selectedBy: ['user2'] },
+      { id: 'item3', name: 'Pasta Carbonara', price: 16.75, quantity: 1, selectedBy: ['user3'] },
+      { id: 'item4', name: 'Tiramisu', price: 8.99, quantity: 3, selectedBy: ['user1', 'user2', 'user3'] },
     ],
+    bankDetails: {
+      bankName: 'Chase Bank',
+      accountName: 'John Doe',
+      accountNumber: '1234567890'
+    },
     status: 'select',
-    total: 57.23,
+    total: 83.22,
   },
   {
     id: '2',
     title: 'Weekend Groceries',
     description: 'Shared groceries for the house',
+    totalAmount: 45.50,
+    bankAccountNumber: '0987654321',
     createdBy: 'user1',
     createdAt: new Date('2024-01-12'),
     participants: [
@@ -39,16 +48,23 @@ const mockBills: Bill[] = [
       { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com' },
     ],
     items: [
-      { id: 'item5', name: 'Milk', price: 4.99, selectedBy: ['user1', 'user4'] },
-      { id: 'item6', name: 'Bread', price: 3.50, selectedBy: ['user1', 'user4'] },
-      { id: 'item7', name: 'Eggs', price: 5.99, selectedBy: ['user1'] },
+      { id: 'item5', name: 'Milk', price: 4.99, quantity: 2, selectedBy: ['user1', 'user4'] },
+      { id: 'item6', name: 'Bread', price: 3.50, quantity: 1, selectedBy: ['user1', 'user4'] },
+      { id: 'item7', name: 'Eggs', price: 5.99, quantity: 1, selectedBy: ['user1'] },
     ],
+    bankDetails: {
+      bankName: 'Bank of America',
+      accountName: 'John Doe',
+      accountNumber: '0987654321'
+    },
     status: 'pay',
     total: 14.48,
   },
   {
     id: '3',
     title: 'Movie Night Snacks',
+    totalAmount: 25.00,
+    bankAccountNumber: '1122334455',
     createdBy: 'user2',
     createdAt: new Date('2024-01-10'),
     participants: [
@@ -56,9 +72,14 @@ const mockBills: Bill[] = [
       { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
     ],
     items: [
-      { id: 'item8', name: 'Popcorn', price: 6.99, selectedBy: ['user1', 'user2'] },
-      { id: 'item9', name: 'Soda Pack', price: 8.99, selectedBy: ['user1', 'user2'] },
+      { id: 'item8', name: 'Popcorn', price: 6.99, quantity: 2, selectedBy: ['user1', 'user2'] },
+      { id: 'item9', name: 'Soda Pack', price: 8.99, quantity: 1, selectedBy: ['user1', 'user2'] },
     ],
+    bankDetails: {
+      bankName: 'Wells Fargo',
+      accountName: 'Jane Smith',
+      accountNumber: '1122334455'
+    },
     status: 'closed',
     total: 15.98,
   },
@@ -67,10 +88,6 @@ const mockBills: Bill[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const [bills] = useState<Bill[]>(mockBills);
-
-  const handleBillPress = (bill: Bill) => {
-    console.log('Open bill:', bill.id);
-  };
 
   const handleCreateBill = () => {
     router.push('/(tabs)/create');
@@ -107,11 +124,7 @@ export default function HomeScreen() {
           </View>
         ) : (
           bills.map((bill) => (
-            <BillCard
-              key={bill.id}
-              bill={bill}
-              onPress={() => handleBillPress(bill)}
-            />
+            <BillCard key={bill.id} bill={bill} />
           ))
         )}
       </ScrollView>

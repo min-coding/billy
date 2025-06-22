@@ -3,13 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Users, Calendar, DollarSign } from 'lucide-react-native';
 import { Bill } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
+import { useRouter } from 'expo-router';
 
 interface BillCardProps {
   bill: Bill;
-  onPress: () => void;
+  onPress?: () => void;
 }
 
 export default function BillCard({ bill, onPress }: BillCardProps) {
+  const router = useRouter();
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'select': return '#F59E0B';
@@ -28,8 +31,16 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
     }
   };
 
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push(`/bill/${bill.id}`);
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1}>{bill.title}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(bill.status) }]}>
@@ -49,7 +60,7 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
         
         <View style={styles.infoRow}>
           <DollarSign size={14} color="#10B981" strokeWidth={2} />
-          <Text style={styles.infoText}>{formatCurrency(bill.total)}</Text>
+          <Text style={styles.infoText}>{formatCurrency(bill.totalAmount)}</Text>
         </View>
         
         <View style={styles.infoRow}>
