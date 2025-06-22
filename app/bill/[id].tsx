@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Users, Calendar, DollarSign, Check, X, MoveVertical as MoreVertical, CreditCard as Edit3, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle } from 'lucide-react-native';
@@ -19,6 +19,7 @@ const mockBill: Bill = {
     { id: 'user1', name: 'John Doe', email: 'john@example.com' },
     { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
     { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com' },
+    { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com' },
   ],
   items: [
     { id: 'item1', name: 'Margherita Pizza', price: 18.99, quantity: 1, selectedBy: ['user1', 'user2'] },
@@ -38,7 +39,15 @@ const mockBill: Bill = {
 const currentUserId = 'user1'; // Mock current user ID
 
 // Mock submitted selections - in real app, this would come from API
-const mockSubmittedSelections = ['user1', 'user2']; // user3 hasn't submitted yet
+const mockSubmittedSelections = ['user1', 'user2']; // user3 and user4 haven't submitted yet
+
+// Mock user avatars - in real app, these would come from user profiles
+const userAvatars: {[key: string]: string} = {
+  'user1': 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+  'user2': 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+  'user3': 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+  'user4': 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+};
 
 export default function BillDetailScreen() {
   const router = useRouter();
@@ -49,7 +58,6 @@ export default function BillDetailScreen() {
   const [paymentVerifications, setPaymentVerifications] = useState<{[userId: string]: boolean}>({});
   const [showHostMenu, setShowHostMenu] = useState(false);
   const [submittedSelections, setSubmittedSelections] = useState<string[]>(mockSubmittedSelections);
-  const [hasUserSubmitted, setHasUserSubmitted] = useState(false);
 
   const isHost = bill.createdBy === currentUserId;
   const currentUser = bill.participants.find(p => p.id === currentUserId);
@@ -58,15 +66,15 @@ export default function BillDetailScreen() {
   const allMembersSubmitted = bill.participants.every(p => submittedSelections.includes(p.id));
   const canFinalizeBill = isHost && allMembersSubmitted && bill.status === 'select';
 
+  // Get submitted users for avatar display
+  const submittedUsers = bill.participants.filter(p => submittedSelections.includes(p.id));
+
   useEffect(() => {
     // Initialize selected items for current user
     const userSelectedItems = bill.items
       .filter(item => item.selectedBy.includes(currentUserId))
       .map(item => item.id);
     setSelectedItems(userSelectedItems);
-
-    // Check if current user has submitted
-    setHasUserSubmitted(submittedSelections.includes(currentUserId));
 
     // Calculate user costs
     setUserCosts(calculateUserCosts(bill));
@@ -91,7 +99,7 @@ export default function BillDetailScreen() {
   };
 
   const toggleItemSelection = (itemId: string) => {
-    if (bill.status !== 'select' || hasUserSubmitted) return;
+    if (bill.status !== 'select') return;
     
     setSelectedItems(prev => {
       const newSelection = prev.includes(itemId) 
@@ -115,21 +123,13 @@ export default function BillDetailScreen() {
   };
 
   const submitSelections = () => {
-    Alert.alert(
-      'Submit Selections',
-      'Are you sure you want to submit your item selections? You won\'t be able to change them later.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Submit', 
-          onPress: () => {
-            setSubmittedSelections(prev => [...prev, currentUserId]);
-            setHasUserSubmitted(true);
-            Alert.alert('Success', 'Your selections have been submitted!');
-          }
-        }
-      ]
-    );
+    if (selectedItems.length === 0) {
+      Alert.alert('No Items Selected', 'Please select at least one item before submitting.');
+      return;
+    }
+
+    Alert.alert('Success', 'Your selections have been submitted!');
+    setSubmittedSelections(prev => [...prev, currentUserId]);
   };
 
   const finalizeBill = () => {
@@ -205,41 +205,12 @@ export default function BillDetailScreen() {
 
   const renderSelectStatus = () => (
     <>
-      {/* Selection Progress */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Selection Progress</Text>
-        <View style={styles.progressContainer}>
-          {bill.participants.map((participant) => {
-            const hasSubmitted = submittedSelections.includes(participant.id);
-            const isCurrentUser = participant.id === currentUserId;
-            
-            return (
-              <View key={participant.id} style={styles.progressItem}>
-                <View style={[styles.progressIndicator, hasSubmitted && styles.progressIndicatorComplete]}>
-                  {hasSubmitted && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
-                </View>
-                <Text style={styles.progressName}>
-                  {isCurrentUser ? 'You' : participant.name}
-                </Text>
-                <Text style={[styles.progressStatus, hasSubmitted && styles.progressStatusComplete]}>
-                  {hasSubmitted ? 'Submitted' : 'Pending'}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
       {/* Items Selection */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {hasUserSubmitted ? 'Your Selected Items' : 'Select Your Items'}
+        <Text style={styles.sectionTitle}>Select Your Items</Text>
+        <Text style={styles.sectionSubtitle}>
+          Choose which items you want to split the cost for
         </Text>
-        {!hasUserSubmitted && (
-          <Text style={styles.sectionSubtitle}>
-            Choose which items you want to split the cost for
-          </Text>
-        )}
         
         {bill.items.map((item) => {
           const isSelected = selectedItems.includes(item.id);
@@ -250,14 +221,9 @@ export default function BillDetailScreen() {
           return (
             <TouchableOpacity
               key={item.id}
-              style={[
-                styles.itemCard, 
-                isSelected && styles.selectedItemCard,
-                hasUserSubmitted && styles.disabledItemCard
-              ]}
+              style={[styles.itemCard, isSelected && styles.selectedItemCard]}
               onPress={() => toggleItemSelection(item.id)}
-              activeOpacity={hasUserSubmitted ? 1 : 0.8}
-              disabled={hasUserSubmitted}
+              activeOpacity={0.8}
             >
               <View style={styles.itemContent}>
                 <View style={styles.itemInfo}>
@@ -279,11 +245,7 @@ export default function BillDetailScreen() {
                   )}
                 </View>
                 
-                <View style={[
-                  styles.checkbox, 
-                  isSelected && styles.checkedBox,
-                  hasUserSubmitted && styles.disabledCheckbox
-                ]}>
+                <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
                   {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
                 </View>
               </View>
@@ -292,23 +254,67 @@ export default function BillDetailScreen() {
         })}
 
         {/* Submit Button */}
-        {!hasUserSubmitted && (
-          <TouchableOpacity 
-            style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
-            onPress={submitSelections}
-            disabled={selectedItems.length === 0}
-          >
-            <Check size={18} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.submitButtonText}>Submit My Selections</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
+          onPress={submitSelections}
+          disabled={selectedItems.length === 0}
+        >
+          <Check size={18} color="#FFFFFF" strokeWidth={2} />
+          <Text style={styles.submitButtonText}>Submit Your Selections</Text>
+        </TouchableOpacity>
+      </View>
 
-        {hasUserSubmitted && (
-          <View style={styles.submittedBanner}>
-            <CheckCircle size={18} color="#10B981" strokeWidth={2} />
-            <Text style={styles.submittedText}>Your selections have been submitted</Text>
+      {/* Selection Progress */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Selection Progress</Text>
+        
+        <View style={styles.progressSummary}>
+          <View style={styles.progressAvatars}>
+            {submittedUsers.map((user, index) => (
+              <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
+                <Image 
+                  source={{ uri: userAvatars[user.id] }} 
+                  style={styles.avatar}
+                />
+              </View>
+            ))}
           </View>
-        )}
+          
+          <View style={styles.progressText}>
+            <Text style={styles.progressCount}>
+              {submittedUsers.length} of {bill.participants.length} submitted
+            </Text>
+            <Text style={styles.progressNames}>
+              {submittedUsers.map(user => 
+                user.id === currentUserId ? 'You' : user.name
+              ).join(', ')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.progressList}>
+          {bill.participants.map((participant) => {
+            const hasSubmitted = submittedSelections.includes(participant.id);
+            const isCurrentUser = participant.id === currentUserId;
+            
+            return (
+              <View key={participant.id} style={styles.progressItem}>
+                <View style={styles.progressLeft}>
+                  <Image 
+                    source={{ uri: userAvatars[participant.id] }} 
+                    style={styles.progressAvatar}
+                  />
+                  <Text style={styles.progressName}>
+                    {isCurrentUser ? 'You' : participant.name}
+                  </Text>
+                </View>
+                <Text style={[styles.progressStatus, hasSubmitted && styles.progressStatusComplete]}>
+                  {hasSubmitted ? 'Submitted' : 'Pending'}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       {/* Finalize Button for Host */}
@@ -647,45 +653,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  progressContainer: {
-    gap: 12,
-  },
-  progressItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  progressIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#475569',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  progressIndicatorComplete: {
-    backgroundColor: '#10B981',
-  },
-  progressName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F8FAFC',
-    flex: 1,
-    letterSpacing: -0.2,
-  },
-  progressStatus: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  progressStatusComplete: {
-    color: '#10B981',
-  },
   itemCard: {
     backgroundColor: '#0F172A',
     borderRadius: 12,
@@ -697,9 +664,6 @@ const styles = StyleSheet.create({
   selectedItemCard: {
     borderColor: '#3B82F6',
     backgroundColor: '#1E293B',
-  },
-  disabledItemCard: {
-    opacity: 0.7,
   },
   itemContent: {
     flexDirection: 'row',
@@ -747,9 +711,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
-  disabledCheckbox: {
-    opacity: 0.5,
-  },
   submitButton: {
     backgroundColor: '#3B82F6',
     flexDirection: 'row',
@@ -769,23 +730,83 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  submittedBanner: {
-    backgroundColor: '#0F172A',
+  progressSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
+    backgroundColor: '#0F172A',
+    padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#10B981',
-    gap: 8,
-    marginTop: 8,
+    borderColor: '#334155',
+    marginBottom: 16,
+    gap: 16,
   },
-  submittedText: {
-    color: '#10B981',
+  progressAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    borderWidth: 2,
+    borderColor: '#1E293B',
+    borderRadius: 20,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  progressText: {
+    flex: 1,
+  },
+  progressCount: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 4,
     letterSpacing: -0.2,
+  },
+  progressNames: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  progressList: {
+    gap: 12,
+  },
+  progressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  progressLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  progressName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    letterSpacing: -0.2,
+  },
+  progressStatus: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  progressStatusComplete: {
+    color: '#10B981',
   },
   finalizeButton: {
     backgroundColor: '#10B981',
