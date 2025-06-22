@@ -57,6 +57,7 @@ export default function BillDetailScreen() {
   const [userCosts, setUserCosts] = useState<UserCost[]>([]);
   const [paymentVerifications, setPaymentVerifications] = useState<{[userId: string]: boolean}>({});
   const [showHostMenu, setShowHostMenu] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [submittedSelections, setSubmittedSelections] = useState<string[]>(mockSubmittedSelections);
 
   const isHost = bill.createdBy === currentUserId;
@@ -66,8 +67,9 @@ export default function BillDetailScreen() {
   const allMembersSubmitted = bill.participants.every(p => submittedSelections.includes(p.id));
   const canFinalizeBill = isHost && allMembersSubmitted && bill.status === 'select';
 
-  // Get submitted users for avatar display
+  // Get submitted and pending users
   const submittedUsers = bill.participants.filter(p => submittedSelections.includes(p.id));
+  const pendingUsers = bill.participants.filter(p => !submittedSelections.includes(p.id));
 
   useEffect(() => {
     // Initialize selected items for current user
@@ -268,53 +270,74 @@ export default function BillDetailScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Selection Progress</Text>
         
-        <View style={styles.progressSummary}>
-          <View style={styles.progressAvatars}>
-            {submittedUsers.map((user, index) => (
-              <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
-                <Image 
-                  source={{ uri: userAvatars[user.id] }} 
-                  style={styles.avatar}
-                />
-              </View>
-            ))}
-          </View>
-          
-          <View style={styles.progressText}>
-            <Text style={styles.progressCount}>
+        <TouchableOpacity 
+          style={styles.progressContainer}
+          onPress={() => setShowMembersModal(true)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressTitle}>
               {submittedUsers.length} of {bill.participants.length} submitted
             </Text>
-            <Text style={styles.progressNames}>
-              {submittedUsers.map(user => 
-                user.id === currentUserId ? 'You' : user.name
-              ).join(', ')}
-            </Text>
+            <Text style={styles.progressSubtitle}>Tap to view details</Text>
           </View>
-        </View>
-
-        <View style={styles.progressList}>
-          {bill.participants.map((participant) => {
-            const hasSubmitted = submittedSelections.includes(participant.id);
-            const isCurrentUser = participant.id === currentUserId;
-            
-            return (
-              <View key={participant.id} style={styles.progressItem}>
-                <View style={styles.progressLeft}>
-                  <Image 
-                    source={{ uri: userAvatars[participant.id] }} 
-                    style={styles.progressAvatar}
-                  />
-                  <Text style={styles.progressName}>
-                    {isCurrentUser ? 'You' : participant.name}
-                  </Text>
+          
+          <View style={styles.avatarSection}>
+            {/* Submitted Avatars */}
+            {submittedUsers.length > 0 && (
+              <View style={styles.avatarGroup}>
+                <Text style={styles.avatarGroupLabel}>Submitted</Text>
+                <View style={styles.avatarStack}>
+                  {submittedUsers.slice(0, 4).map((user, index) => (
+                    <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
+                      <Image 
+                        source={{ uri: userAvatars[user.id] }} 
+                        style={styles.avatar}
+                      />
+                      <View style={styles.submittedBadge}>
+                        <Check size={8} color="#FFFFFF" strokeWidth={2} />
+                      </View>
+                    </View>
+                  ))}
+                  {submittedUsers.length > 4 && (
+                    <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
+                      <View style={styles.moreAvatar}>
+                        <Text style={styles.moreAvatarText}>+{submittedUsers.length - 4}</Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
-                <Text style={[styles.progressStatus, hasSubmitted && styles.progressStatusComplete]}>
-                  {hasSubmitted ? 'Submitted' : 'Pending'}
-                </Text>
               </View>
-            );
-          })}
-        </View>
+            )}
+            
+            {/* Pending Avatars */}
+            {pendingUsers.length > 0 && (
+              <View style={styles.avatarGroup}>
+                <Text style={styles.avatarGroupLabel}>Pending</Text>
+                <View style={styles.avatarStack}>
+                  {pendingUsers.slice(0, 4).map((user, index) => (
+                    <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
+                      <Image 
+                        source={{ uri: userAvatars[user.id] }} 
+                        style={[styles.avatar, styles.pendingAvatar]}
+                      />
+                      <View style={styles.pendingBadge}>
+                        <Clock size={8} color="#F59E0B" strokeWidth={2} />
+                      </View>
+                    </View>
+                  ))}
+                  {pendingUsers.length > 4 && (
+                    <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
+                      <View style={[styles.moreAvatar, styles.morePendingAvatar]}>
+                        <Text style={styles.moreAvatarText}>+{pendingUsers.length - 4}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Finalize Button for Host */}
@@ -538,6 +561,88 @@ export default function BillDetailScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Members Modal */}
+      <Modal
+        visible={showMembersModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowMembersModal(false)}
+      >
+        <View style={styles.membersModalOverlay}>
+          <View style={styles.membersModal}>
+            <View style={styles.membersModalHeader}>
+              <Text style={styles.membersModalTitle}>Selection Progress</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowMembersModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.membersModalContent} showsVerticalScrollIndicator={false}>
+              {/* Submitted Members */}
+              {submittedUsers.length > 0 && (
+                <View style={styles.memberGroup}>
+                  <Text style={styles.memberGroupTitle}>
+                    Submitted ({submittedUsers.length})
+                  </Text>
+                  {submittedUsers.map((user) => (
+                    <View key={user.id} style={styles.memberItem}>
+                      <View style={styles.memberLeft}>
+                        <Image 
+                          source={{ uri: userAvatars[user.id] }} 
+                          style={styles.memberAvatar}
+                        />
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberName}>
+                            {user.id === currentUserId ? 'You' : user.name}
+                          </Text>
+                          <Text style={styles.memberEmail}>{user.email}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.submittedStatus}>
+                        <Check size={16} color="#10B981" strokeWidth={2} />
+                        <Text style={styles.submittedStatusText}>Submitted</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
+              {/* Pending Members */}
+              {pendingUsers.length > 0 && (
+                <View style={styles.memberGroup}>
+                  <Text style={styles.memberGroupTitle}>
+                    Pending ({pendingUsers.length})
+                  </Text>
+                  {pendingUsers.map((user) => (
+                    <View key={user.id} style={styles.memberItem}>
+                      <View style={styles.memberLeft}>
+                        <Image 
+                          source={{ uri: userAvatars[user.id] }} 
+                          style={[styles.memberAvatar, styles.pendingMemberAvatar]}
+                        />
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberName}>
+                            {user.id === currentUserId ? 'You' : user.name}
+                          </Text>
+                          <Text style={styles.memberEmail}>{user.email}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.pendingStatus}>
+                        <Clock size={16} color="#F59E0B" strokeWidth={2} />
+                        <Text style={styles.pendingStatusText}>Pending</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -730,22 +835,46 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  progressSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  progressContainer: {
     backgroundColor: '#0F172A',
-    padding: 16,
     borderRadius: 12,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#334155',
-    marginBottom: 16,
+  },
+  progressHeader: {
+    marginBottom: 20,
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  progressSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  avatarSection: {
     gap: 16,
   },
-  progressAvatars: {
+  avatarGroup: {
+    gap: 12,
+  },
+  avatarGroupLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#CBD5E1',
+    letterSpacing: -0.1,
+  },
+  avatarStack: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarContainer: {
+    position: 'relative',
     borderWidth: 2,
     borderColor: '#1E293B',
     borderRadius: 20,
@@ -755,58 +884,50 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
   },
-  progressText: {
-    flex: 1,
+  pendingAvatar: {
+    opacity: 0.6,
   },
-  progressCount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F8FAFC',
-    marginBottom: 4,
-    letterSpacing: -0.2,
-  },
-  progressNames: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  progressList: {
-    gap: 12,
-  },
-  progressItem: {
-    flexDirection: 'row',
+  submittedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#10B981',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1E293B',
+  },
+  pendingBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#0F172A',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  progressLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#F59E0B',
   },
-  progressAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 12,
+  moreAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  progressName: {
-    fontSize: 16,
+  morePendingAvatar: {
+    opacity: 0.6,
+  },
+  moreAvatarText: {
+    fontSize: 10,
     fontWeight: '600',
     color: '#F8FAFC',
-    letterSpacing: -0.2,
-  },
-  progressStatus: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  progressStatusComplete: {
-    color: '#10B981',
   },
   finalizeButton: {
     backgroundColor: '#10B981',
@@ -1032,5 +1153,129 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#334155',
     marginHorizontal: 16,
+  },
+  membersModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  membersModal: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#334155',
+  },
+  membersModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  membersModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  membersModalContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  memberGroup: {
+    marginBottom: 24,
+  },
+  memberGroupTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#CBD5E1',
+    marginBottom: 12,
+    letterSpacing: -0.2,
+  },
+  memberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  memberLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  pendingMemberAvatar: {
+    opacity: 0.6,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+  memberEmail: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  submittedStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    gap: 4,
+  },
+  submittedStatusText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pendingStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    gap: 4,
+  },
+  pendingStatusText: {
+    color: '#F59E0B',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
