@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, CreditCard as Edit3 } from 'lucide-react-native';
+import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
@@ -34,7 +34,7 @@ export default function ProfileScreen() {
         </View>
         {!isEditing && (
           <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-            <Edit3 size={18} color="#3B82F6" strokeWidth={2} />
+            <UserPen size={18} color="#3B82F6" strokeWidth={2} />
           </TouchableOpacity>
         )}
       </View>
