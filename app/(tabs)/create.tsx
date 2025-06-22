@@ -273,7 +273,7 @@ export default function CreateBillScreen() {
                 style={[styles.input, styles.inputWithIconText]}
                 value={totalAmount}
                 onChangeText={setTotalAmount}
-                placeholder="0.006"
+                placeholder="0.00"
                 placeholderTextColor="#64748B"
                 keyboardType="decimal-pad"
               />
