@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Zap } from 'lucide-react-native';
+import { Plus, Zap, Search, Filter, SortAsc, X, Calendar, Check, Clock, CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { Bill } from '@/types';
 
-// Mock data with updated statuses
+// Mock data with updated statuses and due dates
 const mockBills: Bill[] = [
   {
     id: '1',
@@ -16,6 +16,7 @@ const mockBills: Bill[] = [
     bankAccountNumber: '1234567890',
     createdBy: 'user1',
     createdAt: new Date('2024-01-15'),
+    dueDate: new Date('2024-01-25'),
     participants: [
       { id: 'user1', name: 'John Doe', email: 'john@example.com' },
       { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
@@ -43,6 +44,7 @@ const mockBills: Bill[] = [
     bankAccountNumber: '0987654321',
     createdBy: 'user1',
     createdAt: new Date('2024-01-12'),
+    dueDate: new Date('2024-01-20'),
     participants: [
       { id: 'user1', name: 'John Doe', email: 'john@example.com' },
       { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com' },
@@ -67,6 +69,7 @@ const mockBills: Bill[] = [
     bankAccountNumber: '1122334455',
     createdBy: 'user2',
     createdAt: new Date('2024-01-10'),
+    dueDate: new Date('2024-01-18'),
     participants: [
       { id: 'user1', name: 'John Doe', email: 'john@example.com' },
       { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
@@ -83,14 +86,188 @@ const mockBills: Bill[] = [
     status: 'closed',
     total: 15.98,
   },
+  {
+    id: '4',
+    title: 'Office Lunch Order',
+    description: 'Team lunch from local deli',
+    totalAmount: 85.00,
+    bankAccountNumber: '5566778899',
+    createdBy: 'user1',
+    createdAt: new Date('2024-01-08'),
+    dueDate: new Date('2024-01-22'),
+    participants: [
+      { id: 'user1', name: 'John Doe', email: 'john@example.com' },
+      { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com' },
+      { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com' },
+    ],
+    items: [
+      { id: 'item10', name: 'Sandwich Combo', price: 12.99, quantity: 3, selectedBy: ['user1', 'user3', 'user4'] },
+      { id: 'item11', name: 'Salad Bowl', price: 9.99, quantity: 2, selectedBy: ['user1', 'user4'] },
+    ],
+    bankDetails: {
+      bankName: 'Chase Bank',
+      accountName: 'John Doe',
+      accountNumber: '5566778899'
+    },
+    status: 'select',
+    total: 58.95,
+  },
+  {
+    id: '5',
+    title: 'Birthday Party Supplies',
+    description: 'Decorations and cake for Sarah\'s birthday',
+    totalAmount: 65.00,
+    bankAccountNumber: '9988776655',
+    createdBy: 'user3',
+    createdAt: new Date('2024-01-05'),
+    participants: [
+      { id: 'user1', name: 'John Doe', email: 'john@example.com' },
+      { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
+      { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com' },
+    ],
+    items: [
+      { id: 'item12', name: 'Birthday Cake', price: 35.00, quantity: 1, selectedBy: ['user1', 'user2', 'user3'] },
+      { id: 'item13', name: 'Decorations', price: 20.00, quantity: 1, selectedBy: ['user2', 'user3'] },
+    ],
+    bankDetails: {
+      bankName: 'Wells Fargo',
+      accountName: 'Mike Johnson',
+      accountNumber: '9988776655'
+    },
+    status: 'pay',
+    total: 55.00,
+  },
 ];
+
+const currentUserId = 'user1'; // Mock current user ID
+
+type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
+type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
+type RoleFilter = 'all' | 'host' | 'member';
+
+interface DateRange {
+  start: string;
+  end: string;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const [bills] = useState<Bill[]>(mockBills);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' });
+  
+  // Modal states
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
+
+  // Filtered and sorted bills
+  const filteredAndSortedBills = useMemo(() => {
+    let filtered = bills;
+
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(bill =>
+        bill.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(bill => bill.status === statusFilter);
+    }
+
+    // Role filter
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(bill => {
+        if (roleFilter === 'host') {
+          return bill.createdBy === currentUserId;
+        } else {
+          return bill.createdBy !== currentUserId;
+        }
+      });
+    }
+
+    // Date range filter
+    if (dateRange.start && dateRange.end) {
+      const startDate = new Date(dateRange.start);
+      const endDate = new Date(dateRange.end);
+      filtered = filtered.filter(bill => {
+        if (!bill.dueDate) return false;
+        const dueDate = new Date(bill.dueDate);
+        return dueDate >= startDate && dueDate <= endDate;
+      });
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'amount_high':
+          return b.totalAmount - a.totalAmount;
+        case 'amount_low':
+          return a.totalAmount - b.totalAmount;
+        case 'due_date':
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [bills, searchQuery, statusFilter, roleFilter, sortOption, dateRange]);
 
   const handleCreateBill = () => {
     router.push('/(tabs)/create');
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setRoleFilter('all');
+    setDateRange({ start: '', end: '' });
+    setSortOption('newest');
+  };
+
+  const hasActiveFilters = searchQuery.trim() || statusFilter !== 'all' || roleFilter !== 'all' || dateRange.start || dateRange.end || sortOption !== 'newest';
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'select': return Clock;
+      case 'pay': return User;
+      case 'closed': return CheckCircle;
+      default: return Clock;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'select': return '#F59E0B';
+      case 'pay': return '#3B82F6';
+      case 'closed': return '#10B981';
+      default: return '#64748B';
+    }
+  };
+
+  const getSortLabel = (option: SortOption) => {
+    switch (option) {
+      case 'newest': return 'Newest First';
+      case 'oldest': return 'Oldest First';
+      case 'amount_high': return 'Highest Amount';
+      case 'amount_low': return 'Lowest Amount';
+      case 'due_date': return 'Due Date';
+      default: return 'Newest First';
+    }
   };
 
   return (
@@ -99,7 +276,9 @@ export default function HomeScreen() {
         <View style={styles.headerContent}>
           <View style={styles.titleSection}>
             <Text style={styles.title}>Bills</Text>
-            <Text style={styles.subtitle}>Split expenses with friends</Text>
+            <Text style={styles.subtitle}>
+              {filteredAndSortedBills.length} of {bills.length} bills
+            </Text>
           </View>
           <TouchableOpacity style={styles.createButton} onPress={handleCreateBill}>
             <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
@@ -107,27 +286,253 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Search and Filter Bar */}
+      <View style={styles.searchFilterSection}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Search size={18} color="#64748B" strokeWidth={2} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search bills..."
+            placeholderTextColor="#64748B"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={18} color="#64748B" strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filter and Sort Buttons */}
+        <View style={styles.filterSortContainer}>
+          <TouchableOpacity 
+            style={[styles.filterButton, hasActiveFilters && styles.activeFilterButton]} 
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Filter size={16} color={hasActiveFilters ? "#FFFFFF" : "#64748B"} strokeWidth={2} />
+            <Text style={[styles.filterButtonText, hasActiveFilters && styles.activeFilterButtonText]}>
+              Filter
+            </Text>
+            {hasActiveFilters && <View style={styles.filterDot} />}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.sortButton} 
+            onPress={() => setShowSortModal(true)}
+          >
+            <SortAsc size={16} color="#64748B" strokeWidth={2} />
+            <Text style={styles.sortButtonText}>{getSortLabel(sortOption)}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+            <Text style={styles.clearFiltersText}>Clear All</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {bills.length === 0 ? (
+        {filteredAndSortedBills.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
-              <Zap size={32} color="#3B82F6" strokeWidth={2} />
+              {bills.length === 0 ? (
+                <Zap size={32} color="#3B82F6" strokeWidth={2} />
+              ) : (
+                <Search size={32} color="#64748B" strokeWidth={2} />
+              )}
             </View>
-            <Text style={styles.emptyTitle}>No bills yet</Text>
-            <Text style={styles.emptyDescription}>
-              Create your first bill to start splitting expenses with friends
+            <Text style={styles.emptyTitle}>
+              {bills.length === 0 ? 'No bills yet' : 'No bills found'}
             </Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={handleCreateBill}>
-              <Plus size={16} color="#3B82F6" strokeWidth={2.5} />
-              <Text style={styles.emptyButtonText}>Create Bill</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyDescription}>
+              {bills.length === 0 
+                ? 'Create your first bill to start splitting expenses with friends'
+                : 'Try adjusting your search or filters'
+              }
+            </Text>
+            {bills.length === 0 ? (
+              <TouchableOpacity style={styles.emptyButton} onPress={handleCreateBill}>
+                <Plus size={16} color="#3B82F6" strokeWidth={2.5} />
+                <Text style={styles.emptyButtonText}>Create Bill</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.emptyButton} onPress={clearFilters}>
+                <X size={16} color="#3B82F6" strokeWidth={2.5} />
+                <Text style={styles.emptyButtonText}>Clear Filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
-          bills.map((bill) => (
+          filteredAndSortedBills.map((bill) => (
             <BillCard key={bill.id} bill={bill} />
           ))
         )}
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.filterModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Bills</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowFilterModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Status Filter */}
+              <View style={styles.filterGroup}>
+                <Text style={styles.filterGroupTitle}>Status</Text>
+                {(['all', 'select', 'pay', 'closed'] as StatusFilter[]).map((status) => {
+                  const StatusIcon = status === 'all' ? UsersIcon : getStatusIcon(status);
+                  const isSelected = statusFilter === status;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={status}
+                      style={[styles.filterOption, isSelected && styles.selectedFilterOption]}
+                      onPress={() => setStatusFilter(status)}
+                    >
+                      <View style={styles.filterOptionLeft}>
+                        <StatusIcon 
+                          size={18} 
+                          color={status === 'all' ? "#64748B" : getStatusColor(status)} 
+                          strokeWidth={2} 
+                        />
+                        <Text style={[styles.filterOptionText, isSelected && styles.selectedFilterOptionText]}>
+                          {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
+                        </Text>
+                      </View>
+                      {isSelected && <Check size={16} color="#3B82F6" strokeWidth={2} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Role Filter */}
+              <View style={styles.filterGroup}>
+                <Text style={styles.filterGroupTitle}>Your Role</Text>
+                {(['all', 'host', 'member'] as RoleFilter[]).map((role) => {
+                  const isSelected = roleFilter === role;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={role}
+                      style={[styles.filterOption, isSelected && styles.selectedFilterOption]}
+                      onPress={() => setRoleFilter(role)}
+                    >
+                      <View style={styles.filterOptionLeft}>
+                        <User size={18} color="#64748B" strokeWidth={2} />
+                        <Text style={[styles.filterOptionText, isSelected && styles.selectedFilterOptionText]}>
+                          {role === 'all' ? 'All Roles' : role === 'host' ? 'Bills I Created' : 'Bills I Joined'}
+                        </Text>
+                      </View>
+                      {isSelected && <Check size={16} color="#3B82F6" strokeWidth={2} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Date Range Filter */}
+              <View style={styles.filterGroup}>
+                <Text style={styles.filterGroupTitle}>Due Date Range</Text>
+                <View style={styles.dateRangeContainer}>
+                  <View style={styles.dateInputContainer}>
+                    <Calendar size={16} color="#64748B" strokeWidth={2} />
+                    <TextInput
+                      style={styles.dateInput}
+                      value={dateRange.start}
+                      onChangeText={(text) => setDateRange(prev => ({ ...prev, start: text }))}
+                      placeholder="Start date (YYYY-MM-DD)"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                  <Text style={styles.dateRangeSeparator}>to</Text>
+                  <View style={styles.dateInputContainer}>
+                    <Calendar size={16} color="#64748B" strokeWidth={2} />
+                    <TextInput
+                      style={styles.dateInput}
+                      value={dateRange.end}
+                      onChangeText={(text) => setDateRange(prev => ({ ...prev, end: text }))}
+                      placeholder="End date (YYYY-MM-DD)"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.clearButton} 
+                onPress={() => {
+                  setStatusFilter('all');
+                  setRoleFilter('all');
+                  setDateRange({ start: '', end: '' });
+                }}
+              >
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.applyButton} 
+                onPress={() => setShowFilterModal(false)}
+              >
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sort Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.sortModalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowSortModal(false)}
+        >
+          <View style={styles.sortModal}>
+            <Text style={styles.sortModalTitle}>Sort By</Text>
+            {(['newest', 'oldest', 'amount_high', 'amount_low', 'due_date'] as SortOption[]).map((option) => {
+              const isSelected = sortOption === option;
+              
+              return (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.sortOption, isSelected && styles.selectedSortOption]}
+                  onPress={() => {
+                    setSortOption(option);
+                    setShowSortModal(false);
+                  }}
+                >
+                  <Text style={[styles.sortOptionText, isSelected && styles.selectedSortOptionText]}>
+                    {getSortLabel(option)}
+                  </Text>
+                  {isSelected && <Check size={16} color="#3B82F6" strokeWidth={2} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -177,6 +582,101 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  searchFilterSection: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#334155',
+    gap: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#F8FAFC',
+    fontWeight: '500',
+  },
+  filterSortContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 8,
+    flex: 1,
+    position: 'relative',
+  },
+  activeFilterButton: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  activeFilterButtonText: {
+    color: '#FFFFFF',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F59E0B',
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 8,
+    flex: 1,
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  clearFiltersButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#0F172A',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  clearFiltersText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -230,5 +730,209 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  filterModal: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#334155',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterGroup: {
+    marginBottom: 32,
+  },
+  filterGroupTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#CBD5E1',
+    marginBottom: 16,
+    letterSpacing: -0.2,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  selectedFilterOption: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#1E293B',
+  },
+  filterOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    color: '#F8FAFC',
+    fontWeight: '500',
+  },
+  selectedFilterOptionText: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  dateRangeContainer: {
+    gap: 12,
+  },
+  dateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 12,
+  },
+  dateInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#F8FAFC',
+    fontWeight: '500',
+  },
+  dateRangeSeparator: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+    gap: 12,
+  },
+  clearButton: {
+    flex: 1,
+    backgroundColor: '#334155',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#475569',
+  },
+  clearButtonText: {
+    color: '#CBD5E1',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  applyButton: {
+    flex: 1,
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  sortModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  sortModal: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    minWidth: 200,
+    paddingVertical: 16,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  sortModalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#CBD5E1',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    marginBottom: 8,
+    letterSpacing: -0.2,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  selectedSortOption: {
+    backgroundColor: '#0F172A',
+  },
+  sortOptionText: {
+    fontSize: 16,
+    color: '#F8FAFC',
+    fontWeight: '500',
+  },
+  selectedSortOptionText: {
+    color: '#3B82F6',
+    fontWeight: '600',
   },
 });
