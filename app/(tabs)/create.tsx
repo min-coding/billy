@@ -236,7 +236,7 @@ export default function CreateBillScreen() {
         </View>
       </View>
 
-      <Scro llView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Bill Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Bill Details</Text>
@@ -301,7 +301,7 @@ export default function CreateBillScreen() {
 
         {/* Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Item listzz</Text>
+          <Text style={styles.sectionTitle}>Item list</Text>
           
           <View style={styles.addItemContainer}>
             <View style={styles.addItemRow}>
