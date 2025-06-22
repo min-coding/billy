@@ -200,7 +200,7 @@ export default function CreateBillScreen() {
 
         {/* Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Items</Text>
+          <Text style={styles.sectionTitle}>Item list</Text>
           
           <View style={styles.addItemContainer}>
             <View style={styles.addItemRow}>
@@ -362,7 +362,7 @@ export default function CreateBillScreen() {
           disabled={!isFormValid()}
         >
           <Share2 size={18} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.createBillText}>Create & Share Bill</Text>
+          <Text style={styles.createBillText}>Create Bill</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
