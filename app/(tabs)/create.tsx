@@ -301,7 +301,7 @@ export default function CreateBillScreen() {
 
         {/* Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Item listzzz</Text>
+          <Text style={styles.sectionTitle}>Item listz</Text>
           
           <View style={styles.addItemContainer}>
             <View style={styles.addItemRow}>
