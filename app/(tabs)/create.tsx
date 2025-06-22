@@ -281,8 +281,8 @@ export default function CreateBillScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Due Datez</Text>
-            {/* <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text> */}
+            <Text style={styles.label}>Due Date</Text>
+            <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
             <View style={styles.inputWithIcon}>
               <Calendar size={18} color="#64748B" strokeWidth={2} />
               <TextInput
