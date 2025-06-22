@@ -492,7 +492,7 @@ export default function BillDetailScreen() {
             onPress={() => setShowHostMenu(true)}
           >
             <MoreVertical size={20} color="#F8FAFC" strokeWidth={2} />
-            <Camera color="red" size={48} />;
+            <Camera color="red" size={48} />
           </TouchableOpacity>
         )}
       </View>
