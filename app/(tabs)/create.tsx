@@ -273,14 +273,14 @@ export default function CreateBillScreen() {
                 style={[styles.input, styles.inputWithIconText]}
                 value={totalAmount}
                 onChangeText={setTotalAmount}
-                placeholder="0.00"
+                placeholder="0.006"
                 placeholderTextColor="#64748B"
                 keyboardType="decimal-pad"
               />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
+          {/* <View style={styles.inputGroup}>
             <Text style={styles.label}>Due Date</Text>
             <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
             <View style={styles.inputWithIcon}>
@@ -296,7 +296,7 @@ export default function CreateBillScreen() {
             {dueDate && !validateDueDate(dueDate) && (
               <Text style={styles.errorText}>Due date must be today or in the future</Text>
             )}
-          </View>
+          </View> */}
         </View>
 
         {/* Items */}
