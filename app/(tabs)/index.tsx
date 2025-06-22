@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { Bill } from '@/types';
 
-// Mock data with updated statuses and due dates
+// Mock data with updated statuses, due dates, and tags
 const mockBills: Bill[] = [
   {
     id: '1',
@@ -35,6 +35,7 @@ const mockBills: Bill[] = [
     },
     status: 'select',
     total: 83.22,
+    tag: 'Food & Dining',
   },
   {
     id: '2',
@@ -61,6 +62,7 @@ const mockBills: Bill[] = [
     },
     status: 'pay',
     total: 14.48,
+    tag: 'Groceries',
   },
   {
     id: '3',
@@ -85,6 +87,7 @@ const mockBills: Bill[] = [
     },
     status: 'closed',
     total: 15.98,
+    tag: 'Entertainment',
   },
   {
     id: '4',
@@ -111,6 +114,7 @@ const mockBills: Bill[] = [
     },
     status: 'select',
     total: 58.95,
+    tag: 'Work',
   },
   {
     id: '5',
@@ -136,6 +140,7 @@ const mockBills: Bill[] = [
     },
     status: 'pay',
     total: 55.00,
+    tag: 'Celebration',
   },
 ];
 

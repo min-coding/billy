@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Users, Calendar, DollarSign } from 'lucide-react-native';
+import { Users, Calendar, DollarSign, User, Tag } from 'lucide-react-native';
 import { Bill } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
 import { useRouter } from 'expo-router';
@@ -31,6 +31,9 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
     }
   };
 
+  // Get host name from participants
+  const hostName = bill.participants.find(p => p.id === bill.createdBy)?.name || 'Unknown Host';
+
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -42,15 +45,24 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>{bill.title}</Text>
+        <View style={styles.titleSection}>
+          <Text style={styles.title} numberOfLines={1}>{bill.title}</Text>
+          {bill.tag && (
+            <View style={styles.tagContainer}>
+              <Tag size={12} color="#64748B" strokeWidth={2} />
+              <Text style={styles.tagText}>{bill.tag}</Text>
+            </View>
+          )}
+        </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(bill.status) }]}>
           <Text style={styles.statusText}>{getStatusText(bill.status)}</Text>
         </View>
       </View>
       
-      {bill.description && (
-        <Text style={styles.description} numberOfLines={2}>{bill.description}</Text>
-      )}
+      <View style={styles.hostSection}>
+        <User size={14} color="#64748B" strokeWidth={2} />
+        <Text style={styles.hostText}>Hosted by {hostName}</Text>
+      </View>
       
       <View style={styles.footer}>
         <View style={styles.infoRow}>
@@ -66,7 +78,10 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
         <View style={styles.infoRow}>
           <Calendar size={14} color="#64748B" strokeWidth={2} />
           <Text style={styles.infoText}>
-            {new Date(bill.createdAt).toLocaleDateString()}
+            {bill.dueDate 
+              ? new Date(bill.dueDate).toLocaleDateString()
+              : new Date(bill.createdAt).toLocaleDateString()
+            }
           </Text>
         </View>
       </View>
@@ -98,14 +113,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
+  titleSection: {
+    flex: 1,
+    marginRight: 12,
+  },
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: '#F8FAFC',
-    flex: 1,
-    marginRight: 12,
     lineHeight: 24,
     letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  tagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  tagText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -121,11 +158,21 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  description: {
-    fontSize: 15,
-    color: '#94A3B8',
+  hostSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 16,
-    lineHeight: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  hostText: {
+    fontSize: 13,
+    color: '#CBD5E1',
     fontWeight: '500',
   },
   footer: {

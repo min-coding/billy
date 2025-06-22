@@ -33,6 +33,7 @@ export interface Bill {
   bankDetails: BankDetails;
   status: 'select' | 'pay' | 'closed';
   total: number;
+  tag?: string; // Optional tag/label for grouping bills
 }
 
 export interface UserCost {

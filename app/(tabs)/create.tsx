@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { generateBillCode, formatCurrency } from '@/utils/billUtils';
@@ -48,6 +48,7 @@ export default function CreateBillScreen() {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [tag, setTag] = useState('');
   const [items, setItems] = useState<BillItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
@@ -192,10 +193,11 @@ export default function CreateBillScreen() {
 
     const billCode = generateBillCode();
     const dueDateText = dueDate ? `\nDue: ${new Date(dueDate).toLocaleDateString()}` : '';
+    const tagText = tag ? `\nTag: ${tag}` : '';
     
     Alert.alert(
       'Bill Created!',
-      `Your bill "${title}" has been created with code: ${billCode}${dueDateText}`,
+      `Your bill "${title}" has been created with code: ${billCode}${dueDateText}${tagText}`,
       [
         {
           text: 'Share Code',
@@ -266,6 +268,20 @@ export default function CreateBillScreen() {
           </View>
 
           <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tag/Label</Text>
+            <View style={styles.inputWithIcon}>
+              <Tag size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={[styles.input, styles.inputWithIconText]}
+                value={tag}
+                onChangeText={setTag}
+                placeholder="e.g., Food & Dining, Work, Groceries"
+                placeholderTextColor="#64748B"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Total Amount *</Text>
             <View style={styles.inputWithIcon}>
               <DollarSign size={18} color="#64748B" strokeWidth={2} />
@@ -293,9 +309,9 @@ export default function CreateBillScreen() {
                 placeholderTextColor="#64748B"
               />
             </View>
-            {dueDate && !validateDueDate(dueDate) ? (
-  <Text style={styles.errorText}>Due date must be today or in the future</Text>
-) : null}
+            {dueDate && !validateDueDate(dueDate) && (
+              <Text style={styles.errorText}>Due date must be today or in the future</Text>
+            )}
           </View>
         </View>
 

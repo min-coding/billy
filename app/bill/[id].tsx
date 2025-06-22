@@ -34,6 +34,7 @@ const mockBill: Bill = {
   },
   status: 'select',
   total: 83.22,
+  tag: 'Food & Dining',
 };
 
 const currentUserId = 'user1'; // Mock current user ID
