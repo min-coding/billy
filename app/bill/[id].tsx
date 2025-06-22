@@ -2,22 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { 
-  ArrowLeft, 
-  Users, 
-  Calendar, 
-  DollarSign, 
-  Check, 
-  X, 
-  Edit3, 
-  Trash2, 
-  Plus,
-  CreditCard,
-  Building2,
-  CheckCircle,
-  Clock,
-  AlertCircle
-} from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, X, CreditCard as Edit3, Trash2, Plus, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { Bill, BillItem, User, UserCost } from '@/types';
 import { formatCurrency, calculateUserCosts } from '@/utils/billUtils';
 
