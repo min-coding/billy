@@ -54,8 +54,6 @@ export default function CreateBillScreen() {
   const [participants, setParticipants] = useState<User[]>([
     { id: 'creator', name: 'You', email: 'you@example.com' }
   ]);
-  const [newParticipantName, setNewParticipantName] = useState('');
-  const [newParticipantEmail, setNewParticipantEmail] = useState('');
   const [bankDetails, setBankDetails] = useState<BankDetails>({
     bankName: '',
     accountName: '',
@@ -105,23 +103,6 @@ export default function CreateBillScreen() {
 
   const removeItem = (itemId: string) => {
     setItems(items.filter(item => item.id !== itemId));
-  };
-
-  const addParticipant = () => {
-    if (!newParticipantName.trim() || !newParticipantEmail.trim()) {
-      Alert.alert('Error', 'Please enter both name and email');
-      return;
-    }
-
-    const newParticipant: User = {
-      id: Date.now().toString(),
-      name: newParticipantName.trim(),
-      email: newParticipantEmail.trim(),
-    };
-
-    setParticipants([...participants, newParticipant]);
-    setNewParticipantName('');
-    setNewParticipantEmail('');
   };
 
   const removeParticipant = (participantId: string) => {
@@ -347,33 +328,6 @@ export default function CreateBillScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.addParticipantContainer}>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                value={newParticipantName}
-                onChangeText={setNewParticipantName}
-                placeholder="Member name"
-                placeholderTextColor="#64748B"
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                value={newParticipantEmail}
-                onChangeText={setNewParticipantEmail}
-                placeholder="Email address"
-                placeholderTextColor="#64748B"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            <TouchableOpacity style={styles.addParticipantButton} onPress={addParticipant}>
-              <Plus size={16} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.addParticipantText}>Add Member</Text>
-            </TouchableOpacity>
-          </View>
-
           {participants.map((participant) => (
             <View key={participant.id} style={styles.participantCard}>
               <View style={styles.participantLeft}>
@@ -398,6 +352,15 @@ export default function CreateBillScreen() {
               )}
             </View>
           ))}
+
+          {participants.length === 1 && (
+            <View style={styles.noMembersContainer}>
+              <Text style={styles.noMembersText}>No friends added yet</Text>
+              <Text style={styles.noMembersSubtext}>
+                Add friends from your friends list to split this bill
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Bank Details */}
@@ -776,26 +739,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.1,
   },
-  addParticipantContainer: {
-    marginBottom: 20,
-  },
-  addParticipantButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0F172A',
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-    gap: 8,
-  },
-  addParticipantText: {
-    color: '#3B82F6',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
   participantCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -832,6 +775,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500',
+  },
+  noMembersContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderStyle: 'dashed',
+  },
+  noMembersText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 8,
+    letterSpacing: -0.2,
+  },
+  noMembersSubtext: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 20,
   },
   footer: {
     backgroundColor: '#1E293B',
