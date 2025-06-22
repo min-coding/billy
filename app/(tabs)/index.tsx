@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Zap, Search, Filter, Import as SortAsc, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
+import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { Bill } from '@/types';
@@ -286,51 +286,49 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Search and Filter Bar */}
+      {/* Compact Search and Filter Bar */}
       <View style={styles.searchFilterSection}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Search size={18} color="#64748B" strokeWidth={2} />
-          <TextInput
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search bills..."
-            placeholderTextColor="#64748B"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={18} color="#64748B" strokeWidth={2} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <View style={styles.searchFilterRow}>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Search size={16} color="#64748B" strokeWidth={2} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search bills..."
+              placeholderTextColor="#64748B"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={16} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {/* Filter and Sort Buttons */}
-        <View style={styles.filterSortContainer}>
+          {/* Filter Button */}
           <TouchableOpacity 
-            style={[styles.filterButton, hasActiveFilters && styles.activeFilterButton]} 
+            style={[styles.iconButton, hasActiveFilters && styles.activeIconButton]} 
             onPress={() => setShowFilterModal(true)}
           >
             <Filter size={16} color={hasActiveFilters ? "#FFFFFF" : "#64748B"} strokeWidth={2} />
-            <Text style={[styles.filterButtonText, hasActiveFilters && styles.activeFilterButtonText]}>
-              Filter
-            </Text>
-            {hasActiveFilters && <View style={styles.filterDot} />}
+            {hasActiveFilters && <View style={styles.activeDot} />}
           </TouchableOpacity>
 
+          {/* Sort Button */}
           <TouchableOpacity 
-            style={styles.sortButton} 
+            style={styles.iconButton} 
             onPress={() => setShowSortModal(true)}
           >
-            <SortAsc size={16} color="#64748B" strokeWidth={2} />
-            <Text style={styles.sortButtonText}>{getSortLabel(sortOption)}</Text>
+            <ArrowUpDown size={16} color="#64748B" strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
-        {/* Clear Filters */}
+        {/* Clear Filters - Only show when filters are active */}
         {hasActiveFilters && (
           <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-            <Text style={styles.clearFiltersText}>Clear All</Text>
+            <X size={12} color="#EF4444" strokeWidth={2} />
+            <Text style={styles.clearFiltersText}>Clear filters</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -590,93 +588,67 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#334155',
+  },
+  searchFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 12,
-  },
-  searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#F8FAFC',
-    fontWeight: '500',
-  },
-  filterSortContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0F172A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
     borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#334155',
     gap: 8,
+  },
+  searchInput: {
     flex: 1,
+    fontSize: 15,
+    color: '#F8FAFC',
+    fontWeight: '500',
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
   },
-  activeFilterButton: {
+  activeIconButton: {
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
-  filterButtonText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  activeFilterButtonText: {
-    color: '#FFFFFF',
-  },
-  filterDot: {
+  activeDot: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 4,
+    right: 4,
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#F59E0B',
   },
-  sortButton: {
+  clearFiltersButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 8,
-    flex: 1,
-  },
-  sortButtonText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  clearFiltersButton: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#0F172A',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#EF4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 8,
+    gap: 4,
   },
   clearFiltersText: {
     fontSize: 12,
     color: '#EF4444',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
