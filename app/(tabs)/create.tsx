@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { generateBillCode, formatCurrency } from '@/utils/billUtils';
@@ -47,6 +47,7 @@ export default function CreateBillScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [items, setItems] = useState<BillItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
@@ -67,6 +68,23 @@ export default function CreateBillScreen() {
     friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
     friend.email.toLowerCase().includes(friendSearchQuery.toLowerCase())
   );
+
+  // Helper function to format date for input
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  };
+
+  // Helper function to validate due date
+  const validateDueDate = (dateString: string) => {
+    if (!dateString) return false;
+    const selectedDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  };
 
   const addItem = () => {
     if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
@@ -162,15 +180,22 @@ export default function CreateBillScreen() {
       return;
     }
 
+    if (dueDate && !validateDueDate(dueDate)) {
+      Alert.alert('Error', 'Due date must be today or in the future');
+      return;
+    }
+
     if (!bankDetails.bankName.trim() || !bankDetails.accountName.trim() || !bankDetails.accountNumber.trim()) {
       Alert.alert('Error', 'Please fill in all bank details');
       return;
     }
 
     const billCode = generateBillCode();
+    const dueDateText = dueDate ? `\nDue: ${new Date(dueDate).toLocaleDateString()}` : '';
+    
     Alert.alert(
       'Bill Created!',
-      `Your bill "${title}" has been created with code: ${billCode}`,
+      `Your bill "${title}" has been created with code: ${billCode}${dueDateText}`,
       [
         {
           text: 'Share Code',
@@ -193,6 +218,7 @@ export default function CreateBillScreen() {
            !isNaN(parseFloat(totalAmount)) && 
            parseFloat(totalAmount) > 0 &&
            items.length > 0 &&
+           (!dueDate || validateDueDate(dueDate)) &&
            bankDetails.bankName.trim() &&
            bankDetails.accountName.trim() &&
            bankDetails.accountNumber.trim();
@@ -252,6 +278,24 @@ export default function CreateBillScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Due Date</Text>
+            <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
+            <View style={styles.inputWithIcon}>
+              <Calendar size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={[styles.input, styles.inputWithIconText]}
+                value={dueDate}
+                onChangeText={setDueDate}
+                placeholder="YYYY-MM-DD (optional)"
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            {dueDate && !validateDueDate(dueDate) && (
+              <Text style={styles.errorText}>Due date must be today or in the future</Text>
+            )}
           </View>
         </View>
 
@@ -594,6 +638,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: -0.1,
   },
+  labelSubtext: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 8,
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#334155',
@@ -626,6 +677,12 @@ const styles = StyleSheet.create({
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 4,
+    fontWeight: '500',
   },
   addItemContainer: {
     marginBottom: 20,

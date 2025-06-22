@@ -27,6 +27,7 @@ export interface Bill {
   bankAccountNumber: string;
   createdBy: string;
   createdAt: Date;
+  dueDate?: Date; // Optional due date for the bill
   participants: User[];
   items: BillItem[];
   bankDetails: BankDetails;
