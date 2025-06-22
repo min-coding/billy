@@ -280,7 +280,7 @@ export default function CreateBillScreen() {
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
+          {/* <View style={styles.inputGroup}>
             <Text style={styles.label}>Due Date</Text>
             <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
             <View style={styles.inputWithIcon}>
@@ -296,12 +296,12 @@ export default function CreateBillScreen() {
             {dueDate && !validateDueDate(dueDate) && (
               <Text style={styles.errorText}>Due date must be today or in the future</Text>
             )}
-          </View>
+          </View> */}
         </View>
 
         {/* Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Item list</Text>
+          <Text style={styles.sectionTitle}>Item listzzzz</Text>
           
           <View style={styles.addItemContainer}>
             <View style={styles.addItemRow}>
