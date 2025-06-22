@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BarChart, DollarSign, Users, User, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown, Receipt, UserCheck } from 'lucide-react-native';
+import { ChartBar as BarChart, DollarSign, Users, User, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown, Receipt, UserCheck } from 'lucide-react-native';
 import { Bill, UserCost, Friend } from '@/types';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 

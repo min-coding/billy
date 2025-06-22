@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Receipt, Plus, User, Users, BarChart } from 'lucide-react-native';
+import { Receipt, Plus, User, Users, ChartBar as BarChart } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
