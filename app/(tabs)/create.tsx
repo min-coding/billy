@@ -280,7 +280,7 @@ export default function CreateBillScreen() {
             </View>
           </View>
 
-          {/* <View style={styles.inputGroup}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Due Date</Text>
             <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
             <View style={styles.inputWithIcon}>
@@ -293,10 +293,10 @@ export default function CreateBillScreen() {
                 placeholderTextColor="#64748B"
               />
             </View>
-            {dueDate && !validateDueDate(dueDate) && (
-              <Text style={styles.errorText}>Due date must be today or in the future</Text>
-            )}
-          </View> */}
+            {dueDate && !validateDueDate(dueDate) ? (
+  <Text style={styles.errorText}>Due date must be today or in the future</Text>
+) : null}
+          </View>
         </View>
 
         {/* Items */}
