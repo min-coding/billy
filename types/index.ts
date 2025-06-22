@@ -40,3 +40,22 @@ export interface UserCost {
   items: BillItem[];
   total: number;
 }
+
+export interface Friend {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  addedAt: Date;
+  status: 'active' | 'pending';
+}
+
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  fromUser: User;
+  toUser: User;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: Date;
+}
