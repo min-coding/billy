@@ -1,33 +1,48 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { BillItem, User } from '@/types';
+import { BillItem, User, BankDetails } from '@/types';
 import { generateBillCode, formatCurrency } from '@/utils/billUtils';
 
 export default function CreateBillScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [totalAmount, setTotalAmount] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [items, setItems] = useState<BillItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [participants, setParticipants] = useState<User[]>([
     { id: 'creator', name: 'You', email: 'you@example.com' }
   ]);
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantEmail, setNewParticipantEmail] = useState('');
+  const [bankDetails, setBankDetails] = useState<BankDetails>({
+    bankName: '',
+    accountName: '',
+    accountNumber: ''
+  });
 
   const addItem = () => {
-    if (!newItemName.trim() || !newItemPrice.trim()) {
-      Alert.alert('Error', 'Please enter both item name and price');
+    if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
+      Alert.alert('Error', 'Please enter item name, price, and quantity');
       return;
     }
 
     const price = parseFloat(newItemPrice);
+    const quantity = parseInt(newItemQuantity);
+    
     if (isNaN(price) || price <= 0) {
       Alert.alert('Error', 'Please enter a valid price');
+      return;
+    }
+
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
@@ -35,12 +50,14 @@ export default function CreateBillScreen() {
       id: Date.now().toString(),
       name: newItemName.trim(),
       price: price,
+      quantity: quantity,
       selectedBy: [],
     };
 
     setItems([...items, newItem]);
     setNewItemName('');
     setNewItemPrice('');
+    setNewItemQuantity('1');
   };
 
   const removeItem = (itemId: string) => {
@@ -69,8 +86,8 @@ export default function CreateBillScreen() {
     setParticipants(participants.filter(p => p.id !== participantId));
   };
 
-  const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + item.price, 0);
+  const calculateItemsTotal = () => {
+    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   const createBill = () => {
@@ -79,8 +96,23 @@ export default function CreateBillScreen() {
       return;
     }
 
+    if (!totalAmount.trim() || isNaN(parseFloat(totalAmount)) || parseFloat(totalAmount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid total amount');
+      return;
+    }
+
+    if (!bankAccountNumber.trim()) {
+      Alert.alert('Error', 'Please enter your bank account number');
+      return;
+    }
+
     if (items.length === 0) {
       Alert.alert('Error', 'Please add at least one item');
+      return;
+    }
+
+    if (!bankDetails.bankName.trim() || !bankDetails.accountName.trim() || !bankDetails.accountNumber.trim()) {
+      Alert.alert('Error', 'Please fill in all bank details');
       return;
     }
 
@@ -104,6 +136,18 @@ export default function CreateBillScreen() {
     );
   };
 
+  const isFormValid = () => {
+    return title.trim() && 
+           totalAmount.trim() && 
+           !isNaN(parseFloat(totalAmount)) && 
+           parseFloat(totalAmount) > 0 &&
+           bankAccountNumber.trim() &&
+           items.length > 0 &&
+           bankDetails.bankName.trim() &&
+           bankDetails.accountName.trim() &&
+           bankDetails.accountNumber.trim();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -122,7 +166,7 @@ export default function CreateBillScreen() {
           <Text style={styles.sectionTitle}>Bill Details</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Title *</Text>
+            <Text style={styles.label}>Bill Title *</Text>
             <TextInput
               style={styles.input}
               value={title}
@@ -130,6 +174,36 @@ export default function CreateBillScreen() {
               placeholder="Enter bill title"
               placeholderTextColor="#64748B"
             />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Total Amount *</Text>
+            <View style={styles.inputWithIcon}>
+              <DollarSign size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={[styles.input, styles.inputWithIconText]}
+                value={totalAmount}
+                onChangeText={setTotalAmount}
+                placeholder="0.00"
+                placeholderTextColor="#64748B"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Your Bank Account Number *</Text>
+            <View style={styles.inputWithIcon}>
+              <CreditCard size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={[styles.input, styles.inputWithIconText]}
+                value={bankAccountNumber}
+                onChangeText={setBankAccountNumber}
+                placeholder="Enter your account number"
+                placeholderTextColor="#64748B"
+                keyboardType="numeric"
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -167,6 +241,14 @@ export default function CreateBillScreen() {
                 placeholderTextColor="#64748B"
                 keyboardType="decimal-pad"
               />
+              <TextInput
+                style={[styles.input, styles.itemQuantityInput]}
+                value={newItemQuantity}
+                onChangeText={setNewItemQuantity}
+                placeholder="Qty"
+                placeholderTextColor="#64748B"
+                keyboardType="numeric"
+              />
               <TouchableOpacity style={styles.addButton} onPress={addItem}>
                 <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
               </TouchableOpacity>
@@ -177,7 +259,10 @@ export default function CreateBillScreen() {
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
+                <View style={styles.itemDetails}>
+                  <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
+                  <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
+                </View>
               </View>
               <TouchableOpacity 
                 style={styles.removeButton} 
@@ -190,14 +275,14 @@ export default function CreateBillScreen() {
 
           {items.length > 0 && (
             <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total: {formatCurrency(calculateTotal())}</Text>
+              <Text style={styles.totalLabel}>Items Total: {formatCurrency(calculateItemsTotal())}</Text>
             </View>
           )}
         </View>
 
-        {/* Participants */}
+        {/* Members */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Participants</Text>
+          <Text style={styles.sectionTitle}>Members</Text>
           
           <View style={styles.addParticipantContainer}>
             <View style={styles.inputGroup}>
@@ -205,7 +290,7 @@ export default function CreateBillScreen() {
                 style={styles.input}
                 value={newParticipantName}
                 onChangeText={setNewParticipantName}
-                placeholder="Participant name"
+                placeholder="Member name"
                 placeholderTextColor="#64748B"
               />
             </View>
@@ -222,7 +307,7 @@ export default function CreateBillScreen() {
             </View>
             <TouchableOpacity style={styles.addParticipantButton} onPress={addParticipant}>
               <Users size={16} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.addParticipantText}>Add Participant</Text>
+              <Text style={styles.addParticipantText}>Add Member</Text>
             </TouchableOpacity>
           </View>
 
@@ -243,14 +328,60 @@ export default function CreateBillScreen() {
             </View>
           ))}
         </View>
+
+        {/* Bank Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Bank Details</Text>
+          <Text style={styles.sectionSubtitle}>Where members should send payments</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Bank Name *</Text>
+            <View style={styles.inputWithIcon}>
+              <Building2 size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={[styles.input, styles.inputWithIconText]}
+                value={bankDetails.bankName}
+                onChangeText={(text) => setBankDetails({...bankDetails, bankName: text})}
+                placeholder="e.g., Chase Bank, Wells Fargo"
+                placeholderTextColor="#64748B"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Account Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={bankDetails.accountName}
+              onChangeText={(text) => setBankDetails({...bankDetails, accountName: text})}
+              placeholder="Account holder name"
+              placeholderTextColor="#64748B"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Account Number *</Text>
+            <View style={styles.inputWithIcon}>
+              <CreditCard size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={[styles.input, styles.inputWithIconText]}
+                value={bankDetails.accountNumber}
+                onChangeText={(text) => setBankDetails({...bankDetails, accountNumber: text})}
+                placeholder="Bank account number"
+                placeholderTextColor="#64748B"
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
       {/* Create Button */}
       <View style={styles.footer}>
         <TouchableOpacity 
-          style={[styles.createBillButton, (!title.trim() || items.length === 0) && styles.disabledButton]} 
+          style={[styles.createBillButton, !isFormValid() && styles.disabledButton]} 
           onPress={createBill}
-          disabled={!title.trim() || items.length === 0}
+          disabled={!isFormValid()}
         >
           <Share2 size={18} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.createBillText}>Create & Share Bill</Text>
@@ -312,8 +443,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#F8FAFC',
-    marginBottom: 20,
+    marginBottom: 8,
     letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginBottom: 20,
+    fontWeight: '500',
   },
   inputGroup: {
     marginBottom: 16,
@@ -336,6 +473,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     fontWeight: '500',
   },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  inputWithIconText: {
+    flex: 1,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+  },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
@@ -345,13 +500,16 @@ const styles = StyleSheet.create({
   },
   addItemRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     alignItems: 'flex-end',
   },
   itemNameInput: {
-    flex: 2,
+    flex: 3,
   },
   itemPriceInput: {
+    flex: 2,
+  },
+  itemQuantityInput: {
     flex: 1,
   },
   addButton: {
@@ -388,10 +546,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#F8FAFC',
-    marginBottom: 4,
+    marginBottom: 6,
     letterSpacing: -0.2,
   },
+  itemDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   itemPrice: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  itemTotal: {
     fontSize: 14,
     color: '#10B981',
     fontWeight: '600',
@@ -410,7 +578,7 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
   },
   totalLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#10B981',
     textAlign: 'center',

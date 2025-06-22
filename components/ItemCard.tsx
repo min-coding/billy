@@ -12,7 +12,8 @@ interface ItemCardProps {
 }
 
 export default function ItemCard({ item, isSelected, onToggle, participantCount }: ItemCardProps) {
-  const splitPrice = participantCount > 0 ? item.price / participantCount : item.price;
+  const itemTotal = item.price * item.quantity;
+  const splitPrice = participantCount > 0 ? itemTotal / participantCount : itemTotal;
 
   return (
     <TouchableOpacity 
@@ -23,7 +24,11 @@ export default function ItemCard({ item, isSelected, onToggle, participantCount 
       <View style={styles.content}>
         <View style={styles.itemInfo}>
           <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.itemPrice}>
+              {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
+            </Text>
+          </View>
           {item.selectedBy.length > 1 && (
             <Text style={styles.splitInfo}>
               Split {item.selectedBy.length} ways: {formatCurrency(splitPrice)}
@@ -72,8 +77,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#F8FAFC',
-    marginBottom: 4,
+    marginBottom: 6,
     letterSpacing: -0.2,
+  },
+  priceRow: {
+    marginBottom: 4,
   },
   itemPrice: {
     fontSize: 14,
@@ -83,7 +91,6 @@ const styles = StyleSheet.create({
   splitInfo: {
     fontSize: 12,
     color: '#3B82F6',
-    marginTop: 4,
     fontWeight: '500',
   },
   checkbox: {

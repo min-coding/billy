@@ -9,17 +9,27 @@ export interface BillItem {
   id: string;
   name: string;
   price: number;
+  quantity: number;
   selectedBy: string[]; // Array of user IDs who selected this item
+}
+
+export interface BankDetails {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
 }
 
 export interface Bill {
   id: string;
   title: string;
   description?: string;
+  totalAmount: number;
+  bankAccountNumber: string;
   createdBy: string;
   createdAt: Date;
   participants: User[];
   items: BillItem[];
+  bankDetails: BankDetails;
   status: 'select' | 'pay' | 'closed';
   total: number;
 }

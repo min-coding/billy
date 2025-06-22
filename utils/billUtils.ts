@@ -9,7 +9,8 @@ export const calculateUserCosts = (bill: Bill): UserCost[] => {
     
     bill.items.forEach(item => {
       if (item.selectedBy.includes(participant.id)) {
-        const splitAmount = item.price / item.selectedBy.length;
+        const itemTotal = item.price * item.quantity;
+        const splitAmount = itemTotal / item.selectedBy.length;
         userItems.push({
           ...item,
           price: splitAmount
