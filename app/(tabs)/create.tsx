@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag, TestTube } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { generateBillCode, formatCurrency } from '@/utils/billUtils';
@@ -69,6 +69,65 @@ export default function CreateBillScreen() {
     friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
     friend.email.toLowerCase().includes(friendSearchQuery.toLowerCase())
   );
+
+  // Test bill data for quick testing
+  const fillTestBill = () => {
+    setTitle('Test Restaurant Bill');
+    setDescription('Quick test bill for app testing');
+    setTotalAmount('85.50');
+    setDueDate('2024-02-15');
+    setTag('Food & Dining');
+    
+    // Add test items
+    const testItems: BillItem[] = [
+      {
+        id: 'test1',
+        name: 'Margherita Pizza',
+        price: 18.99,
+        quantity: 1,
+        selectedBy: []
+      },
+      {
+        id: 'test2',
+        name: 'Caesar Salad',
+        price: 12.50,
+        quantity: 2,
+        selectedBy: []
+      },
+      {
+        id: 'test3',
+        name: 'Garlic Bread',
+        price: 8.99,
+        quantity: 1,
+        selectedBy: []
+      },
+      {
+        id: 'test4',
+        name: 'Tiramisu',
+        price: 9.99,
+        quantity: 3,
+        selectedBy: []
+      }
+    ];
+    setItems(testItems);
+    
+    // Add test participants
+    const testParticipants: User[] = [
+      { id: 'creator', name: 'You', email: 'you@example.com' },
+      { id: 'friend1', name: 'Jane Smith', email: 'jane@example.com', avatar: mockFriends[0].avatar },
+      { id: 'friend2', name: 'Mike Johnson', email: 'mike@example.com', avatar: mockFriends[1].avatar }
+    ];
+    setParticipants(testParticipants);
+    
+    // Add test bank details
+    setBankDetails({
+      bankName: 'Test Bank',
+      accountName: 'John Doe',
+      accountNumber: '1234567890'
+    });
+
+    Alert.alert('Test Data Loaded', 'Bill has been prefilled with test data for quick testing!');
+  };
 
   // Helper function to format date for input
   const formatDateForInput = (dateString: string) => {
@@ -236,6 +295,11 @@ export default function CreateBillScreen() {
           <Text style={styles.title}>Create Bill</Text>
           <Text style={styles.subtitle}>Split expenses with friends</Text>
         </View>
+        
+        {/* Test Bill Button */}
+        <TouchableOpacity style={styles.testButton} onPress={fillTestBill}>
+          <TestTube size={18} color="#F59E0B" strokeWidth={2} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -309,9 +373,9 @@ export default function CreateBillScreen() {
                 placeholderTextColor="#64748B"
               />
             </View>
-            {dueDate && !validateDueDate(dueDate) ?
-  (<Text style={styles.errorText}>Due date must be today or in the future</Text>
-) : null}
+            {dueDate && !validateDueDate(dueDate) && (
+              <Text style={styles.errorText}>Due date must be today or in the future</Text>
+            )}
           </View>
         </View>
 
@@ -618,6 +682,16 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
     marginTop: 2,
+  },
+  testButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
   },
   scrollView: {
     flex: 1,
