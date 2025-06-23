@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2 } from 'lucide-react-native';
-import { mockBills } from '@/data/mockBills';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
+import { supabase } from '@/lib/supabase';
 
 const currentUserId = 'user1'; // This should come from auth context
 
@@ -16,51 +16,73 @@ export default function BillDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { getUnreadCount } = useChat();
-  
-  const bill = mockBills.find(b => b.id === id);
+
+  const [bill, setBill] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const unreadCount = getUnreadCount(id || '');
 
-  // Mock data for testing different states
-  const mockSubmittedSelections = bill?.testSubmittedSelections || [];
-  const mockPaymentStatus = bill?.testPaymentStatus || {};
+  useEffect(() => {
+    const fetchBill = async () => {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase.from('bills').select('*').eq('id', id).single();
+      if (error) {
+        setError('Bill not found');
+        setBill(null);
+      } else {
+        setBill(data);
+      }
+      setLoading(false);
+    };
+    if (id) fetchBill();
+  }, [id]);
 
   const isHost = bill?.createdBy === currentUserId;
-  const isParticipant = bill?.participants.some(p => p.id === currentUserId);
+  const isParticipant = bill?.participants?.some((p: any) => p.id === currentUserId);
   const userCosts = bill ? calculateUserCosts(bill) : [];
   const currentUserCost = userCosts.find(uc => uc.userId === currentUserId);
 
   // Check if all members have submitted their selections
   const allMembersSubmitted = useMemo(() => {
     if (!bill) return false;
-    return bill.participants.every(p => mockSubmittedSelections.includes(p.id));
-  }, [bill, mockSubmittedSelections]);
+    // Replace with real submission logic if available
+    return bill.participants?.every((p: any) => p.hasSubmitted);
+  }, [bill]);
 
   // Initialize selected items based on bill data
-  React.useEffect(() => {
+  useEffect(() => {
     if (bill && !hasSubmitted) {
       const userSelectedItems = bill.items
-        .filter(item => item.selectedBy.includes(currentUserId))
-        .map(item => item.id);
+        .filter((item: any) => item.selectedBy.includes(currentUserId))
+        .map((item: any) => item.id);
       setSelectedItems(userSelectedItems);
     }
   }, [bill, hasSubmitted]);
 
-  if (!bill) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Bill not found</Text>
+        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 50 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !bill) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.errorText}>{error || 'Bill not found'}</Text>
       </SafeAreaView>
     );
   }
 
   const toggleItemSelection = (itemId: string) => {
     if (hasSubmitted && bill.status === 'pay') return; // Can't change after submission in pay status
-    
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
+    setSelectedItems(prev =>
+      prev.includes(itemId)
         ? prev.filter(id => id !== itemId)
         : [...prev, itemId]
     );
@@ -71,7 +93,6 @@ export default function BillDetailScreen() {
       Alert.alert('No Items Selected', 'Please select at least one item before submitting.');
       return;
     }
-
     Alert.alert(
       'Submit Selections',
       'Are you sure you want to submit your item selections? You can still edit them until the host finalizes the bill.',
@@ -82,6 +103,7 @@ export default function BillDetailScreen() {
           onPress: () => {
             setHasSubmitted(true);
             Alert.alert('Success', 'Your selections have been submitted!');
+            // TODO: Send API request to update selections in DB
           }
         }
       ]
@@ -96,7 +118,6 @@ export default function BillDetailScreen() {
       );
       return;
     }
-
     Alert.alert(
       'Finalize Bill',
       'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
@@ -107,6 +128,7 @@ export default function BillDetailScreen() {
           style: 'destructive',
           onPress: () => {
             Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
+            // TODO: Update bill status in DB
           }
         }
       ]
@@ -123,10 +145,7 @@ export default function BillDetailScreen() {
           text: 'Continue',
           style: 'destructive',
           onPress: () => {
-            // Reset all selections and submissions
             resetBillSelections();
-            
-            // Navigate to edit screen (placeholder for now)
             Alert.alert(
               'Bill Reset Complete',
               'All member selections have been cleared. You can now edit the bill details. All participants will be notified to reselect their items.',
@@ -148,23 +167,9 @@ export default function BillDetailScreen() {
   };
 
   const resetBillSelections = () => {
-    // Clear all item selections for all participants
-    if (bill) {
-      bill.items.forEach(item => {
-        item.selectedBy = [];
-      });
-    }
-    
-    // Reset current user's local state
+    // TODO: Send API request to clear all selections in database
     setSelectedItems([]);
     setHasSubmitted(false);
-    
-    // In a real app, this would:
-    // 1. Send API request to clear all selections in database
-    // 2. Send notifications to all participants about the reset
-    // 3. Update bill status if needed
-    // 4. Clear any cached submission data
-    
     console.log('Bill selections reset for bill:', bill?.id);
     console.log('All participants will need to reselect items');
   };
@@ -185,6 +190,7 @@ export default function BillDetailScreen() {
                 onPress: () => router.back()
               }
             ]);
+            // TODO: Delete bill from DB
           }
         }
       ]
@@ -193,9 +199,13 @@ export default function BillDetailScreen() {
 
   const getParticipantStatus = (participantId: string) => {
     if (bill.status === 'select') {
-      return mockSubmittedSelections.includes(participantId) ? 'submitted' : 'pending';
+      // Replace with real submission logic if available
+      const participant = bill.participants.find((p: any) => p.id === participantId);
+      return participant?.hasSubmitted ? 'submitted' : 'pending';
     } else if (bill.status === 'pay') {
-      return mockPaymentStatus[participantId] || 'unpaid';
+      // Replace with real payment status logic if available
+      const participant = bill.participants.find((p: any) => p.id === participantId);
+      return participant?.paymentStatus || 'unpaid';
     }
     return 'completed';
   };
@@ -323,7 +333,7 @@ export default function BillDetailScreen() {
         {/* Items Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Items</Text>
-          {bill.items.map((item) => (
+          {bill.items.map((item: any) => (
             <ItemCard
               key={item.id}
               item={item}
@@ -360,7 +370,7 @@ export default function BillDetailScreen() {
         {/* Participants */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Participants</Text>
-          {bill.participants.map((participant) => {
+          {bill.participants.map((participant: any) => {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
             const StatusIcon = getStatusIcon(status);

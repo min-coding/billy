@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChartBar as BarChart, DollarSign, Users, User, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown, Receipt, UserCheck } from 'lucide-react-native';
 import { Bill, UserCost, Friend } from '@/types';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
+import { supabase } from '@/lib/supabase';
 
-const currentUserId = 'user1'; // Mock current user ID
+const currentUserId = 'user1'; // Replace with real user ID from auth
 
 // Comprehensive user data combining all sources
 const allPossibleUsers = [
@@ -39,6 +40,21 @@ interface FriendBalance {
 }
 
 export default function SummaryScreen() {
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBills = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('bills').select('*');
+      if (!error && data) {
+        setBills(data);
+      }
+      setLoading(false);
+    };
+    fetchBills();
+  }, []);
+
   const summaryData = useMemo(() => {
     let totalToPay = 0;
     let totalToCollect = 0;
@@ -46,17 +62,56 @@ export default function SummaryScreen() {
     let billsAsMemberCount = 0;
     const friendBalancesMap: { [userId: string]: { name: string; avatar: string; amount: number } } = {};
 
-    // Remove all usage of mockBills in this file. If you need to fetch bills, do so from the database instead.
-
+    bills.forEach(bill => {
+      const isHost = bill.createdBy === currentUserId;
+      const isParticipant = bill.participants.some((p: any) => p.id === currentUserId);
+      if (isHost) {
+        billsAsHostCount++;
+      } else if (isParticipant) {
+        billsAsMemberCount++;
+      }
+      // Only calculate financial data for bills in 'pay' status
+      if (bill.status === 'pay') {
+        const userCosts = calculateUserCosts(bill);
+        userCosts.forEach(userCost => {
+          if (userCost.userId === currentUserId) return;
+          // If I'm host, positive means they owe me; if I'm participant, negative means I owe them
+          let netAmount = 0;
+          if (isHost) {
+            netAmount = userCost.total; // they owe me
+          } else if (userCost.userId === bill.createdBy) {
+            // I'm participant, this is the host
+            netAmount = -userCost.total; // I owe host
+          }
+          if (!friendBalancesMap[userCost.userId]) {
+            friendBalancesMap[userCost.userId] = {
+              name: getUserName(userCost.userId),
+              avatar: getUserAvatar(userCost.userId),
+              amount: 0,
+            };
+          }
+          friendBalancesMap[userCost.userId].amount += netAmount;
+        });
+      }
+    });
+    const sortedFriendBalances: FriendBalance[] = Object.entries(friendBalancesMap)
+      .map(([userId, { name, avatar, amount }]) => ({
+        userId,
+        userName: name,
+        avatar,
+        netAmount: amount,
+      }))
+      .filter(fb => fb.netAmount !== 0)
+      .sort((a, b) => Math.abs(b.netAmount) - Math.abs(a.netAmount));
     return {
       totalToPay,
       totalToCollect,
       netBalance: totalToCollect - totalToPay,
       billsAsHostCount,
       billsAsMemberCount,
-      sortedFriendBalances: []
+      sortedFriendBalances,
     };
-  }, []);
+  }, [bills]);
 
   return (
     <SafeAreaView style={styles.container}>

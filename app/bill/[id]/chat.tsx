@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Send, Camera, Image as ImageIcon, Check, X, Clock, Shield, MessageCircle } from 'lucide-react-native';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockBills } from '@/data/mockBills';
 import { formatCurrency } from '@/utils/billUtils';
+import { supabase } from '@/lib/supabase';
 
 export default function BillChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,10 +19,28 @@ export default function BillChatScreen() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedMessageImage, setSelectedMessageImage] = useState<string | null>(null);
+  const [bill, setBill] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const bill = mockBills.find(b => b.id === id);
+  useEffect(() => {
+    const fetchBill = async () => {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase.from('bills').select('*').eq('id', id).single();
+      if (error) {
+        setError('Bill not found');
+        setBill(null);
+      } else {
+        setBill(data);
+      }
+      setLoading(false);
+    };
+    if (id) fetchBill();
+  }, [id]);
+
   const messages = getMessagesForBill(id || '');
   const isHost = bill?.createdBy === user?.id;
 
@@ -42,7 +60,15 @@ export default function BillChatScreen() {
     }, 100);
   }, [messages.length]);
 
-  if (!bill || !user) {
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 50 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !bill || !user) {
     return null;
   }
 
@@ -190,16 +216,16 @@ export default function BillChatScreen() {
         showsVerticalScrollIndicator={false}
       >
         {messages.map((message, index) => {
-          const isOwnMessage = message.senderId === user.id;
+          const isOwnMessage = message?.senderId === user.id;
           const showDate = index === 0 || 
-            formatDate(message.timestamp) !== formatDate(messages[index - 1].timestamp);
+            formatDate(message?.timestamp ?? '') !== formatDate(messages[index - 1]?.timestamp ?? '');
 
           return (
             <View key={message.id}>
               {/* Date Separator */}
               {showDate && (
                 <View style={styles.dateSeparator}>
-                  <Text style={styles.dateText}>{formatDate(message.timestamp)}</Text>
+                  <Text style={styles.dateText}>{formatDate(message?.timestamp ?? '')}</Text>
                 </View>
               )}
 
@@ -211,12 +237,12 @@ export default function BillChatScreen() {
                 {/* Avatar for other messages */}
                 {!isOwnMessage && (
                   <View style={styles.avatarContainer}>
-                    {message.senderAvatar ? (
+                    {message?.senderAvatar ? (
                       <Image source={{ uri: message.senderAvatar }} style={styles.avatar} />
                     ) : (
                       <View style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>
-                          {message.senderName.charAt(0).toUpperCase()}
+                          {((message?.senderName || '?')[0]).toUpperCase()}
                         </Text>
                       </View>
                     )}
@@ -226,56 +252,56 @@ export default function BillChatScreen() {
                 <View style={[
                   styles.messageBubble,
                   isOwnMessage ? styles.ownBubble : styles.otherBubble,
-                  message.type === 'system' && styles.systemBubble
+                  message?.type === 'system' && styles.systemBubble
                 ]}>
                   {/* Sender name for other messages */}
-                  {!isOwnMessage && message.type !== 'system' && (
-                    <Text style={styles.senderName}>{message.senderName}</Text>
+                  {!isOwnMessage && message?.type !== 'system' && (
+                    <Text style={styles.senderName}>{message?.senderName}</Text>
                   )}
 
                   {/* System message */}
-                  {message.type === 'system' && (
+                  {message?.type === 'system' && (
                     <View style={styles.systemMessage}>
                       <Shield size={14} color="#64748B" strokeWidth={2} />
-                      <Text style={styles.systemText}>{message.content}</Text>
+                      <Text style={styles.systemText}>{message?.content}</Text>
                     </View>
                   )}
 
                   {/* Regular message */}
-                  {message.type === 'text' && (
+                  {message?.type === 'text' && (
                     <Text style={[
                       styles.messageText,
                       isOwnMessage ? styles.ownMessageText : styles.otherMessageText
                     ]}>
-                      {message.content}
+                      {message?.content}
                     </Text>
                   )}
 
                   {/* Image/Payment slip message */}
-                  {(message.type === 'image' || message.type === 'payment_slip') && (
+                  {(message?.type === 'image' || message?.type === 'payment_slip') && (
                     <View style={styles.imageMessage}>
-                      {message.content && (
+                      {message?.content && (
                         <Text style={[
                           styles.messageText,
                           isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
                           styles.imageMessageText
                         ]}>
-                          {message.content}
+                          {message?.content}
                         </Text>
                       )}
                       
                       <TouchableOpacity 
                         style={styles.imageContainer}
-                        onPress={() => message.imageUrl && openImageModal(message.imageUrl)}
+                        onPress={() => message?.imageUrl && openImageModal(message.imageUrl)}
                       >
-                        <Image source={{ uri: message.imageUrl }} style={styles.messageImage} />
+                        <Image source={{ uri: message?.imageUrl }} style={styles.messageImage} />
                         
                         {/* Payment slip overlay */}
-                        {message.isPaymentSlip && (
+                        {message?.isPaymentSlip && (
                           <View style={styles.paymentOverlay}>
                             <View style={styles.paymentInfo}>
                               <Text style={styles.paymentLabel}>Payment Slip</Text>
-                              {message.paymentAmount && (
+                              {message?.paymentAmount && (
                                 <Text style={styles.paymentAmount}>
                                   {formatCurrency(message.paymentAmount)}
                                 </Text>
@@ -297,7 +323,7 @@ export default function BillChatScreen() {
                       </TouchableOpacity>
 
                       {/* Host verification buttons */}
-                      {message.isPaymentSlip && 
+                      {message?.isPaymentSlip && 
                        message.paymentStatus === 'pending' && 
                        isHost && 
                        !isOwnMessage && (
@@ -325,12 +351,12 @@ export default function BillChatScreen() {
                   )}
 
                   {/* Timestamp */}
-                  {message.type !== 'system' && (
+                  {message?.type !== 'system' && (
                     <Text style={[
                       styles.timestamp,
                       isOwnMessage ? styles.ownTimestamp : styles.otherTimestamp
                     ]}>
-                      {formatTime(message.timestamp)}
+                      {formatTime(message?.timestamp ?? new Date())}
                     </Text>
                   )}
                 </View>
