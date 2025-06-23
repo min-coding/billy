@@ -5,7 +5,7 @@ import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, Circ
 import { useRouter } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { Bill } from '@/types';
-import { mockBills } from '../mockBills';
+import { mockBills } from '@/data/mockBills';
 
 const currentUserId = 'user1'; // Mock current user ID
 

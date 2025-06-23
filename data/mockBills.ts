@@ -387,4 +387,4 @@ export const mockBills: Bill[] = [
     total: 100,
     tag: 'Test',
   },
-]; 
+];

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2 } from 'lucide-react-native';
-import { mockBills } from '../mockBills';
+import { mockBills } from '@/data/mockBills';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';

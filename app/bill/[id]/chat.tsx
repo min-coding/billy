@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Send, Camera, Image as ImageIcon, Check, X, Clock, Shield, MessageCircle } from 'lucide-react-native';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockBills } from '@/app/mockBills';
+import { mockBills } from '@/data/mockBills';
 import { formatCurrency } from '@/utils/billUtils';
 
 export default function BillChatScreen() {
