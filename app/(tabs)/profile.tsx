@@ -1,21 +1,50 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen } from 'lucide-react-native';
+import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen, Camera } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
+  const { user, logout, updateProfile, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('John Doe');
-  const [email, setEmail] = useState('john.doe@example.com');
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
 
-  const handleSave = () => {
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      await updateProfile({ name, email });
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile');
+    }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    setName('John Doe');
-    setEmail('john.doe@example.com');
+    setName(user?.name || '');
+    setEmail(user?.email || '');
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to sign out');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const menuItems = [
@@ -24,6 +53,8 @@ export default function ProfileScreen() {
     { icon: Settings, title: 'Settings', subtitle: 'App preferences and privacy' },
     { icon: HelpCircle, title: 'Help & Support', subtitle: 'Get help and contact support' },
   ];
+
+  if (!user) return null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -43,8 +74,17 @@ export default function ProfileScreen() {
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <User size={32} color="#FFFFFF" strokeWidth={2} />
+            <View style={styles.avatarWrapper}>
+              {user.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatar}>
+                  <User size={32} color="#FFFFFF" strokeWidth={2} />
+                </View>
+              )}
+              <TouchableOpacity style={styles.cameraButton}>
+                <Camera size={16} color="#FFFFFF" strokeWidth={2} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -58,6 +98,7 @@ export default function ProfileScreen() {
                   onChangeText={setName}
                   placeholder="Enter your name"
                   placeholderTextColor="#64748B"
+                  editable={!isLoading}
                 />
               </View>
               
@@ -71,6 +112,7 @@ export default function ProfileScreen() {
                   placeholderTextColor="#64748B"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!isLoading}
                 />
               </View>
 
@@ -78,22 +120,32 @@ export default function ProfileScreen() {
                 <TouchableOpacity 
                   style={[styles.button, styles.cancelButton]} 
                   onPress={handleCancel}
+                  disabled={isLoading}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={[styles.button, styles.saveButton]} 
+                  style={[styles.button, styles.saveButton, isLoading && styles.disabledButton]} 
                   onPress={handleSave}
+                  disabled={isLoading}
                 >
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>
+                    {isLoading ? 'Saving...' : 'Save'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{name}</Text>
-              <Text style={styles.profileEmail}>{email}</Text>
+              <Text style={styles.profileName}>{user.name}</Text>
+              <Text style={styles.profileEmail}>{user.email}</Text>
+              <Text style={styles.joinDate}>
+                Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </Text>
             </View>
           )}
         </View>
@@ -135,7 +187,7 @@ export default function ProfileScreen() {
 
         {/* Logout Section */}
         <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <LogOut size={18} color="#EF4444" strokeWidth={2} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
@@ -201,6 +253,9 @@ const styles = StyleSheet.create({
   avatarContainer: {
     marginBottom: 20,
   },
+  avatarWrapper: {
+    position: 'relative',
+  },
   avatar: {
     width: 80,
     height: 80,
@@ -217,6 +272,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1E293B',
+  },
   profileInfo: {
     alignItems: 'center',
   },
@@ -230,6 +303,12 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: 16,
     color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  joinDate: {
+    fontSize: 14,
+    color: '#64748B',
     fontWeight: '500',
   },
   editForm: {
@@ -289,6 +368,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#475569',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   saveButtonText: {
     color: '#FFFFFF',
