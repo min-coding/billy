@@ -149,6 +149,11 @@ export default function BillDetailScreen() {
   };
 
   const finalizeBill = () => {
+    if (!allMembersSubmitted) {
+      Alert.alert('Cannot Finalize', 'Please wait for all members to submit their selections before finalizing the bill.');
+      return;
+    }
+
     Alert.alert(
       'Finalize Bill',
       'This will calculate everyone\'s share and move the bill to payment stage. Continue?',
@@ -321,11 +326,15 @@ export default function BillDetailScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Finalize Button - Only show for host when all members have submitted */}
-          {isHost && canFinalizeBill && (
+          {/* Finalize Button - Always show for host, but disable if not all members submitted */}
+          {isHost && (
             <TouchableOpacity 
-              style={styles.finalizeButton}
+              style={[
+                styles.finalizeButton, 
+                !allMembersSubmitted && styles.disabledFinalizeButton
+              ]}
               onPress={finalizeBill}
+              disabled={!allMembersSubmitted}
             >
               <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
               <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
@@ -1028,6 +1037,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  disabledFinalizeButton: {
+    backgroundColor: '#475569',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   finalizeButtonText: {
     color: '#FFFFFF',
