@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ChatProvider } from '@/contexts/ChatContext';
 import { useRouter, useSegments } from 'expo-router';
 import LoadingScreen from '@/components/LoadingScreen';
 
@@ -34,6 +35,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="bill/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="bill/[id]/chat" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
@@ -44,8 +46,10 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootLayoutNav />
-      <StatusBar style="light" />
+      <ChatProvider>
+        <RootLayoutNav />
+        <StatusBar style="light" />
+      </ChatProvider>
     </AuthProvider>
   );
 }
