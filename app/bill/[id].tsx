@@ -348,11 +348,6 @@ export default function BillDetailScreen() {
             </Text>
           )}
 
-          {hasCurrentUserSubmitted && !isHost && (
-            <Text style={styles.statusMessage}>
-              Your selections have been submitted. Waiting for host to finalize the bill.
-            </Text>
-          )}
         </View>
       </View>
 
