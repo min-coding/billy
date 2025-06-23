@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, CreditCard as Edit3, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2 } from 'lucide-react-native';
 import { mockBills } from '../mockBills';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
@@ -216,7 +216,7 @@ export default function BillDetailScreen() {
         {isHost && bill.status === 'select' && (
           <View style={styles.hostActions}>
             <TouchableOpacity style={styles.editButton} onPress={editBill}>
-              <Edit3 size={16} color="#3B82F6" strokeWidth={2} />
+              <SquarePen size={16} color="#3B82F6" strokeWidth={2} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.deleteButton} onPress={deleteBill}>
               <Trash2 size={16} color="#EF4444" strokeWidth={2} />
