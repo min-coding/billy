@@ -49,21 +49,34 @@ export function useBills() {
 
       if (createdBillsError) throw createdBillsError;
 
-      // Fetch bills where user is a participant
-      const { data: participantBills, error: participantBillsError } = await supabase
-        .from('bills')
-        .select(`
-          *,
-          bill_participants!inner(user_id),
-          users!bills_created_by_fkey(id, name, email, avatar)
-        `)
-        .eq('bill_participants.user_id', user.id)
-        .order('created_at', { ascending: false });
+      // First, get bill IDs where user is a participant
+      const { data: participantData, error: participantError } = await supabase
+        .from('bill_participants')
+        .select('bill_id')
+        .eq('user_id', user.id);
 
-      if (participantBillsError) throw participantBillsError;
+      if (participantError) throw participantError;
+
+      const participantBillIds = participantData?.map(p => p.bill_id) || [];
+
+      // Then fetch the actual bills using the bill IDs
+      let participantBills: any[] = [];
+      if (participantBillIds.length > 0) {
+        const { data: participantBillsData, error: participantBillsError } = await supabase
+          .from('bills')
+          .select(`
+            *,
+            users!bills_created_by_fkey(id, name, email, avatar)
+          `)
+          .in('id', participantBillIds)
+          .order('created_at', { ascending: false });
+
+        if (participantBillsError) throw participantBillsError;
+        participantBills = participantBillsData || [];
+      }
 
       // Combine and deduplicate bills
-      const allBills = [...(createdBills || []), ...(participantBills || [])];
+      const allBills = [...(createdBills || []), ...participantBills];
       const uniqueBills = allBills.filter((bill, index, self) => 
         index === self.findIndex(b => b.id === bill.id)
       );
