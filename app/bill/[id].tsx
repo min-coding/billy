@@ -304,7 +304,7 @@ export default function BillDetailScreen() {
           );
         })}
 
-        {/* Submit Button */}
+        {/* Submit Button - Only show for members who haven't submitted */}
         {!submittedSelections.includes(currentUserId) && (
           <TouchableOpacity 
             style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
@@ -316,22 +316,24 @@ export default function BillDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Finalize Button for Host */}
+        {/* Finalize Button - Only show for host */}
         {isHost && (
-          <TouchableOpacity 
-            style={[styles.finalizeButton, !canFinalizeBill && styles.disabledButton]}
-            onPress={finalizeBill}
-            disabled={!canFinalizeBill}
-          >
-            <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
-          </TouchableOpacity>
-        )}
-        
-        {isHost && !allMembersSubmitted && (
-          <Text style={styles.finalizeSubtext}>
-            Waiting for all members to submit their selections
-          </Text>
+          <>
+            <TouchableOpacity 
+              style={[styles.finalizeButton, !canFinalizeBill && styles.disabledButton]}
+              onPress={finalizeBill}
+              disabled={!canFinalizeBill}
+            >
+              <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
+            </TouchableOpacity>
+            
+            {!allMembersSubmitted && (
+              <Text style={styles.finalizeSubtext}>
+                Waiting for all members to submit their selections
+              </Text>
+            )}
+          </>
         )}
       </View>
 
