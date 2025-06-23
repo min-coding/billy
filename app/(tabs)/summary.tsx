@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChartBar as BarChart, DollarSign, Users, User, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown, Receipt, UserCheck } from 'lucide-react-native';
 import { Bill, UserCost, Friend } from '@/types';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
-import { mockBills } from '@/data/mockBills';
 
 const currentUserId = 'user1'; // Mock current user ID
 
@@ -47,82 +46,15 @@ export default function SummaryScreen() {
     let billsAsMemberCount = 0;
     const friendBalancesMap: { [userId: string]: { name: string; avatar: string; amount: number } } = {};
 
-    mockBills.forEach(bill => {
-      const isHost = bill.createdBy === currentUserId;
-      const isParticipant = bill.participants.some(p => p.id === currentUserId);
-
-      if (isHost) {
-        billsAsHostCount++;
-      } else if (isParticipant) {
-        billsAsMemberCount++;
-      }
-
-      // Only calculate financial data for bills in 'pay' status
-      if (bill.status === 'pay') {
-        const userCosts = calculateUserCosts(bill);
-        
-        if (isParticipant) {
-          const currentUserCost = userCosts.find(uc => uc.userId === currentUserId);
-          if (currentUserCost) {
-            totalToPay += currentUserCost.total;
-          }
-        }
-
-        if (isHost) {
-          // As host, you collect from other participants
-          userCosts.forEach(userCost => {
-            if (userCost.userId !== currentUserId) {
-              totalToCollect += userCost.total;
-              
-              // Track individual friend balances
-              if (!friendBalancesMap[userCost.userId]) {
-                friendBalancesMap[userCost.userId] = {
-                  name: getUserName(userCost.userId),
-                  avatar: getUserAvatar(userCost.userId),
-                  amount: 0
-                };
-              }
-              friendBalancesMap[userCost.userId].amount += userCost.total; // They owe you
-            }
-          });
-        } else if (isParticipant) {
-          // As member, you owe the host
-          const hostId = bill.createdBy;
-          const currentUserCost = userCosts.find(uc => uc.userId === currentUserId);
-          
-          if (currentUserCost && hostId !== currentUserId) {
-            if (!friendBalancesMap[hostId]) {
-              friendBalancesMap[hostId] = {
-                name: getUserName(hostId),
-                avatar: getUserAvatar(hostId),
-                amount: 0
-              };
-            }
-            friendBalancesMap[hostId].amount -= currentUserCost.total; // You owe them
-          }
-        }
-      }
-    });
-
-    const netBalance = totalToCollect - totalToPay;
-
-    // Convert to sorted array
-    const sortedFriendBalances: FriendBalance[] = Object.entries(friendBalancesMap)
-      .map(([userId, data]) => ({
-        userId,
-        userName: data.name,
-        avatar: data.avatar,
-        netAmount: data.amount
-      }))
-      .sort((a, b) => Math.abs(b.netAmount) - Math.abs(a.netAmount)); // Sort by absolute amount, highest first
+    // Remove all usage of mockBills in this file. If you need to fetch bills, do so from the database instead.
 
     return {
       totalToPay,
       totalToCollect,
-      netBalance,
+      netBalance: totalToCollect - totalToPay,
       billsAsHostCount,
       billsAsMemberCount,
-      sortedFriendBalances
+      sortedFriendBalances: []
     };
   }, []);
 
