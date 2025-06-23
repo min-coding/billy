@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, X, EllipsisVertical, CreditCard as Edit3, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle, Camera } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, X, EllipsisVertical, UserPen, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle, Camera, MessageCircle } from 'lucide-react-native';
 import { Bill, BillItem, User, UserCost } from '@/types';
 import { formatCurrency, calculateUserCosts } from '@/utils/billUtils';
 
@@ -81,6 +81,13 @@ export default function BillDetailScreen() {
 
     // Calculate user costs
     setUserCosts(calculateUserCosts(bill));
+
+    // Initialize payment verifications
+    const initialVerifications: {[userId: string]: boolean} = {};
+    bill.participants.forEach(participant => {
+      initialVerifications[participant.id] = false;
+    });
+    setPaymentVerifications(initialVerifications);
   }, [bill, submittedSelections]);
 
   const getStatusColor = (status: string) => {
@@ -102,7 +109,10 @@ export default function BillDetailScreen() {
   };
 
   const toggleItemSelection = (itemId: string) => {
-    if (bill.status !== 'select') return;
+    if (bill.status !== 'select') {
+      Alert.alert('Selection Locked', 'Item selections cannot be changed after the bill has been finalized.');
+      return;
+    }
     
     setSelectedItems(prev => {
       const newSelection = prev.includes(itemId) 
@@ -206,6 +216,44 @@ export default function BillDetailScreen() {
     }
   };
 
+  const openPaymentChat = () => {
+    // Simulate opening a chat application
+    const message = `Hi! I've paid my share for "${bill.title}". Please verify my payment. Thanks!`;
+    const phoneNumber = ''; // In real app, this would be the host's phone number
+    
+    // For web, we'll just show an alert. On mobile, this would open SMS or WhatsApp
+    if (phoneNumber) {
+      const url = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+      Linking.openURL(url).catch(() => {
+        Alert.alert('Chat Unavailable', 'Please contact the host directly to verify your payment.');
+      });
+    } else {
+      Alert.alert(
+        'Payment Verification',
+        'Please contact the host to verify your payment:\n\n' + message,
+        [
+          { text: 'Copy Message', onPress: () => {
+            // In real app, copy to clipboard
+            Alert.alert('Message Copied', 'Message copied to clipboard');
+          }},
+          { text: 'OK' }
+        ]
+      );
+    }
+  };
+
+  const showItemParticipants = (item: BillItem) => {
+    const participantNames = item.selectedBy
+      .map(userId => bill.participants.find(p => p.id === userId)?.name || 'Unknown')
+      .join(', ');
+    
+    Alert.alert(
+      `${item.name}`,
+      `Selected by: ${participantNames || 'No one'}`,
+      [{ text: 'OK' }]
+    );
+  };
+
   const renderSelectStatus = () => (
     <>
       {/* Items Selection */}
@@ -257,14 +305,34 @@ export default function BillDetailScreen() {
         })}
 
         {/* Submit Button */}
-        <TouchableOpacity 
-          style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
-          onPress={submitSelections}
-          disabled={selectedItems.length === 0}
-        >
-          <Check size={18} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.submitButtonText}>Submit Your Selections</Text>
-        </TouchableOpacity>
+        {!submittedSelections.includes(currentUserId) && (
+          <TouchableOpacity 
+            style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
+            onPress={submitSelections}
+            disabled={selectedItems.length === 0}
+          >
+            <Check size={18} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.submitButtonText}>Submit Your Selections</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Finalize Button for Host */}
+        {isHost && (
+          <TouchableOpacity 
+            style={[styles.finalizeButton, !canFinalizeBill && styles.disabledButton]}
+            onPress={finalizeBill}
+            disabled={!canFinalizeBill}
+          >
+            <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
+          </TouchableOpacity>
+        )}
+        
+        {isHost && !allMembersSubmitted && (
+          <Text style={styles.finalizeSubtext}>
+            Waiting for all members to submit their selections
+          </Text>
+        )}
       </View>
 
       {/* Selection Progress */}
@@ -340,19 +408,6 @@ export default function BillDetailScreen() {
           </View>
         </TouchableOpacity>
       </View>
-
-      {/* Finalize Button for Host */}
-      {canFinalizeBill && (
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.finalizeButton} onPress={finalizeBill}>
-            <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
-          </TouchableOpacity>
-          <Text style={styles.finalizeSubtext}>
-            All members have submitted their selections. You can now finalize the bill.
-          </Text>
-        </View>
-      )}
     </>
   );
 
@@ -392,6 +447,12 @@ export default function BillDetailScreen() {
                       <Text style={styles.verifiedBadgeText}>Verified</Text>
                     </View>
                   )}
+                  {!isVerified && !isHost && !isCurrentUser && (
+                    <View style={styles.unpaidBadge}>
+                      <Clock size={12} color="#F59E0B" strokeWidth={2} />
+                      <Text style={styles.unpaidBadgeText}>Unpaid</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               
@@ -405,6 +466,63 @@ export default function BillDetailScreen() {
             </View>
           );
         })}
+      </View>
+
+      {/* Items Display (Read-only) */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Selected Items</Text>
+        <Text style={styles.sectionSubtitle}>
+          Tap on an item to see who selected it
+        </Text>
+        
+        {bill.items.map((item) => {
+          const itemTotal = item.price * item.quantity;
+          const splitCount = item.selectedBy.length;
+          const splitAmount = splitCount > 0 ? itemTotal / splitCount : itemTotal;
+          
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.readOnlyItemCard}
+              onPress={() => showItemParticipants(item)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.itemContent}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemPrice}>
+                    {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
+                  </Text>
+                  {splitCount > 1 && (
+                    <Text style={styles.splitInfo}>
+                      Split {splitCount} ways: {formatCurrency(splitAmount)} each
+                    </Text>
+                  )}
+                  {item.selectedBy.length > 0 && (
+                    <Text style={styles.selectedByInfo}>
+                      Selected by: {item.selectedBy.map(id => 
+                        bill.participants.find(p => p.id === id)?.name || 'Unknown'
+                      ).join(', ')}
+                    </Text>
+                  )}
+                </View>
+                
+                <View style={styles.infoIcon}>
+                  <Users size={16} color="#64748B" strokeWidth={2} />
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Payment Verification Button */}
+        <TouchableOpacity 
+          style={styles.chatButton}
+          onPress={openPaymentChat}
+        >
+          <MessageCircle size={18} color="#FFFFFF" strokeWidth={2} />
+          <Text style={styles.chatButtonText}>Verify your payment via chat</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Bank Details */}
@@ -548,7 +666,7 @@ export default function BillDetailScreen() {
         >
           <View style={styles.hostMenu}>
             <TouchableOpacity style={styles.hostMenuItem} onPress={editBill}>
-              <Edit3 size={18} color="#3B82F6" strokeWidth={2} />
+              <UserPen size={18} color="#3B82F6" strokeWidth={2} />
               <Text style={styles.hostMenuText}>Edit Bill</Text>
             </TouchableOpacity>
             
@@ -786,6 +904,15 @@ const styles = StyleSheet.create({
     borderColor: '#3B82F6',
     backgroundColor: '#1E293B',
   },
+  readOnlyItemCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    opacity: 0.8,
+  },
   itemContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -832,6 +959,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
+  infoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   submitButton: {
     backgroundColor: '#3B82F6',
     flexDirection: 'row',
@@ -841,6 +976,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     marginTop: 8,
+    marginBottom: 16,
   },
   disabledButton: {
     backgroundColor: '#475569',
@@ -850,6 +986,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  finalizeButton: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#10B981',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  finalizeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  finalizeSubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '500',
   },
   progressContainer: {
     backgroundColor: '#0F172A',
@@ -945,36 +1111,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F8FAFC',
   },
-  finalizeButton: {
-    backgroundColor: '#10B981',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 12,
-    gap: 8,
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  finalizeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  finalizeSubtext: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: 12,
-    fontWeight: '500',
-  },
   paymentCard: {
     backgroundColor: '#0F172A',
     borderRadius: 12,
@@ -1044,6 +1180,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  unpaidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    gap: 4,
+  },
+  unpaidBadgeText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   paymentItems: {
     gap: 4,
   },
@@ -1051,6 +1203,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500',
+  },
+  chatButton: {
+    backgroundColor: '#8B5CF6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   bankDetailsCard: {
     backgroundColor: '#0F172A',
