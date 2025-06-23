@@ -373,9 +373,9 @@ export default function CreateBillScreen() {
                 placeholderTextColor="#64748B"
               />
             </View>
-            {dueDate && !validateDueDate(dueDate) && (
+            {dueDate && !validateDueDate(dueDate)? (
               <Text style={styles.errorText}>Due date must be today or in the future</Text>
-            )}
+            ):null}
           </View>
         </View>
 
