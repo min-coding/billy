@@ -116,18 +116,57 @@ export default function BillDetailScreen() {
   const editBill = () => {
     Alert.alert(
       'Edit Bill',
-      'This feature will allow you to modify bill details, items, and participants.',
+      'Editing the bill will reset all member selections and submissions. All participants will need to reselect their items. Do you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Edit',
+          text: 'Continue',
+          style: 'destructive',
           onPress: () => {
-            // In a real app, this would navigate to edit screen
-            Alert.alert('Coming Soon', 'Bill editing functionality will be available soon.');
+            // Reset all selections and submissions
+            resetBillSelections();
+            
+            // Navigate to edit screen (placeholder for now)
+            Alert.alert(
+              'Bill Reset Complete',
+              'All member selections have been cleared. You can now edit the bill details. All participants will be notified to reselect their items.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // In a real app, this would navigate to edit screen
+                    // router.push(`/bill/${bill.id}/edit`);
+                    Alert.alert('Coming Soon', 'Bill editing functionality will be available soon.');
+                  }
+                }
+              ]
+            );
           }
         }
       ]
     );
+  };
+
+  const resetBillSelections = () => {
+    // Clear all item selections for all participants
+    if (bill) {
+      bill.items.forEach(item => {
+        item.selectedBy = [];
+      });
+    }
+    
+    // Reset current user's local state
+    setSelectedItems([]);
+    setHasSubmitted(false);
+    
+    // In a real app, this would:
+    // 1. Send API request to clear all selections in database
+    // 2. Send notifications to all participants about the reset
+    // 3. Update bill status if needed
+    // 4. Clear any cached submission data
+    
+    console.log('Bill selections reset for bill:', bill?.id);
+    console.log('All participants will need to reselect items');
   };
 
   const deleteBill = () => {
@@ -264,6 +303,22 @@ export default function BillDetailScreen() {
             <Text style={styles.description}>{bill.description}</Text>
           )}
         </View>
+
+        {/* Reset Warning - Show when host has made changes */}
+        {isHost && bill.status === 'select' && (
+          <View style={styles.section}>
+            <View style={styles.warningCard}>
+              <View style={styles.warningHeader}>
+                <Bell size={16} color="#F59E0B" strokeWidth={2} />
+                <Text style={styles.warningTitle}>Edit Bill Impact</Text>
+              </View>
+              <Text style={styles.warningText}>
+                Editing bill details will reset all member selections and submissions. 
+                All participants will need to reselect their items after you make changes.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Items Section */}
         <View style={styles.section}>
@@ -522,6 +577,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#94A3B8',
     lineHeight: 24,
+    fontWeight: '500',
+  },
+  warningCard: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400E',
+    letterSpacing: -0.2,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#92400E',
+    lineHeight: 20,
     fontWeight: '500',
   },
   sectionTitle: {
