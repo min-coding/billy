@@ -40,7 +40,7 @@ const mockBill: Bill = {
 const currentUserId = 'user1'; // Mock current user ID
 
 // Mock submitted selections - in real app, this would come from API
-const mockSubmittedSelections = ['user1', 'user2']; // user3 and user4 haven't submitted yet
+const mockSubmittedSelections = ['user2']; // Only user2 has submitted, user1 and others haven't
 
 // Mock user avatars - in real app, these would come from user profiles
 const userAvatars: {[key: string]: string} = {
@@ -144,8 +144,17 @@ export default function BillDetailScreen() {
       return;
     }
 
-    Alert.alert('Success', 'Your selections have been submitted!');
-    setSubmittedSelections(prev => [...prev, currentUserId]);
+    const isUpdate = hasCurrentUserSubmitted;
+    const message = isUpdate 
+      ? 'Your selections have been updated!' 
+      : 'Your selections have been submitted!';
+    
+    Alert.alert('Success', message);
+    
+    // Add current user to submitted list if not already there
+    if (!hasCurrentUserSubmitted) {
+      setSubmittedSelections(prev => [...prev, currentUserId]);
+    }
   };
 
   const finalizeBill = () => {
@@ -268,7 +277,7 @@ export default function BillDetailScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Select Your Items</Text>
         <Text style={styles.sectionSubtitle}>
-          Choose which items you want to split the cost for
+          Choose which items you want to split the cost for. You can change your selections until the host finalizes the bill.
         </Text>
         
         {bill.items.map((item) => {
@@ -314,40 +323,57 @@ export default function BillDetailScreen() {
 
         {/* Action Buttons Container */}
         <View style={styles.actionButtonsContainer}>
-          {/* Submit Button - Only show for members who haven't submitted */}
-          {!hasCurrentUserSubmitted && (
-            <TouchableOpacity 
-              style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
-              onPress={submitSelections}
-              disabled={selectedItems.length === 0}
-            >
-              <Check size={18} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.submitButtonText}>Submit Your Selections</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Finalize Button - Always show for host, but disable if not all members submitted */}
-          {isHost && (
-            <TouchableOpacity 
-              style={[
-                styles.finalizeButton, 
-                !allMembersSubmitted && styles.disabledFinalizeButton
-              ]}
-              onPress={finalizeBill}
-              disabled={!allMembersSubmitted}
-            >
-              <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Status Messages */}
-          {isHost && !allMembersSubmitted && (
-            <Text style={styles.statusMessage}>
-              Waiting for all members to submit their selections
+          {/* Submit/Update Button - Always show for current user */}
+          <TouchableOpacity 
+            style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
+            onPress={submitSelections}
+            disabled={selectedItems.length === 0}
+          >
+            <Check size={18} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.submitButtonText}>
+              {hasCurrentUserSubmitted ? 'Update Your Selections' : 'Submit Your Selections'}
             </Text>
+          </TouchableOpacity>
+
+          {/* Status indicator for current user */}
+          {hasCurrentUserSubmitted && (
+            <View style={styles.submissionStatusContainer}>
+              <Check size={16} color="#10B981" strokeWidth={2} />
+              <Text style={styles.submissionStatusText}>
+                You have submitted your selections. You can still make changes until the host finalizes the bill.
+              </Text>
+            </View>
           )}
 
+          {/* Finalize Button - Only show for host */}
+          {isHost && (
+            <>
+              <TouchableOpacity 
+                style={[
+                  styles.finalizeButton, 
+                  !allMembersSubmitted && styles.disabledFinalizeButton
+                ]}
+                onPress={finalizeBill}
+                disabled={!allMembersSubmitted}
+              >
+                <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
+                <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
+              </TouchableOpacity>
+
+              {/* Status Messages for host */}
+              {!allMembersSubmitted && (
+                <Text style={styles.statusMessage}>
+                  Waiting for all members to submit their selections ({submittedUsers.length}/{bill.participants.length} submitted)
+                </Text>
+              )}
+
+              {allMembersSubmitted && (
+                <Text style={styles.readyToFinalizeMessage}>
+                  ✅ All members have submitted! You can now finalize the bill.
+                </Text>
+              )}
+            </>
+          )}
         </View>
       </View>
 
@@ -1016,6 +1042,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
+  submissionStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    gap: 8,
+  },
+  submissionStatusText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '500',
+    lineHeight: 18,
+  },
   finalizeButton: {
     backgroundColor: '#10B981',
     flexDirection: 'row',
@@ -1050,6 +1094,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
     fontStyle: 'italic',
+  },
+  readyToFinalizeMessage: {
+    fontSize: 14,
+    color: '#10B981',
+    textAlign: 'center',
+    fontWeight: '600',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
   },
   progressContainer: {
     backgroundColor: '#0F172A',
