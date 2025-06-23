@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthUser, AuthState, LoginCredentials, SignupCredentials } from '@/types/auth';
+import { storage } from '@/utils/storage';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -44,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthState = async () => {
     try {
-      // In a real app, this would check for stored tokens/session
-      const storedUser = localStorage.getItem('auth_user');
+      // Check for stored user session using cross-platform storage
+      const storedUser = await storage.getItem('auth_user');
       if (storedUser) {
         const user = JSON.parse(storedUser);
         setAuthState({
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
+      console.error('Auth state check error:', error);
       setAuthState({
         user: null,
         isLoading: false,
@@ -94,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: mockUser.createdAt,
       };
 
-      // Store user session
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      // Store user session using cross-platform storage
+      await storage.setItem('auth_user', JSON.stringify(user));
 
       setAuthState({
         user,
@@ -138,8 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: new Date(),
       };
 
-      // Store user session
-      localStorage.setItem('auth_user', JSON.stringify(newUser));
+      // Store user session using cross-platform storage
+      await storage.setItem('auth_user', JSON.stringify(newUser));
 
       setAuthState({
         user: newUser,
@@ -159,8 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Clear stored session
-      localStorage.removeItem('auth_user');
+      // Clear stored session using cross-platform storage
+      await storage.removeItem('auth_user');
 
       setAuthState({
         user: null,
@@ -168,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: false,
       });
     } catch (error) {
+      console.error('Logout error:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
@@ -184,8 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const updatedUser = { ...authState.user, ...updates };
 
-      // Update stored session
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      // Update stored session using cross-platform storage
+      await storage.setItem('auth_user', JSON.stringify(updatedUser));
 
       setAuthState({
         user: updatedUser,
@@ -193,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
       });
     } catch (error) {
+      console.error('Profile update error:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
