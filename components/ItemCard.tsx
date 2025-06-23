@@ -9,11 +9,37 @@ interface ItemCardProps {
   isSelected: boolean;
   onToggle: () => void;
   participantCount: number;
+  editable?: boolean;
 }
 
-export default function ItemCard({ item, isSelected, onToggle, participantCount }: ItemCardProps) {
+export default function ItemCard({ item, isSelected, onToggle, participantCount, editable = true }: ItemCardProps) {
   const itemTotal = item.price * item.quantity;
   const splitPrice = participantCount > 0 ? itemTotal / participantCount : itemTotal;
+
+  if (!editable) {
+    return (
+      <View style={[styles.card, isSelected && styles.selectedCard, styles.disabledCard]}>
+        <View style={styles.content}>
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.itemPrice}>
+                {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
+              </Text>
+            </View>
+            {item.selectedBy.length > 1 && (
+              <Text style={styles.splitInfo}>
+                Split {item.selectedBy.length} ways: {formatCurrency(splitPrice)}
+              </Text>
+            )}
+          </View>
+          <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
+            {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <TouchableOpacity 
@@ -35,7 +61,6 @@ export default function ItemCard({ item, isSelected, onToggle, participantCount 
             </Text>
           )}
         </View>
-        
         <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
           {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
         </View>
@@ -64,6 +89,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  disabledCard: {
+    opacity: 0.5,
+    borderColor: '#475569',
+  },
+  disabledText: {
+    color: '#94A3B8',
+  },
+  disabledCheckbox: {
+    borderColor: '#94A3B8',
+    backgroundColor: '#1E293B',
   },
   content: {
     flexDirection: 'row',

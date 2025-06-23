@@ -330,6 +330,7 @@ export default function BillDetailScreen() {
               isSelected={selectedItems.includes(item.id)}
               onToggle={() => toggleItemSelection(item.id)}
               participantCount={item.selectedBy.length}
+              editable={bill.status === 'select'}
             />
           ))}
         </View>
