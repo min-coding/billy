@@ -64,6 +64,9 @@ export default function BillDetailScreen() {
   const isHost = bill.createdBy === currentUserId;
   const currentUser = bill.participants.find(p => p.id === currentUserId);
 
+  // Check if current user has submitted their selections
+  const hasCurrentUserSubmitted = submittedSelections.includes(currentUserId);
+
   // Check if all members have submitted their selections
   const allMembersSubmitted = bill.participants.every(p => submittedSelections.includes(p.id));
   const canFinalizeBill = isHost && allMembersSubmitted && bill.status === 'select';
@@ -304,37 +307,44 @@ export default function BillDetailScreen() {
           );
         })}
 
-        {/* Submit Button - Only show for members who haven't submitted */}
-        {!submittedSelections.includes(currentUserId) && (
-          <TouchableOpacity 
-            style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
-            onPress={submitSelections}
-            disabled={selectedItems.length === 0}
-          >
-            <Check size={18} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.submitButtonText}>Submit Your Selections</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Finalize Button - Only show for host */}
-        {isHost && (
-          <>
+        {/* Action Buttons Container */}
+        <View style={styles.actionButtonsContainer}>
+          {/* Submit Button - Only show for members who haven't submitted */}
+          {!hasCurrentUserSubmitted && (
             <TouchableOpacity 
-              style={[styles.finalizeButton, !canFinalizeBill && styles.disabledButton]}
+              style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
+              onPress={submitSelections}
+              disabled={selectedItems.length === 0}
+            >
+              <Check size={18} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.submitButtonText}>Submit Your Selections</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Finalize Button - Only show for host when all members have submitted */}
+          {isHost && canFinalizeBill && (
+            <TouchableOpacity 
+              style={styles.finalizeButton}
               onPress={finalizeBill}
-              disabled={!canFinalizeBill}
             >
               <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
               <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
             </TouchableOpacity>
-            
-            {!allMembersSubmitted && (
-              <Text style={styles.finalizeSubtext}>
-                Waiting for all members to submit their selections
-              </Text>
-            )}
-          </>
-        )}
+          )}
+
+          {/* Status Messages */}
+          {isHost && !allMembersSubmitted && (
+            <Text style={styles.statusMessage}>
+              Waiting for all members to submit their selections
+            </Text>
+          )}
+
+          {hasCurrentUserSubmitted && !isHost && (
+            <Text style={styles.statusMessage}>
+              Your selections have been submitted. Waiting for host to finalize the bill.
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* Selection Progress */}
@@ -969,6 +979,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // New Action Buttons Container
+  actionButtonsContainer: {
+    marginTop: 20,
+    gap: 16,
+  },
   submitButton: {
     backgroundColor: '#3B82F6',
     flexDirection: 'row',
@@ -977,11 +992,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
-    marginTop: 8,
-    marginBottom: 16,
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   disabledButton: {
     backgroundColor: '#475569',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitButtonText: {
     color: '#FFFFFF',
@@ -1012,12 +1035,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  finalizeSubtext: {
+  statusMessage: {
     fontSize: 14,
     color: '#94A3B8',
     textAlign: 'center',
-    marginTop: 12,
     fontWeight: '500',
+    fontStyle: 'italic',
   },
   progressContainer: {
     backgroundColor: '#0F172A',
