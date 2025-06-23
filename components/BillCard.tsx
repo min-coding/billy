@@ -1,12 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Users, Calendar, DollarSign, User, Tag } from 'lucide-react-native';
-import { Bill } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
 import { useRouter } from 'expo-router';
 
 interface BillCardProps {
-  bill: Bill;
+  bill: {
+    id: string;
+    title: string;
+    description?: string;
+    total_amount: number;
+    created_by: string;
+    status: 'select' | 'pay' | 'closed';
+    due_date?: string;
+    tag?: string;
+    created_at: string;
+    participants: Array<{
+      id: string;
+      name: string;
+      email: string;
+    }>;
+  };
   onPress?: () => void;
 }
 
@@ -32,7 +46,7 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
   };
 
   // Get host name from participants
-  const hostName = bill.participants.find(p => p.id === bill.createdBy)?.name || 'Unknown Host';
+  const hostName = bill.participants.find(p => p.id === bill.created_by)?.name || 'Unknown Host';
 
   const handlePress = () => {
     if (onPress) {
@@ -72,15 +86,15 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
         
         <View style={styles.infoRow}>
           <DollarSign size={14} color="#10B981" strokeWidth={2} />
-          <Text style={styles.infoText}>{formatCurrency(bill.totalAmount)}</Text>
+          <Text style={styles.infoText}>{formatCurrency(bill.total_amount)}</Text>
         </View>
         
         <View style={styles.infoRow}>
           <Calendar size={14} color="#64748B" strokeWidth={2} />
           <Text style={styles.infoText}>
-            {bill.dueDate 
-              ? new Date(bill.dueDate).toLocaleDateString()
-              : new Date(bill.createdAt).toLocaleDateString()
+            {bill.due_date 
+              ? new Date(bill.due_date).toLocaleDateString()
+              : new Date(bill.created_at).toLocaleDateString()
             }
           </Text>
         </View>

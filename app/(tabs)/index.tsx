@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import BillCard from '@/components/BillCard';
-import { Bill } from '@/types';
-import { mockBills } from '@/data/mockBills';
-
-const currentUserId = 'user1'; // Mock current user ID
+import { useBills } from '@/hooks/useBills';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
 type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
@@ -20,7 +18,8 @@ interface DateRange {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [bills] = useState<Bill[]>(mockBills);
+  const { user } = useAuth();
+  const { bills, loading, error } = useBills();
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,9 +52,9 @@ export default function HomeScreen() {
     if (roleFilter !== 'all') {
       filtered = filtered.filter(bill => {
         if (roleFilter === 'host') {
-          return bill.createdBy === currentUserId;
+          return bill.created_by === user?.id;
         } else {
-          return bill.createdBy !== currentUserId;
+          return bill.created_by !== user?.id;
         }
       });
     }
@@ -65,8 +64,8 @@ export default function HomeScreen() {
       const startDate = new Date(dateRange.start);
       const endDate = new Date(dateRange.end);
       filtered = filtered.filter(bill => {
-        if (!bill.dueDate) return false;
-        const dueDate = new Date(bill.dueDate);
+        if (!bill.due_date) return false;
+        const dueDate = new Date(bill.due_date);
         return dueDate >= startDate && dueDate <= endDate;
       });
     }
@@ -75,25 +74,25 @@ export default function HomeScreen() {
     const sorted = [...filtered].sort((a, b) => {
       switch (sortOption) {
         case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         case 'amount_high':
-          return b.totalAmount - a.totalAmount;
+          return b.total_amount - a.total_amount;
         case 'amount_low':
-          return a.totalAmount - b.totalAmount;
+          return a.total_amount - b.total_amount;
         case 'due_date':
-          if (!a.dueDate && !b.dueDate) return 0;
-          if (!a.dueDate) return 1;
-          if (!b.dueDate) return -1;
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          if (!a.due_date && !b.due_date) return 0;
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
         default:
           return 0;
       }
     });
 
     return sorted;
-  }, [bills, searchQuery, statusFilter, roleFilter, sortOption, dateRange]);
+  }, [bills, searchQuery, statusFilter, roleFilter, sortOption, dateRange, user?.id]);
 
   const handleCreateBill = () => {
     router.push('/(tabs)/create');
@@ -137,6 +136,30 @@ export default function HomeScreen() {
       default: return 'Newest First';
     }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Loading bills...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => window.location.reload()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -407,6 +430,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0F172A',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  retryButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     backgroundColor: '#0F172A',

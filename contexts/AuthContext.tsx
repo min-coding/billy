@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthUser, AuthState, LoginCredentials, SignupCredentials } from '@/types/auth';
-import { storage } from '@/utils/storage';
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -11,26 +12,6 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for demo
-const mockUsers = [
-  {
-    id: 'user1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    password: 'password123',
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    createdAt: new Date('2024-01-01'),
-  },
-  {
-    id: 'user2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    password: 'password123',
-    avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    createdAt: new Date('2024-01-02'),
-  },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -38,17 +19,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
   });
 
-  // Check for existing session on app start
   useEffect(() => {
-    checkAuthState();
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthStateChange(session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuthStateChange(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const checkAuthState = async () => {
+  const handleAuthStateChange = async (session: Session | null) => {
     try {
-      // Check for stored user session using cross-platform storage
-      const storedUser = await storage.getItem('auth_user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      if (session?.user) {
+        // Get user profile from database
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          setAuthState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+          });
+          return;
+        }
+
+        const user: AuthUser = {
+          id: userProfile.id,
+          name: userProfile.name,
+          email: userProfile.email,
+          avatar: userProfile.avatar,
+          createdAt: new Date(userProfile.created_at),
+        };
+
         setAuthState({
           user,
           isLoading: false,
@@ -62,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('Auth state check error:', error);
+      console.error('Auth state change error:', error);
       setAuthState({
         user: null,
         isLoading: false,
@@ -75,35 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
 
-      // Find user in mock data
-      const mockUser = mockUsers.find(
-        u => u.email.toLowerCase() === credentials.email.toLowerCase() && 
-             u.password === credentials.password
-      );
-
-      if (!mockUser) {
-        throw new Error('Invalid email or password');
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const user: AuthUser = {
-        id: mockUser.id,
-        name: mockUser.name,
-        email: mockUser.email,
-        avatar: mockUser.avatar,
-        createdAt: mockUser.createdAt,
-      };
-
-      // Store user session using cross-platform storage
-      await storage.setItem('auth_user', JSON.stringify(user));
-
-      setAuthState({
-        user,
-        isLoading: false,
-        isAuthenticated: true,
-      });
+      // Auth state will be updated by the listener
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
@@ -119,35 +112,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Passwords do not match');
       }
 
-      // Check if email already exists
-      const existingUser = mockUsers.find(
-        u => u.email.toLowerCase() === credentials.email.toLowerCase()
-      );
+      // Sign up with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
+      });
 
-      if (existingUser) {
-        throw new Error('An account with this email already exists');
+      if (error) {
+        throw new Error(error.message);
       }
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!data.user) {
+        throw new Error('Failed to create user account');
+      }
 
-      // Create new user
-      const newUser: AuthUser = {
-        id: `user_${Date.now()}`,
-        name: credentials.name,
-        email: credentials.email,
-        avatar: `https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`,
-        createdAt: new Date(),
-      };
+      // Create user profile in database
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          name: credentials.name,
+          email: credentials.email,
+          avatar: `https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`,
+        });
 
-      // Store user session using cross-platform storage
-      await storage.setItem('auth_user', JSON.stringify(newUser));
+      if (profileError) {
+        throw new Error('Failed to create user profile');
+      }
 
-      setAuthState({
-        user: newUser,
-        isLoading: false,
-        isAuthenticated: true,
-      });
+      // Auth state will be updated by the listener
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
@@ -158,17 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      // Clear stored session using cross-platform storage
-      await storage.removeItem('auth_user');
-
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
+      // Auth state will be updated by the listener
     } catch (error) {
       console.error('Logout error:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -182,14 +171,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: updates.name,
+          email: updates.email,
+          avatar: updates.avatar,
+        })
+        .eq('id', authState.user.id);
 
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Update local state
       const updatedUser = { ...authState.user, ...updates };
-
-      // Update stored session using cross-platform storage
-      await storage.setItem('auth_user', JSON.stringify(updatedUser));
-
       setAuthState({
         user: updatedUser,
         isLoading: false,

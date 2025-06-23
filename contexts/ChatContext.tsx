@@ -1,6 +1,29 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ChatMessage, ChatState } from '@/types/chat';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
+import type { Database } from '@/types/database';
+
+type ChatMessage = {
+  id: string;
+  billId: string;
+  senderId: string | null;
+  senderName: string;
+  senderAvatar?: string;
+  type: 'text' | 'image' | 'payment_slip' | 'system';
+  content: string;
+  imageUrl?: string;
+  isPaymentSlip: boolean;
+  paymentAmount?: number;
+  paymentStatus?: 'pending' | 'verified' | 'rejected';
+  timestamp: Date;
+  readBy: string[];
+};
+
+interface ChatState {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  error?: string;
+}
 
 interface ChatContextType extends ChatState {
   sendMessage: (billId: string, content: string, type?: 'text' | 'image' | 'payment_slip', imageUrl?: string, paymentAmount?: number) => Promise<void>;
@@ -12,53 +35,64 @@ interface ChatContextType extends ChatState {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Mock chat data
-const mockMessages: ChatMessage[] = [
-  {
-    id: 'msg1',
-    billId: '1',
-    senderId: 'user1',
-    senderName: 'John Doe',
-    senderAvatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    type: 'system',
-    content: 'Bill created and shared with participants',
-    timestamp: new Date('2024-01-15T10:00:00'),
-    readBy: ['user1', 'user2', 'user3'],
-  },
-  {
-    id: 'msg2',
-    billId: '1',
-    senderId: 'user2',
-    senderName: 'Jane Smith',
-    senderAvatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    type: 'text',
-    content: 'Thanks for organizing this! I\'ll send my payment shortly.',
-    timestamp: new Date('2024-01-15T14:30:00'),
-    readBy: ['user1', 'user2'],
-  },
-  {
-    id: 'msg3',
-    billId: '1',
-    senderId: 'user2',
-    senderName: 'Jane Smith',
-    senderAvatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    type: 'payment_slip',
-    content: 'Payment sent! Here\'s my payment confirmation.',
-    imageUrl: 'https://images.pexels.com/photos/4386431/pexels-photo-4386431.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&dpr=2',
-    isPaymentSlip: true,
-    paymentAmount: 25.50,
-    paymentStatus: 'pending',
-    timestamp: new Date('2024-01-15T16:45:00'),
-    readBy: ['user2'],
-  },
-];
-
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [chatState, setChatState] = useState<ChatState>({
-    messages: mockMessages,
+    messages: [],
     isLoading: false,
   });
+
+  const fetchMessages = async (billId: string) => {
+    if (!user) return [];
+
+    try {
+      // Fetch messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('chat_messages')
+        .select(`
+          *,
+          users(name, avatar)
+        `)
+        .eq('bill_id', billId)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      // Fetch read status for each message
+      const messageIds = messagesData.map(m => m.id);
+      const { data: readsData } = await supabase
+        .from('message_reads')
+        .select('message_id, user_id')
+        .in('message_id', messageIds);
+
+      const readsByMessage = readsData?.reduce((acc, read) => {
+        if (!acc[read.message_id]) acc[read.message_id] = [];
+        acc[read.message_id].push(read.user_id);
+        return acc;
+      }, {} as Record<string, string[]>) || {};
+
+      const messages: ChatMessage[] = messagesData.map(msg => ({
+        id: msg.id,
+        billId: msg.bill_id,
+        senderId: msg.sender_id,
+        senderName: msg.users?.name || 'System',
+        senderAvatar: msg.users?.avatar,
+        type: msg.type,
+        content: msg.content,
+        imageUrl: msg.image_url,
+        isPaymentSlip: msg.is_payment_slip,
+        paymentAmount: msg.payment_amount,
+        paymentStatus: msg.payment_status,
+        timestamp: new Date(msg.created_at),
+        readBy: readsByMessage[msg.id] || [],
+      }));
+
+      return messages;
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      return [];
+    }
+  };
 
   const sendMessage = async (
     billId: string, 
@@ -72,28 +106,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setChatState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const { error } = await supabase
+        .from('chat_messages')
+        .insert({
+          bill_id: billId,
+          sender_id: user.id,
+          type,
+          content,
+          image_url: imageUrl,
+          is_payment_slip: type === 'payment_slip',
+          payment_amount: paymentAmount,
+          payment_status: type === 'payment_slip' ? 'pending' : null,
+        });
 
-      const newMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        billId,
-        senderId: user.id,
-        senderName: user.name,
-        senderAvatar: user.avatar,
-        type,
-        content,
-        imageUrl,
-        isPaymentSlip: type === 'payment_slip',
-        paymentAmount,
-        paymentStatus: type === 'payment_slip' ? 'pending' : undefined,
-        timestamp: new Date(),
-        readBy: [user.id],
-      };
+      if (error) throw error;
 
+      // Refresh messages for this bill
+      const updatedMessages = await fetchMessages(billId);
       setChatState(prev => ({
         ...prev,
-        messages: [...prev.messages, newMessage],
+        messages: prev.messages.filter(m => m.billId !== billId).concat(updatedMessages),
         isLoading: false,
       }));
     } catch (error) {
@@ -102,29 +134,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         error: 'Failed to send message'
       }));
+      throw error;
     }
   };
 
   const markAsRead = async (messageId: string) => {
     if (!user) return;
 
-    setChatState(prev => ({
-      ...prev,
-      messages: prev.messages.map(msg => 
-        msg.id === messageId && !msg.readBy.includes(user.id)
-          ? { ...msg, readBy: [...msg.readBy, user.id] }
-          : msg
-      ),
-    }));
+    try {
+      const { error } = await supabase
+        .from('message_reads')
+        .upsert({
+          message_id: messageId,
+          user_id: user.id,
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setChatState(prev => ({
+        ...prev,
+        messages: prev.messages.map(msg => 
+          msg.id === messageId && !msg.readBy.includes(user.id)
+            ? { ...msg, readBy: [...msg.readBy, user.id] }
+            : msg
+        ),
+      }));
+    } catch (err) {
+      console.error('Error marking message as read:', err);
+    }
   };
 
   const verifyPayment = async (messageId: string, status: 'verified' | 'rejected') => {
     setChatState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ payment_status: status })
+        .eq('id', messageId);
 
+      if (error) throw error;
+
+      // Update local state
       setChatState(prev => ({
         ...prev,
         messages: prev.messages.map(msg => 
@@ -140,6 +192,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         error: 'Failed to update payment status'
       }));
+      throw error;
     }
   };
 
@@ -156,6 +209,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       .filter(msg => msg.billId === billId && !msg.readBy.includes(user.id))
       .length;
   };
+
+  // Load messages for bills when user changes
+  useEffect(() => {
+    if (user) {
+      // This will be called when bills are loaded to fetch their messages
+      setChatState({ messages: [], isLoading: false });
+    }
+  }, [user]);
 
   return (
     <ChatContext.Provider
