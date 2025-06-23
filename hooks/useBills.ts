@@ -37,22 +37,40 @@ export function useBills() {
       setLoading(true);
       setError(null);
 
-      // Fetch bills where user is creator or participant
-      const { data: billsData, error: billsError } = await supabase
+      // Fetch bills created by the user
+      const { data: createdBills, error: createdBillsError } = await supabase
+        .from('bills')
+        .select(`
+          *,
+          users!bills_created_by_fkey(id, name, email, avatar)
+        `)
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (createdBillsError) throw createdBillsError;
+
+      // Fetch bills where user is a participant
+      const { data: participantBills, error: participantBillsError } = await supabase
         .from('bills')
         .select(`
           *,
           bill_participants!inner(user_id),
           users!bills_created_by_fkey(id, name, email, avatar)
         `)
-        .or(`created_by.eq.${user.id},bill_participants.user_id.eq.${user.id}`)
+        .eq('bill_participants.user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (billsError) throw billsError;
+      if (participantBillsError) throw participantBillsError;
+
+      // Combine and deduplicate bills
+      const allBills = [...(createdBills || []), ...(participantBills || [])];
+      const uniqueBills = allBills.filter((bill, index, self) => 
+        index === self.findIndex(b => b.id === bill.id)
+      );
 
       // Fetch detailed data for each bill
       const billsWithDetails = await Promise.all(
-        billsData.map(async (bill) => {
+        uniqueBills.map(async (bill) => {
           // Fetch participants
           const { data: participantsData } = await supabase
             .from('bill_participants')
@@ -90,6 +108,11 @@ export function useBills() {
             },
           };
         })
+      );
+
+      // Sort by created_at descending
+      billsWithDetails.sort((a, b) => 
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       );
 
       setBills(billsWithDetails);
