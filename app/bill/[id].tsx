@@ -5,37 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Users, Calendar, DollarSign, Check, X, EllipsisVertical, UserPen, Trash2, CreditCard, Building2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle, Camera, MessageCircle } from 'lucide-react-native';
 import { Bill, BillItem, User, UserCost } from '@/types';
 import { formatCurrency, calculateUserCosts } from '@/utils/billUtils';
-
-// Mock data - in real app, this would come from API/database
-const mockBill: Bill = {
-  id: '1',
-  title: 'Dinner at Tony\'s',
-  description: 'Italian restaurant with the team',
-  totalAmount: 120.00,
-  bankAccountNumber: '1234567890',
-  createdBy: 'user1',
-  createdAt: new Date('2024-01-15'),
-  participants: [
-    { id: 'user1', name: 'John Doe', email: 'john@example.com' },
-    { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
-    { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com' },
-    { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com' },
-  ],
-  items: [
-    { id: 'item1', name: 'Margherita Pizza', price: 18.99, quantity: 1, selectedBy: ['user1', 'user2'] },
-    { id: 'item2', name: 'Caesar Salad', price: 12.50, quantity: 2, selectedBy: ['user2'] },
-    { id: 'item3', name: 'Pasta Carbonara', price: 16.75, quantity: 1, selectedBy: ['user3'] },
-    { id: 'item4', name: 'Tiramisu', price: 8.99, quantity: 3, selectedBy: ['user1', 'user2', 'user3'] },
-  ],
-  bankDetails: {
-    bankName: 'Chase Bank',
-    accountName: 'John Doe',
-    accountNumber: '1234567890'
-  },
-  status: 'select',
-  total: 83.22,
-  tag: 'Food & Dining',
-};
+import { mockBills } from '../mockBills';
 
 const currentUserId = 'user1'; // Mock current user ID
 
@@ -53,41 +23,41 @@ const userAvatars: {[key: string]: string} = {
 export default function BillDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [bill, setBill] = useState<Bill>(mockBill);
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const foundBill = mockBills.find(b => b.id === id);
+  const [bill, setBill] = useState<Bill>(foundBill!);
+  const [selectedItems, setSelectedItems] = useState<string[]>(() => {
+    if (foundBill) {
+      return foundBill.items.filter(item => item.selectedBy.includes(currentUserId)).map(item => item.id);
+    }
+    return [];
+  });
   const [userCosts, setUserCosts] = useState<UserCost[]>([]);
   const [paymentVerifications, setPaymentVerifications] = useState<{[userId: string]: boolean}>({});
   const [showHostMenu, setShowHostMenu] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [submittedSelections, setSubmittedSelections] = useState<string[]>(mockSubmittedSelections);
 
-  const isHost = bill.createdBy === currentUserId;
-  const currentUser = bill.participants.find(p => p.id === currentUserId);
+  const isHost = bill?.createdBy === currentUserId;
+  const currentUser = bill?.participants.find(p => p.id === currentUserId);
 
   // Check if current user has submitted their selections
   const hasCurrentUserSubmitted = submittedSelections.includes(currentUserId);
 
   // Check if all members have submitted their selections
-  const allMembersSubmitted = bill.participants.every(p => submittedSelections.includes(p.id));
-  const canFinalizeBill = isHost && allMembersSubmitted && bill.status === 'select';
+  const allMembersSubmitted = bill?.participants.every(p => submittedSelections.includes(p.id));
+  const canFinalizeBill = isHost && allMembersSubmitted && bill?.status === 'select';
 
   // Get submitted and pending users
-  const submittedUsers = bill.participants.filter(p => submittedSelections.includes(p.id));
-  const pendingUsers = bill.participants.filter(p => !submittedSelections.includes(p.id));
+  const submittedUsers = bill?.participants.filter(p => submittedSelections.includes(p.id));
+  const pendingUsers = bill?.participants.filter(p => !submittedSelections.includes(p.id));
 
   useEffect(() => {
-    // Initialize selected items for current user
-    const userSelectedItems = bill.items
-      .filter(item => item.selectedBy.includes(currentUserId))
-      .map(item => item.id);
-    setSelectedItems(userSelectedItems);
-
     // Calculate user costs
     setUserCosts(calculateUserCosts(bill));
 
     // Initialize payment verifications
     const initialVerifications: {[userId: string]: boolean} = {};
-    bill.participants.forEach(participant => {
+    bill?.participants.forEach(participant => {
       initialVerifications[participant.id] = false;
     });
     setPaymentVerifications(initialVerifications);
@@ -112,7 +82,7 @@ export default function BillDetailScreen() {
   };
 
   const toggleItemSelection = (itemId: string) => {
-    if (bill.status !== 'select') {
+    if (bill?.status !== 'select') {
       Alert.alert('Selection Locked', 'Item selections cannot be changed after the bill has been finalized.');
       return;
     }
@@ -123,7 +93,7 @@ export default function BillDetailScreen() {
         : [...prev, itemId];
       
       // Update bill items
-      const updatedItems = bill.items.map(item => {
+      const updatedItems = bill?.items.map(item => {
         if (item.id === itemId) {
           const updatedSelectedBy = newSelection.includes(itemId)
             ? [...item.selectedBy.filter(id => id !== currentUserId), currentUserId]
@@ -133,7 +103,7 @@ export default function BillDetailScreen() {
         return item;
       });
 
-      setBill(prev => ({ ...prev, items: updatedItems }));
+      setBill(prev => prev ? { ...prev, items: updatedItems } : prev);
       return newSelection;
     });
   };
@@ -171,7 +141,7 @@ export default function BillDetailScreen() {
         { 
           text: 'Finalize', 
           onPress: () => {
-            setBill(prev => ({ ...prev, status: 'pay' }));
+            setBill(prev => prev ? { ...prev, status: 'pay' } : prev);
             setShowHostMenu(false);
             Alert.alert('Success', 'Bill has been finalized! Members can now see their payment amounts.');
           }
@@ -209,7 +179,7 @@ export default function BillDetailScreen() {
     setPaymentVerifications(prev => ({ ...prev, [userId]: true }));
     
     // Check if all payments are verified
-    const allVerified = bill.participants.every(p => 
+    const allVerified = bill?.participants.every(p => 
       p.id === currentUserId || paymentVerifications[p.id] || p.id === userId
     );
     
@@ -222,7 +192,7 @@ export default function BillDetailScreen() {
           { 
             text: 'Close Bill', 
             onPress: () => {
-              setBill(prev => ({ ...prev, status: 'closed' }));
+              setBill(prev => prev ? { ...prev, status: 'closed' } : prev);
               Alert.alert('Success', 'Bill has been closed!');
             }
           }
@@ -235,7 +205,7 @@ export default function BillDetailScreen() {
 
   const openPaymentChat = () => {
     // Simulate opening a chat application
-    const message = `Hi! I've paid my share for "${bill.title}". Please verify my payment. Thanks!`;
+    const message = `Hi! I've paid my share for "${bill?.title}". Please verify my payment. Thanks!`;
     const phoneNumber = ''; // In real app, this would be the host's phone number
     
     // For web, we'll just show an alert. On mobile, this would open SMS or WhatsApp
@@ -261,7 +231,7 @@ export default function BillDetailScreen() {
 
   const showItemParticipants = (item: BillItem) => {
     const participantNames = item.selectedBy
-      .map(userId => bill.participants.find(p => p.id === userId)?.name || 'Unknown')
+      .map(userId => bill?.participants.find(p => p.id === userId)?.name || 'Unknown')
       .join(', ');
     
     Alert.alert(
@@ -280,7 +250,7 @@ export default function BillDetailScreen() {
           Choose which items you want to split the cost for. You can change your selections until the host finalizes the bill.
         </Text>
         
-        {bill.items.map((item) => {
+        {bill?.items.map((item) => {
           const isSelected = selectedItems.includes(item.id);
           const itemTotal = item.price * item.quantity;
           const splitCount = item.selectedBy.length;
@@ -307,7 +277,7 @@ export default function BillDetailScreen() {
                   {item.selectedBy.length > 0 && (
                     <Text style={styles.selectedByInfo}>
                       Selected by: {item.selectedBy.map(id => 
-                        bill.participants.find(p => p.id === id)?.name || 'Unknown'
+                        bill?.participants.find(p => p.id === id)?.name || 'Unknown'
                       ).join(', ')}
                     </Text>
                   )}
@@ -363,7 +333,7 @@ export default function BillDetailScreen() {
               {/* Status Messages for host */}
               {!allMembersSubmitted && (
                 <Text style={styles.statusMessage}>
-                  Waiting for all members to submit their selections ({submittedUsers.length}/{bill.participants.length} submitted)
+                  Waiting for all members to submit their selections ({submittedUsers?.length ?? 0}/{bill?.participants?.length ?? 0} submitted)
                 </Text>
               )}
 
@@ -388,14 +358,14 @@ export default function BillDetailScreen() {
         >
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>
-              {submittedUsers.length} of {bill.participants.length} submitted
+              {submittedUsers?.length} of {bill?.participants?.length} submitted
             </Text>
             <Text style={styles.progressSubtitle}>Tap to view details</Text>
           </View>
           
           <View style={styles.avatarSection}>
             {/* Submitted Avatars */}
-            {submittedUsers.length > 0 && (
+            {submittedUsers?.length > 0 && (
               <View style={styles.avatarGroup}>
                 <Text style={styles.avatarGroupLabel}>Submitted</Text>
                 <View style={styles.avatarStack}>
@@ -422,7 +392,7 @@ export default function BillDetailScreen() {
             )}
             
             {/* Pending Avatars */}
-            {pendingUsers.length > 0 && (
+            {pendingUsers?.length > 0 && (
               <View style={styles.avatarGroup}>
                 <Text style={styles.avatarGroupLabel}>Pending</Text>
                 <View style={styles.avatarStack}>
@@ -517,7 +487,7 @@ export default function BillDetailScreen() {
           Tap on an item to see who selected it
         </Text>
         
-        {bill.items.map((item) => {
+        {bill?.items.map((item) => {
           const itemTotal = item.price * item.quantity;
           const splitCount = item.selectedBy.length;
           const splitAmount = splitCount > 0 ? itemTotal / splitCount : itemTotal;
@@ -543,7 +513,7 @@ export default function BillDetailScreen() {
                   {item.selectedBy.length > 0 && (
                     <Text style={styles.selectedByInfo}>
                       Selected by: {item.selectedBy.map(id => 
-                        bill.participants.find(p => p.id === id)?.name || 'Unknown'
+                        bill?.participants.find(p => p.id === id)?.name || 'Unknown'
                       ).join(', ')}
                     </Text>
                   )}
@@ -576,19 +546,19 @@ export default function BillDetailScreen() {
           <View style={styles.bankDetailRow}>
             <Building2 size={16} color="#64748B" strokeWidth={2} />
             <Text style={styles.bankDetailLabel}>Bank:</Text>
-            <Text style={styles.bankDetailValue}>{bill.bankDetails.bankName}</Text>
+            <Text style={styles.bankDetailValue}>{bill?.bankDetails.bankName}</Text>
           </View>
           
           <View style={styles.bankDetailRow}>
             <Users size={16} color="#64748B" strokeWidth={2} />
             <Text style={styles.bankDetailLabel}>Account Name:</Text>
-            <Text style={styles.bankDetailValue}>{bill.bankDetails.accountName}</Text>
+            <Text style={styles.bankDetailValue}>{bill?.bankDetails.accountName}</Text>
           </View>
           
           <View style={styles.bankDetailRow}>
             <CreditCard size={16} color="#64748B" strokeWidth={2} />
             <Text style={styles.bankDetailLabel}>Account Number:</Text>
-            <Text style={styles.bankDetailValue}>{bill.bankDetails.accountNumber}</Text>
+            <Text style={styles.bankDetailValue}>{bill?.bankDetails.accountNumber}</Text>
           </View>
         </View>
       </View>
@@ -627,7 +597,15 @@ export default function BillDetailScreen() {
     </View>
   );
 
-  const StatusIcon = getStatusIcon(bill.status);
+  const StatusIcon = getStatusIcon(bill?.status);
+
+  if (!bill) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
+        <Text style={{ color: '#F8FAFC', fontSize: 18 }}>Bill not found.</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -637,17 +615,17 @@ export default function BillDetailScreen() {
           <ArrowLeft size={20} color="#F8FAFC" strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{bill.title}</Text>
+          <Text style={styles.title}>{bill?.title}</Text>
           <View style={styles.statusContainer}>
-            <StatusIcon size={14} color={getStatusColor(bill.status)} strokeWidth={2} />
-            <Text style={[styles.statusText, { color: getStatusColor(bill.status) }]}>
-              {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
+            <StatusIcon size={14} color={getStatusColor(bill?.status)} strokeWidth={2} />
+            <Text style={[styles.statusText, { color: getStatusColor(bill?.status) }]}>
+              {bill?.status.charAt(0).toUpperCase() + bill?.status.slice(1)}
             </Text>
           </View>
         </View>
         
         {/* Host Menu Button */}
-        {isHost && bill.status === 'select' && (
+        {isHost && bill?.status === 'select' && (
           <TouchableOpacity 
             style={styles.menuButton} 
             onPress={() => setShowHostMenu(true)}
@@ -661,23 +639,23 @@ export default function BillDetailScreen() {
         {/* Bill Info - Redesigned */}
         <View style={styles.billInfoSection}>
           <View style={styles.billInfoHeader}>
-            {bill.description && (
+            {bill?.description && (
               <Text style={styles.description}>{bill.description}</Text>
             )}
             <View style={styles.quickStats}>
               <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>{formatCurrency(bill.totalAmount)}</Text>
+                <Text style={styles.quickStatValue}>{formatCurrency(bill?.totalAmount)}</Text>
                 <Text style={styles.quickStatLabel}>Total</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>{bill.participants.length}</Text>
+                <Text style={styles.quickStatValue}>{bill?.participants.length}</Text>
                 <Text style={styles.quickStatLabel}>Members</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatValue}>
-                  {new Date(bill.createdAt).toLocaleDateString('en-US', { 
+                  {new Date(bill?.createdAt).toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric' 
                   })}
@@ -689,9 +667,9 @@ export default function BillDetailScreen() {
         </View>
 
         {/* Status-specific content */}
-        {bill.status === 'select' && renderSelectStatus()}
-        {bill.status === 'pay' && renderPayStatus()}
-        {bill.status === 'closed' && renderClosedStatus()}
+        {bill?.status === 'select' && renderSelectStatus()}
+        {bill?.status === 'pay' && renderPayStatus()}
+        {bill?.status === 'closed' && renderClosedStatus()}
       </ScrollView>
 
       {/* Host Menu Modal */}
@@ -743,7 +721,7 @@ export default function BillDetailScreen() {
             
             <ScrollView style={styles.membersModalContent} showsVerticalScrollIndicator={false}>
               {/* Submitted Members */}
-              {submittedUsers.length > 0 && (
+              {submittedUsers?.length > 0 && (
                 <View style={styles.memberGroup}>
                   <Text style={styles.memberGroupTitle}>
                     Submitted ({submittedUsers.length})
@@ -772,7 +750,7 @@ export default function BillDetailScreen() {
               )}
               
               {/* Pending Members */}
-              {pendingUsers.length > 0 && (
+              {pendingUsers?.length > 0 && (
                 <View style={styles.memberGroup}>
                   <Text style={styles.memberGroupTitle}>
                     Pending ({pendingUsers.length})
