@@ -20,10 +20,17 @@ const userAvatars: {[key: string]: string} = {
   'user4': 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
 };
 
+// Add support for initial submitted selections and payment status from bill mock data
+// Extend Bill type for test cases (in real app, use a separate test config)
+type BillWithTest = Bill & {
+  testSubmittedSelections?: string[];
+  testPaymentStatus?: { [userId: string]: 'unpaid' | 'paid' | 'verified' };
+};
+
 export default function BillDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const foundBill = mockBills.find(b => b.id === id);
+  const foundBill = mockBills.find(b => b.id === id) as BillWithTest | undefined;
   const [bill, setBill] = useState<Bill>(foundBill!);
   const [selectedItems, setSelectedItems] = useState<string[]>(() => {
     if (foundBill) {
@@ -35,7 +42,20 @@ export default function BillDetailScreen() {
   const [paymentVerifications, setPaymentVerifications] = useState<{[userId: string]: boolean}>({});
   const [showHostMenu, setShowHostMenu] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
-  const [submittedSelections, setSubmittedSelections] = useState<string[]>(mockSubmittedSelections);
+  const [submittedSelections, setSubmittedSelections] = useState<string[]>(
+    foundBill?.testSubmittedSelections || []
+  );
+  const [paymentStatus, setPaymentStatus] = useState<{[userId: string]: 'unpaid' | 'paid' | 'verified'}>(
+    foundBill?.testPaymentStatus || (() => {
+      const initialStatus: {[userId: string]: 'unpaid' | 'paid' | 'verified'} = {};
+      foundBill?.participants.forEach(participant => {
+        initialStatus[participant.id] = 'unpaid';
+      });
+      return initialStatus;
+    })()
+  );
+  const [showItemDetails, setShowItemDetails] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   const isHost = bill?.createdBy === currentUserId;
   const currentUser = bill?.participants.find(p => p.id === currentUserId);
@@ -175,32 +195,20 @@ export default function BillDetailScreen() {
     );
   };
 
+  // Handler for member to mark/unmark as paid
+  const togglePaid = (userId: string) => {
+    setPaymentStatus(prev => ({
+      ...prev,
+      [userId]: prev[userId] === 'paid' ? 'unpaid' : 'paid',
+    }));
+  };
+
+  // Handler for host to verify payment
   const verifyPayment = (userId: string) => {
-    setPaymentVerifications(prev => ({ ...prev, [userId]: true }));
-    
-    // Check if all payments are verified
-    const allVerified = bill?.participants.every(p => 
-      p.id === currentUserId || paymentVerifications[p.id] || p.id === userId
-    );
-    
-    if (allVerified) {
-      Alert.alert(
-        'All Payments Verified',
-        'All members have paid. Close this bill?',
-        [
-          { text: 'Not Yet', style: 'cancel' },
-          { 
-            text: 'Close Bill', 
-            onPress: () => {
-              setBill(prev => prev ? { ...prev, status: 'closed' } : prev);
-              Alert.alert('Success', 'Bill has been closed!');
-            }
-          }
-        ]
-      );
-    } else {
-      Alert.alert('Success', 'Payment verified!');
-    }
+    setPaymentStatus(prev => ({
+      ...prev,
+      [userId]: 'verified',
+    }));
   };
 
   const openPaymentChat = () => {
@@ -241,329 +249,371 @@ export default function BillDetailScreen() {
     );
   };
 
-  const renderSelectStatus = () => (
-    <>
-      {/* Items Selection */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Your Items</Text>
-        <Text style={styles.sectionSubtitle}>
-          Choose which items you want to split the cost for. You can change your selections until the host finalizes the bill.
-        </Text>
-        
-        {bill?.items.map((item) => {
-          const isSelected = selectedItems.includes(item.id);
-          const itemTotal = item.price * item.quantity;
-          const splitCount = item.selectedBy.length;
-          const splitAmount = splitCount > 0 ? itemTotal / splitCount : itemTotal;
+  const renderSelectStatus = () => {
+    const hasCurrentUserSubmitted = submittedSelections.includes(currentUserId);
+    const allMembersSubmitted = bill.participants.every(p => submittedSelections.includes(p.id));
+    return (
+      <>
+        {/* Items Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Select Your Items</Text>
+          <Text style={styles.sectionSubtitle}>
+            Choose which items you want to split the cost for. You can change your selections until the host finalizes the bill.
+          </Text>
           
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.itemCard, isSelected && styles.selectedItemCard]}
-              onPress={() => toggleItemSelection(item.id)}
-              activeOpacity={0.8}
+          {bill?.items.map((item) => {
+            const isSelected = selectedItems.includes(item.id);
+            const itemTotal = item.price * item.quantity;
+            const splitCount = item.selectedBy.length;
+            const splitAmount = splitCount > 0 ? itemTotal / splitCount : itemTotal;
+            
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.itemCard, isSelected && styles.selectedItemCard]}
+                onPress={() => toggleItemSelection(item.id)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.itemContent}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemPrice}>
+                      {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
+                    </Text>
+                    {splitCount > 1 && (
+                      <Text style={styles.splitInfo}>
+                        Split {splitCount} ways: {formatCurrency(splitAmount)} each
+                      </Text>
+                    )}
+                    {item.selectedBy.length > 0 && (
+                      <Text style={styles.selectedByInfo}>
+                        Selected by: {item.selectedBy.map(id => 
+                          bill?.participants.find(p => p.id === id)?.name || 'Unknown'
+                        ).join(', ')}
+                      </Text>
+                    )}
+                  </View>
+                  
+                  <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
+                    {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+
+          {/* Action Buttons Container */}
+          <View style={styles.actionButtonsContainer}>
+            {/* Submit/Update Button - Always show for current user */}
+            <TouchableOpacity 
+              style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
+              onPress={submitSelections}
+              disabled={selectedItems.length === 0}
             >
-              <View style={styles.itemContent}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemPrice}>
-                    {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
-                  </Text>
-                  {splitCount > 1 && (
-                    <Text style={styles.splitInfo}>
-                      Split {splitCount} ways: {formatCurrency(splitAmount)} each
-                    </Text>
-                  )}
-                  {item.selectedBy.length > 0 && (
-                    <Text style={styles.selectedByInfo}>
-                      Selected by: {item.selectedBy.map(id => 
-                        bill?.participants.find(p => p.id === id)?.name || 'Unknown'
-                      ).join(', ')}
-                    </Text>
-                  )}
-                </View>
-                
-                <View style={[styles.checkbox, isSelected && styles.checkedBox]}>
-                  {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-
-        {/* Action Buttons Container */}
-        <View style={styles.actionButtonsContainer}>
-          {/* Submit/Update Button - Always show for current user */}
-          <TouchableOpacity 
-            style={[styles.submitButton, selectedItems.length === 0 && styles.disabledButton]}
-            onPress={submitSelections}
-            disabled={selectedItems.length === 0}
-          >
-            <Check size={18} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.submitButtonText}>
-              {hasCurrentUserSubmitted ? 'Update Your Selections' : 'Submit Your Selections'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Status indicator for current user */}
-          {hasCurrentUserSubmitted && (
-            <View style={styles.submissionStatusContainer}>
-              <Check size={16} color="#10B981" strokeWidth={2} />
-              <Text style={styles.submissionStatusText}>
-                You have submitted your selections. You can still make changes until the host finalizes the bill.
+              <Check size={18} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.submitButtonText}>
+                {hasCurrentUserSubmitted ? 'Update Your Selections' : 'Submit Your Selections'}
               </Text>
-            </View>
-          )}
+            </TouchableOpacity>
 
-          {/* Finalize Button - Only show for host */}
-          {isHost && (
-            <>
+            {/* Status indicator for current user */}
+            {hasCurrentUserSubmitted && (
+              <View style={styles.submissionStatusContainer}>
+                <Check size={16} color="#10B981" strokeWidth={2} />
+                <Text style={styles.submissionStatusText}>
+                  You have submitted your selections. You can still make changes until the host finalizes the bill.
+                </Text>
+              </View>
+            )}
+
+            {/* Finalize Button - Only show for host */}
+            {isHost && (
               <TouchableOpacity 
-                style={[
-                  styles.finalizeButton, 
-                  !allMembersSubmitted && styles.disabledFinalizeButton
-                ]}
+                style={[styles.finalizeButton, !allMembersSubmitted && styles.disabledFinalizeButton]}
                 onPress={finalizeBill}
                 disabled={!allMembersSubmitted}
               >
                 <CheckCircle size={18} color="#FFFFFF" strokeWidth={2} />
                 <Text style={styles.finalizeButtonText}>Finalize Bill</Text>
               </TouchableOpacity>
+            )}
+          </View>
+        </View>
 
-              {/* Status Messages for host */}
-              {!allMembersSubmitted && (
-                <Text style={styles.statusMessage}>
-                  Waiting for all members to submit their selections ({submittedUsers?.length ?? 0}/{bill?.participants?.length ?? 0} submitted)
-                </Text>
+        {/* Selection Progress */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Selection Progress</Text>
+          
+          <TouchableOpacity 
+            style={styles.progressContainer}
+            onPress={() => setShowMembersModal(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>
+                {submittedUsers?.length} of {bill?.participants?.length} submitted
+              </Text>
+              <Text style={styles.progressSubtitle}>Tap to view details</Text>
+            </View>
+            
+            <View style={styles.avatarSection}>
+              {/* Submitted Avatars */}
+              {submittedUsers?.length > 0 && (
+                <View style={styles.avatarGroup}>
+                  <Text style={styles.avatarGroupLabel}>Submitted</Text>
+                  <View style={styles.avatarStack}>
+                    {submittedUsers.slice(0, 4).map((user, index) => (
+                      <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
+                        <Image 
+                          source={{ uri: userAvatars[user.id] }} 
+                          style={styles.avatar}
+                        />
+                        <View style={styles.submittedBadge}>
+                          <Check size={8} color="#FFFFFF" strokeWidth={2} />
+                        </View>
+                      </View>
+                    ))}
+                    {submittedUsers.length > 4 && (
+                      <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
+                        <View style={styles.moreAvatar}>
+                          <Text style={styles.moreAvatarText}>+{submittedUsers.length - 4}</Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
               )}
+              
+              {/* Pending Avatars */}
+              {pendingUsers?.length > 0 && (
+                <View style={styles.avatarGroup}>
+                  <Text style={styles.avatarGroupLabel}>Pending</Text>
+                  <View style={styles.avatarStack}>
+                    {pendingUsers.slice(0, 4).map((user, index) => (
+                      <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
+                        <Image 
+                          source={{ uri: userAvatars[user.id] }} 
+                          style={[styles.avatar, styles.pendingAvatar]}
+                        />
+                        <View style={styles.pendingBadge}>
+                          <Clock size={8} color="#F59E0B" strokeWidth={2} />
+                        </View>
+                      </View>
+                    ))}
+                    {pendingUsers.length > 4 && (
+                      <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
+                        <View style={[styles.moreAvatar, styles.morePendingAvatar]}>
+                          <Text style={styles.moreAvatarText}>+{pendingUsers.length - 4}</Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+        {allMembersSubmitted && !isHost && (
+          <View style={{ marginTop: 16, alignItems: 'center' }}>
+            <Text style={{ color: '#F59E0B', fontWeight: '600' }}>Pending for bill finalization</Text>
+          </View>
+        )}
+      </>
+    );
+  };
 
-              {allMembersSubmitted && (
-                <Text style={styles.readyToFinalizeMessage}>
-                  ✅ All members have submitted! You can now finalize the bill.
-                </Text>
-              )}
+  const renderPayStatus = () => {
+    const currentUserCost = userCosts.find(uc => uc.userId === currentUserId);
+    const status = paymentStatus[currentUserId] || 'unpaid';
+    const isCurrentUserPaid = status === 'paid';
+    const isCurrentUserVerified = status === 'verified';
+
+    // If all are verified, auto-close bill
+    if (bill.status === 'pay' && bill.participants.every(p => paymentStatus[p.id] === 'verified')) {
+      setBill(prev => prev ? { ...prev, status: 'closed' } : prev);
+      return null;
+    }
+
+    return (
+      <>
+        {/* Payment Summary & Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Your Payment</Text>
+          <Text style={styles.sectionSubtitle}>Amount you owe for this bill</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={styles.paymentTotal}>{formatCurrency(currentUserCost?.total ?? 0)}</Text>
+            <TouchableOpacity style={{ marginLeft: 16 }} onPress={() => setShowReceiptModal(true)}>
+              <Text style={{ color: '#3B82F6', fontWeight: '600' }}>View Receipt</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Member: show Mark as Paid/Unmark Paid and Verify via Chat as separate buttons */}
+          {!isHost && status === 'unpaid' && (
+            <TouchableOpacity style={styles.verifyButton} onPress={() => togglePaid(currentUserId)}>
+              <Text style={styles.verifyButtonText}>Mark as Paid</Text>
+            </TouchableOpacity>
+          )}
+          {!isHost && status === 'paid' && (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity style={styles.verifyButton} onPress={() => togglePaid(currentUserId)}>
+                <Text style={styles.verifyButtonText}>Unmark Paid</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.verifyButton} onPress={openPaymentChat}>
+                <MessageCircle size={18} color="#FFFFFF" strokeWidth={2} />
+                <Text style={styles.verifyButtonText}>Verify via Chat</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!isHost && isCurrentUserVerified && (
+            <View style={styles.verifiedBadge}>
+              <Check size={12} color="#10B981" strokeWidth={2} />
+              <Text style={styles.verifiedBadgeText}>Payment Verified</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Payment Progress for all participants */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Progress</Text>
+          {userCosts.map((userCost) => {
+            const isCurrentUser = userCost.userId === currentUserId;
+            const status = paymentStatus[userCost.userId] || 'unpaid';
+            return (
+              <View key={userCost.userId} style={styles.paymentCard}>
+                <View style={styles.paymentHeader}>
+                  <Text style={styles.paymentUserName}>
+                    {isCurrentUser ? 'You' : userCost.userName}
+                  </Text>
+                  <View style={styles.paymentAmount}>
+                    <Text style={styles.paymentTotal}>{formatCurrency(userCost.total)}</Text>
+                    {/* Host: Verify button for paid but not verified */}
+                    {isHost && !isCurrentUser && status === 'paid' && (
+                      <TouchableOpacity style={styles.verifyButton} onPress={() => verifyPayment(userCost.userId)}>
+                        <Text style={styles.verifyButtonText}>Verify Payment</Text>
+                      </TouchableOpacity>
+                    )}
+                    {/* Badges for status */}
+                    {status === 'verified' && (
+                      <View style={styles.verifiedBadge}>
+                        <Check size={12} color="#10B981" strokeWidth={2} />
+                        <Text style={styles.verifiedBadgeText}>Verified</Text>
+                      </View>
+                    )}
+                    {status === 'paid' && (
+                      <View style={styles.paidBadge}>
+                        <Clock size={12} color="#F59E0B" strokeWidth={2} />
+                        <Text style={styles.paidBadgeText}>Paid (Pending)</Text>
+                      </View>
+                    )}
+                    {status === 'unpaid' && (
+                      <View style={styles.unpaidBadge}>
+                        <Clock size={12} color="#F59E0B" strokeWidth={2} />
+                        <Text style={styles.unpaidBadgeText}>Unpaid</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Collapsible Item Details */}
+        <View style={styles.section}>
+          <TouchableOpacity onPress={() => setShowItemDetails(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={styles.sectionTitle}>Selected Items</Text>
+            <Text style={{ color: '#3B82F6', marginLeft: 8 }}>{showItemDetails ? 'Hide' : 'Show'}</Text>
+          </TouchableOpacity>
+          {showItemDetails && (
+            <>
+              <Text style={styles.sectionSubtitle}>Tap on an item to see who selected it</Text>
+              {bill?.items.map((item) => {
+                const itemTotal = item.price * item.quantity;
+                const splitCount = item.selectedBy.length;
+                const splitAmount = splitCount > 0 ? itemTotal / splitCount : itemTotal;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.readOnlyItemCard}
+                    onPress={() => showItemParticipants(item)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.itemContent}>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={styles.itemPrice}>
+                          {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
+                        </Text>
+                        {splitCount > 1 && (
+                          <Text style={styles.splitInfo}>
+                            Split {splitCount} ways: {formatCurrency(splitAmount)} each
+                          </Text>
+                        )}
+                        {item.selectedBy.length > 0 && (
+                          <Text style={styles.selectedByInfo}>
+                            Selected by: {item.selectedBy.map(id => 
+                              bill?.participants.find(p => p.id === id)?.name || 'Unknown'
+                            ).join(', ')}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.infoIcon}>
+                        <Users size={16} color="#64748B" strokeWidth={2} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </>
           )}
         </View>
-      </View>
 
-      {/* Selection Progress */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Selection Progress</Text>
-        
-        <TouchableOpacity 
-          style={styles.progressContainer}
-          onPress={() => setShowMembersModal(true)}
-          activeOpacity={0.8}
+        {/* Receipt/Breakdown Modal */}
+        <Modal
+          visible={showReceiptModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowReceiptModal(false)}
         >
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>
-              {submittedUsers?.length} of {bill?.participants?.length} submitted
-            </Text>
-            <Text style={styles.progressSubtitle}>Tap to view details</Text>
-          </View>
-          
-          <View style={styles.avatarSection}>
-            {/* Submitted Avatars */}
-            {submittedUsers?.length > 0 && (
-              <View style={styles.avatarGroup}>
-                <Text style={styles.avatarGroupLabel}>Submitted</Text>
-                <View style={styles.avatarStack}>
-                  {submittedUsers.slice(0, 4).map((user, index) => (
-                    <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
-                      <Image 
-                        source={{ uri: userAvatars[user.id] }} 
-                        style={styles.avatar}
-                      />
-                      <View style={styles.submittedBadge}>
-                        <Check size={8} color="#FFFFFF" strokeWidth={2} />
-                      </View>
-                    </View>
-                  ))}
-                  {submittedUsers.length > 4 && (
-                    <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
-                      <View style={styles.moreAvatar}>
-                        <Text style={styles.moreAvatarText}>+{submittedUsers.length - 4}</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-            
-            {/* Pending Avatars */}
-            {pendingUsers?.length > 0 && (
-              <View style={styles.avatarGroup}>
-                <Text style={styles.avatarGroupLabel}>Pending</Text>
-                <View style={styles.avatarStack}>
-                  {pendingUsers.slice(0, 4).map((user, index) => (
-                    <View key={user.id} style={[styles.avatarContainer, { marginLeft: index > 0 ? -8 : 0 }]}>
-                      <Image 
-                        source={{ uri: userAvatars[user.id] }} 
-                        style={[styles.avatar, styles.pendingAvatar]}
-                      />
-                      <View style={styles.pendingBadge}>
-                        <Clock size={8} color="#F59E0B" strokeWidth={2} />
-                      </View>
-                    </View>
-                  ))}
-                  {pendingUsers.length > 4 && (
-                    <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
-                      <View style={[styles.moreAvatar, styles.morePendingAvatar]}>
-                        <Text style={styles.moreAvatarText}>+{pendingUsers.length - 4}</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      </View>
-    </>
-  );
-
-  const renderPayStatus = () => (
-    <>
-      {/* Payment Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Summary</Text>
-        
-        {userCosts.map((userCost) => {
-          const isCurrentUser = userCost.userId === currentUserId;
-          const isVerified = paymentVerifications[userCost.userId];
-          
-          return (
-            <View key={userCost.userId} style={styles.paymentCard}>
-              <View style={styles.paymentHeader}>
-                <Text style={styles.paymentUserName}>
-                  {isCurrentUser ? 'You' : userCost.userName}
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 24, width: '85%' }}>
+              <Text style={{ color: '#F8FAFC', fontSize: 18, fontWeight: '700', marginBottom: 12 }}>Receipt Breakdown</Text>
+              {currentUserCost?.items.map((item) => (
+                <Text key={item.id} style={{ color: '#CBD5E1', fontSize: 15, marginBottom: 4 }}>
+                  • {item.name}: {formatCurrency(item.price)}
                 </Text>
-                <View style={styles.paymentAmount}>
-                  <Text style={styles.paymentTotal}>{formatCurrency(userCost.total)}</Text>
-                  {isHost && !isCurrentUser && (
-                    <TouchableOpacity
-                      style={[styles.verifyButton, isVerified && styles.verifiedButton]}
-                      onPress={() => verifyPayment(userCost.userId)}
-                      disabled={isVerified}
-                    >
-                      <Check size={14} color={isVerified ? "#10B981" : "#FFFFFF"} strokeWidth={2} />
-                      <Text style={[styles.verifyButtonText, isVerified && styles.verifiedButtonText]}>
-                        {isVerified ? 'Verified' : 'Verify'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {isVerified && !isHost && (
-                    <View style={styles.verifiedBadge}>
-                      <Check size={12} color="#10B981" strokeWidth={2} />
-                      <Text style={styles.verifiedBadgeText}>Verified</Text>
-                    </View>
-                  )}
-                  {!isVerified && !isHost && !isCurrentUser && (
-                    <View style={styles.unpaidBadge}>
-                      <Clock size={12} color="#F59E0B" strokeWidth={2} />
-                      <Text style={styles.unpaidBadgeText}>Unpaid</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              
-              <View style={styles.paymentItems}>
-                {userCost.items.map((item) => (
-                  <Text key={item.id} style={styles.paymentItemText}>
-                    • {item.name}: {formatCurrency(item.price)}
-                  </Text>
-                ))}
-              </View>
+              ))}
+              <TouchableOpacity style={{ marginTop: 20, alignSelf: 'flex-end' }} onPress={() => setShowReceiptModal(false)}>
+                <Text style={{ color: '#3B82F6', fontWeight: '600', fontSize: 16 }}>Close</Text>
+              </TouchableOpacity>
             </View>
-          );
-        })}
-      </View>
-
-      {/* Items Display (Read-only) */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Selected Items</Text>
-        <Text style={styles.sectionSubtitle}>
-          Tap on an item to see who selected it
-        </Text>
-        
-        {bill?.items.map((item) => {
-          const itemTotal = item.price * item.quantity;
-          const splitCount = item.selectedBy.length;
-          const splitAmount = splitCount > 0 ? itemTotal / splitCount : itemTotal;
-          
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.readOnlyItemCard}
-              onPress={() => showItemParticipants(item)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.itemContent}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemPrice}>
-                    {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(itemTotal)}
-                  </Text>
-                  {splitCount > 1 && (
-                    <Text style={styles.splitInfo}>
-                      Split {splitCount} ways: {formatCurrency(splitAmount)} each
-                    </Text>
-                  )}
-                  {item.selectedBy.length > 0 && (
-                    <Text style={styles.selectedByInfo}>
-                      Selected by: {item.selectedBy.map(id => 
-                        bill?.participants.find(p => p.id === id)?.name || 'Unknown'
-                      ).join(', ')}
-                    </Text>
-                  )}
-                </View>
-                
-                <View style={styles.infoIcon}>
-                  <Users size={16} color="#64748B" strokeWidth={2} />
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-
-        {/* Payment Verification Button */}
-        <TouchableOpacity 
-          style={styles.chatButton}
-          onPress={openPaymentChat}
-        >
-          <MessageCircle size={18} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.chatButtonText}>Verify your payment via chat</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Bank Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Details</Text>
-        <Text style={styles.sectionSubtitle}>Send your payment to:</Text>
-        
-        <View style={styles.bankDetailsCard}>
-          <View style={styles.bankDetailRow}>
-            <Building2 size={16} color="#64748B" strokeWidth={2} />
-            <Text style={styles.bankDetailLabel}>Bank:</Text>
-            <Text style={styles.bankDetailValue}>{bill?.bankDetails.bankName}</Text>
           </View>
-          
-          <View style={styles.bankDetailRow}>
-            <Users size={16} color="#64748B" strokeWidth={2} />
-            <Text style={styles.bankDetailLabel}>Account Name:</Text>
-            <Text style={styles.bankDetailValue}>{bill?.bankDetails.accountName}</Text>
-          </View>
-          
-          <View style={styles.bankDetailRow}>
-            <CreditCard size={16} color="#64748B" strokeWidth={2} />
-            <Text style={styles.bankDetailLabel}>Account Number:</Text>
-            <Text style={styles.bankDetailValue}>{bill?.bankDetails.accountNumber}</Text>
+        </Modal>
+
+        {/* Bank Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Details</Text>
+          <Text style={styles.sectionSubtitle}>Send your payment to:</Text>
+          <View style={styles.bankDetailsCard}>
+            <View style={styles.bankDetailRow}>
+              <Building2 size={16} color="#64748B" strokeWidth={2} />
+              <Text style={styles.bankDetailLabel}>Bank:</Text>
+              <Text style={styles.bankDetailValue}>{bill?.bankDetails.bankName}</Text>
+            </View>
+            <View style={styles.bankDetailRow}>
+              <Users size={16} color="#64748B" strokeWidth={2} />
+              <Text style={styles.bankDetailLabel}>Account Name:</Text>
+              <Text style={styles.bankDetailValue}>{bill?.bankDetails.accountName}</Text>
+            </View>
+            <View style={styles.bankDetailRow}>
+              <CreditCard size={16} color="#64748B" strokeWidth={2} />
+              <Text style={styles.bankDetailLabel}>Account Number:</Text>
+              <Text style={styles.bankDetailValue}>{bill?.bankDetails.accountNumber}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderClosedStatus = () => (
     <View style={styles.section}>
@@ -1536,6 +1586,22 @@ const styles = StyleSheet.create({
   pendingStatusText: {
     color: '#F59E0B',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  paidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    gap: 4,
+  },
+  paidBadgeText: {
+    color: '#F59E0B',
+    fontSize: 11,
     fontWeight: '600',
   },
 });
