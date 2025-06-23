@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, Edit3, Trash2 } from 'lucide-react-native';
 import { mockBills } from '../mockBills';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
@@ -113,6 +113,45 @@ export default function BillDetailScreen() {
     );
   };
 
+  const editBill = () => {
+    Alert.alert(
+      'Edit Bill',
+      'This feature will allow you to modify bill details, items, and participants.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Edit',
+          onPress: () => {
+            // In a real app, this would navigate to edit screen
+            Alert.alert('Coming Soon', 'Bill editing functionality will be available soon.');
+          }
+        }
+      ]
+    );
+  };
+
+  const deleteBill = () => {
+    Alert.alert(
+      'Delete Bill',
+      'Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Bill Deleted', 'The bill has been deleted successfully.', [
+              {
+                text: 'OK',
+                onPress: () => router.back()
+              }
+            ]);
+          }
+        }
+      ]
+    );
+  };
+
   const getParticipantStatus = (participantId: string) => {
     if (bill.status === 'select') {
       return mockSubmittedSelections.includes(participantId) ? 'submitted' : 'pending';
@@ -173,6 +212,18 @@ export default function BillDetailScreen() {
           </Text>
         </View>
         
+        {/* Host Actions */}
+        {isHost && bill.status === 'select' && (
+          <View style={styles.hostActions}>
+            <TouchableOpacity style={styles.editButton} onPress={editBill}>
+              <Edit3 size={16} color="#3B82F6" strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteButton} onPress={deleteBill}>
+              <Trash2 size={16} color="#EF4444" strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+        )}
+        
         {/* Chat Button */}
         <TouchableOpacity style={styles.chatButton} onPress={openChat}>
           <MessageCircle size={18} color="#3B82F6" strokeWidth={2} />
@@ -228,8 +279,8 @@ export default function BillDetailScreen() {
           ))}
         </View>
 
-        {/* Your Cost */}
-        {currentUserCost && (
+        {/* Your Cost - Only show in pay/closed status when shares are finalized */}
+        {currentUserCost && bill.status !== 'select' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your Share</Text>
             <View style={styles.costCard}>
@@ -273,9 +324,12 @@ export default function BillDetailScreen() {
                 </View>
                 
                 <View style={styles.participantRight}>
-                  <Text style={styles.participantAmount}>
-                    {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
-                  </Text>
+                  {/* Only show amounts when bill is not in select status */}
+                  {bill.status !== 'select' && (
+                    <Text style={styles.participantAmount}>
+                      {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
+                    </Text>
+                  )}
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
                     <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
                     <Text style={styles.statusText}>{getStatusText(status)}</Text>
@@ -382,6 +436,31 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
     marginTop: 2,
+  },
+  hostActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginRight: 12,
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#EF4444',
   },
   chatButton: {
     position: 'relative',
