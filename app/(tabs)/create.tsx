@@ -75,7 +75,7 @@ export default function CreateBillScreen() {
     setTitle('Test Restaurant Bill');
     setDescription('Quick test bill for app testing');
     setTotalAmount('85.50');
-    setDueDate('2024-02-15');
+    setDueDate('2026-02-15');
     setTag('Food & Dining');
     
     // Add test items
