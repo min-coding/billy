@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2 } from 'lucide-react-native';
@@ -20,45 +20,52 @@ export default function BillDetailScreen() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const unreadCount = getUnreadCount(id || '');
 
+  const fetchBill = async () => {
+    setLoading(true);
+    setError(null);
+    const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', id).single();
+    if (billError) {
+      setError('Bill not found');
+      setBill(null);
+    } else {
+      // Fetch items for this bill
+      const { data: itemsData } = await supabase
+        .from('bill_items')
+        .select('*, bill_item_selections(user_id)')
+        .eq('bill_id', billData.id);
+      const items = itemsData?.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
+      })) || [];
+      // Fetch participants
+      const { data: participantsData } = await supabase
+        .from('bill_participants')
+        .select('user_id, has_submitted, users:user_id(id, name, email, avatar)')
+        .eq('bill_id', billData.id);
+      const participants = (participantsData || [])
+        .map((p: any) => p.users ? { ...p.users, hasSubmitted: p.has_submitted } : null)
+        .filter(Boolean);
+      setBill({ 
+        ...billData, 
+        totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
+        items, 
+        participants 
+      });
+      // Update hasSubmitted for the current user
+      const currentUserParticipant = participants.find(p => p.id === user?.id);
+      setHasSubmitted(!!currentUserParticipant?.hasSubmitted);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchBill = async () => {
-      setLoading(true);
-      setError(null);
-      const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', id).single();
-      if (billError) {
-        setError('Bill not found');
-        setBill(null);
-      } else {
-        // Fetch items for this bill
-        const { data: itemsData } = await supabase
-          .from('bill_items')
-          .select('*, bill_item_selections(user_id)')
-          .eq('bill_id', billData.id);
-        const items = itemsData?.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
-        })) || [];
-        // Fetch participants
-        const { data: participantsData } = await supabase
-          .from('bill_participants')
-          .select('users(id, name, email, avatar)')
-          .eq('bill_id', billData.id);
-        const participants = (participantsData?.map(p => p.users) || []).filter(Boolean);
-        setBill({ 
-          ...billData, 
-          totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
-          items, 
-          participants 
-        });
-      }
-      setLoading(false);
-    };
     if (id) fetchBill();
   }, [id]);
 
@@ -82,7 +89,7 @@ export default function BillDetailScreen() {
       const userSelectedItems = (bill.items || [])
         .filter((item: any) => Array.isArray(item.selectedBy) && item.selectedBy.includes(user.id))
         .map((item: any) => item.id);
-      setSelectedItems(userSelectedItems);
+    setSelectedItems(userSelectedItems);
     }
   }, [bill, hasSubmitted, loading, user?.id]);
 
@@ -120,75 +127,65 @@ export default function BillDetailScreen() {
       Alert.alert('No Items Selected', 'Please select at least one item before submitting.');
       return;
     }
-    Alert.alert(
-      'Submit Selections',
-      'Are you sure you want to submit your item selections? You can still edit them until the host finalizes the bill.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          onPress: async () => {
-            try {
-              // 1. Remove all previous selections for this user and bill
-              await supabase
-                .from('bill_item_selections')
-                .delete()
-                .eq('user_id', user.id)
-                .in('bill_item_id', bill.items.map((item: any) => item.id));
+    const handleSubmitSelections = async () => {
+      setSubmitting(true);
+      try {
+        // 1. Remove all previous selections for this user and bill
+        await supabase
+          .from('bill_item_selections')
+          .delete()
+          .eq('user_id', user.id)
+          .in('bill_item_id', bill.items.map((item: any) => item.id));
 
-              // 2. Insert new selections
-              if (selectedItems.length > 0) {
-                const inserts = selectedItems.map(itemId => ({
-                  bill_item_id: itemId,
-                  user_id: user.id,
-                }));
-                await supabase.from('bill_item_selections').insert(inserts);
-              }
-
-              // 3. Optionally, update participant's submission status if column exists
-              // await supabase
-              //   .from('bill_participants')
-              //   .update({ has_submitted: true })
-              //   .eq('bill_id', bill.id)
-              //   .eq('user_id', user.id);
-
-              setHasSubmitted(true);
-              Alert.alert('Success', 'Your selections have been submitted!');
-              // 4. Refetch bill data to update UI
-              const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', bill.id).single();
-              if (!billError && billData) {
-                // Fetch items for this bill
-                const { data: itemsData } = await supabase
-                  .from('bill_items')
-                  .select('*, bill_item_selections(user_id)')
-                  .eq('bill_id', billData.id);
-                const items = itemsData?.map(item => ({
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  quantity: item.quantity,
-                  selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
-                })) || [];
-                // Fetch participants
-                const { data: participantsData } = await supabase
-                  .from('bill_participants')
-                  .select('users(id, name, email, avatar)')
-                  .eq('bill_id', billData.id);
-                const participants = (participantsData?.map((p: any) => p.users) || []).filter(Boolean);
-                setBill({ 
-                  ...billData, 
-                  totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
-                  items, 
-                  participants 
-                });
-              }
-            } catch (err) {
-              Alert.alert('Error', 'Failed to submit selections. Please try again.');
-            }
-          }
+        // 2. Insert new selections
+        if (selectedItems.length > 0) {
+          const inserts = selectedItems.map(itemId => ({
+            bill_item_id: itemId,
+            user_id: user.id,
+          }));
+          await supabase.from('bill_item_selections').insert(inserts);
         }
-      ]
-    );
+
+        // 3. Update has_submitted in bill_participants
+        await supabase
+          .from('bill_participants')
+          .update({ has_submitted: true })
+          .eq('bill_id', bill.id)
+          .eq('user_id', user.id);
+
+        // 4. Refetch bill data to update UI
+        await fetchBill();
+
+        if (Platform.OS === 'web') {
+          alert('Your selections have been submitted!');
+        } else {
+          Alert.alert('Success', 'Your selections have been submitted!');
+        }
+        setSubmitting(false);
+      } catch (err) {
+        setSubmitting(false);
+        if (Platform.OS === 'web') {
+          alert('Failed to submit selections. Please try again.');
+        } else {
+          Alert.alert('Error', 'Failed to submit selections. Please try again.');
+        }
+      }
+    };
+    if (Platform.OS === 'web') {
+      handleSubmitSelections();
+    } else {
+      Alert.alert(
+        'Submit Selections',
+        'Are you sure you want to submit your item selections? You can still edit them until the host finalizes the bill.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Submit',
+            onPress: handleSubmitSelections
+          }
+        ]
+      );
+    }
   };
 
   const finalizeBill = async () => {
@@ -204,8 +201,8 @@ export default function BillDetailScreen() {
       'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Finalize',
+        { 
+          text: 'Finalize', 
           style: 'destructive',
           onPress: async () => {
             try {
@@ -216,33 +213,7 @@ export default function BillDetailScreen() {
                 .eq('id', bill.id);
               Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
               // Refetch bill data
-              const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', bill.id).single();
-              if (!billError && billData) {
-                // Fetch items for this bill
-                const { data: itemsData } = await supabase
-                  .from('bill_items')
-                  .select('*, bill_item_selections(user_id)')
-                  .eq('bill_id', billData.id);
-                const items = itemsData?.map(item => ({
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  quantity: item.quantity,
-                  selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
-                })) || [];
-                // Fetch participants
-                const { data: participantsData } = await supabase
-                  .from('bill_participants')
-                  .select('users(id, name, email, avatar)')
-                  .eq('bill_id', billData.id);
-                const participants = (participantsData?.map((p: any) => p.users) || []).filter(Boolean);
-                setBill({ 
-                  ...billData, 
-                  totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
-                  items, 
-                  participants 
-                });
-              }
+              await fetchBill();
             } catch (err) {
               Alert.alert('Error', 'Failed to finalize bill. Please try again.');
             }
@@ -258,7 +229,7 @@ export default function BillDetailScreen() {
       'Editing the bill will reset all member selections and submissions. All participants will need to reselect their items. Do you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
+        { 
           text: 'Continue',
           style: 'destructive',
           onPress: () => {
@@ -300,7 +271,7 @@ export default function BillDetailScreen() {
   };
 
   const deleteBill = async () => {
-    Alert.alert(
+      Alert.alert(
       'Delete Bill',
       'Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.',
       [
@@ -339,10 +310,10 @@ export default function BillDetailScreen() {
             } catch (err) {
               Alert.alert('Error', 'Failed to delete bill. Please try again.');
             }
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
   };
 
   const getParticipantStatus = (participantId: string) => {
@@ -396,8 +367,8 @@ export default function BillDetailScreen() {
   };
 
   const host = bill.participants.find((p: any) => p.id === bill.created_by);
-
-  return (
+          
+          return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -408,9 +379,9 @@ export default function BillDetailScreen() {
           <Text style={styles.subtitle}>
             {bill.status === 'select' ? 'Select Items' : 
              bill.status === 'pay' ? 'Payment Phase' : 'Completed'}
-          </Text>
-        </View>
-        
+                  </Text>
+                </View>
+                
         {/* Host Actions */}
         {isHost && bill.status === 'select' && (
           <View style={styles.hostActions}>
@@ -419,10 +390,10 @@ export default function BillDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.deleteButton} onPress={deleteBill}>
               <Trash2 size={16} color="#EF4444" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-        )}
-        
+          </TouchableOpacity>
+            </View>
+          )}
+
         {/* Chat Button */}
         <TouchableOpacity style={styles.chatButton} onPress={openChat}>
           <MessageCircle size={18} color="#3B82F6" strokeWidth={2} />
@@ -436,17 +407,17 @@ export default function BillDetailScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Bill Info */}
-        <View style={styles.section}>
+      <View style={styles.section}>
           <View style={styles.billInfo}>
             <View style={styles.infoRow}>
               <Users size={16} color="#64748B" strokeWidth={2} />
               <Text style={styles.infoText}>{bill.participants.length} people</Text>
-            </View>
-            
+          </View>
+          
             <View style={styles.infoRow}>
               <DollarSign size={16} color="#10B981" strokeWidth={2} />
               <Text style={styles.infoText}>{formatCurrency(bill.totalAmount)}</Text>
-            </View>
+                      </View>
             
             <View style={styles.infoRow}>
               <Calendar size={16} color="#64748B" strokeWidth={2} />
@@ -456,17 +427,17 @@ export default function BillDetailScreen() {
                   : `Created ${new Date(bill.createdAt).toLocaleDateString()}`
                 }
               </Text>
-            </View>
-          </View>
+                      </View>
+                    </View>
 
           {bill.description && (
             <Text style={styles.description}>{bill.description}</Text>
-          )}
-        </View>
+                  )}
+                </View>
 
         {/* Reset Warning - Show when host has made changes */}
         {isHost && bill.status === 'select' && (
-          <View style={styles.section}>
+      <View style={styles.section}>
             <View style={styles.warningCard}>
               <View style={styles.warningHeader}>
                 <Bell size={16} color="#F59E0B" strokeWidth={2} />
@@ -475,18 +446,18 @@ export default function BillDetailScreen() {
               <Text style={styles.warningText}>
                 Editing bill details will reset all member selections and submissions. 
                 All participants will need to reselect their items after you make changes.
-              </Text>
-            </View>
-          </View>
-        )}
+                </Text>
+                    </View>
+                    </View>
+                  )}
 
         {/* Items Section */}
-        <View style={styles.section}>
+      <View style={styles.section}>
           <Text style={styles.sectionTitle}>Items</Text>
           {Array.isArray(bill.items) && bill.items.length > 0 ? (
             bill.items.map((item: any) => (
               <ItemCard
-                key={item.id}
+              key={item.id}
                 item={item}
                 isSelected={selectedItems.includes(item.id)}
                 onToggle={() => toggleItemSelection(item.id)}
@@ -496,33 +467,33 @@ export default function BillDetailScreen() {
             ))
           ) : (
             <Text style={{ color: '#64748B', marginTop: 8 }}>No items yet.</Text>
-          )}
-        </View>
-
+                  )}
+                </View>
+                
         {/* Your Cost - Only show in pay/closed status when shares are finalized */}
         {currentUserCost && bill.status !== 'select' && (
-          <View style={styles.section}>
+      <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your Share</Text>
             <View style={styles.costCard}>
               <View style={styles.costHeader}>
                 <Text style={styles.costAmount}>{formatCurrency(currentUserCost.total)}</Text>
                 <Text style={styles.costLabel}>Total Amount</Text>
-              </View>
-              
+          </View>
+          
               <View style={styles.costItems}>
                 {currentUserCost.items.map((item) => (
                   <View key={item.id} style={styles.costItem}>
                     <Text style={styles.costItemName}>{item.name}</Text>
                     <Text style={styles.costItemPrice}>{formatCurrency(item.price)}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
           </View>
+                ))}
+          </View>
+        </View>
+      </View>
         )}
 
         {/* Participants */}
-        <View style={styles.section}>
+    <View style={styles.section}>
           <Text style={styles.sectionTitle}>Participants</Text>
           {bill.participants.map((participant: any) => {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
@@ -535,32 +506,32 @@ export default function BillDetailScreen() {
                   {participant.id === bill.created_by && (
                     <View style={styles.hostBadge}>
                       <Text style={styles.hostBadgeText}>HOST</Text>
-                    </View>
+          </View>
                   )}
                   <View style={styles.participantInfo}>
                     <Text style={styles.participantName}>{participant.name}</Text>
                     <Text style={styles.participantEmail}>{participant.email}</Text>
-                  </View>
-                </View>
+          </View>
+        </View>
                 
                 <View style={styles.participantRight}>
                   {/* Only show amounts when bill is not in select status */}
                   {bill.status !== 'select' && (
                     <Text style={styles.participantAmount}>
                       {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
-                    </Text>
+            </Text>
                   )}
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
                     <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
                     <Text style={styles.statusText}>{getStatusText(status)}</Text>
-                  </View>
-                </View>
+          </View>
+        </View>
               </View>
             );
           })}
           {/* Host add member button */}
-          {isHost && bill.status === 'select' && (
-            <TouchableOpacity
+        {isHost && bill.status === 'select' && (
+          <TouchableOpacity 
               style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
               onPress={async () => {
                 // Prompt for user email or username (simple prompt for demo)
@@ -584,19 +555,15 @@ export default function BillDetailScreen() {
                   Alert.alert('Error', addError.message);
                   return;
                 }
-                // Refresh participants
-                const { data: participantsData } = await supabase
-                  .from('bill_participants')
-                  .select('users(id, name, email, avatar)')
-                  .eq('bill_id', bill.id);
-                setBill({ ...bill, participants: (participantsData?.map((p: any) => p.users) || []).filter(Boolean) });
+                // Refresh bill data
+                await fetchBill();
                 Alert.alert('Success', 'Member added!');
               }}
             >
               <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+          </TouchableOpacity>
+        )}
+      </View>
 
         {/* Bank Details */}
         {bill.status === 'pay' && (
@@ -607,34 +574,38 @@ export default function BillDetailScreen() {
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
               <Text style={styles.accountNumber}>Account: {bill.bankDetails.accountNumber}</Text>
-            </View>
-          </View>
+              </View>
+              </View>
         )}
       </ScrollView>
 
       {/* Action Buttons */}
       {isParticipant && bill.status === 'select' && (
         <View style={styles.footer}>
-          <TouchableOpacity 
+        <TouchableOpacity 
             style={[
               styles.submitButton,
-              selectedItems.length === 0 && styles.disabledButton
+              (selectedItems.length === 0 || submitting) && styles.disabledButton
             ]}
             onPress={submitSelections}
-            disabled={selectedItems.length === 0}
+            disabled={selectedItems.length === 0 || submitting}
           >
-            <Check size={18} color="#FFFFFF" strokeWidth={2} />
+            {submitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+            ) : (
+              <Check size={18} color="#FFFFFF" strokeWidth={2} />
+            )}
             <Text style={styles.submitButtonText}>
               {hasSubmitted ? 'Update Selections' : 'Submit Selections'}
             </Text>
-          </TouchableOpacity>
-        </View>
+            </TouchableOpacity>
+          </View>
       )}
 
       {/* Host Finalize Button */}
       {isHost && bill.status === 'select' && (
         <View style={styles.footer}>
-          <TouchableOpacity 
+              <TouchableOpacity 
             style={[
               styles.finalizeButton,
               !allMembersSubmitted && styles.disabledButton
@@ -646,15 +617,15 @@ export default function BillDetailScreen() {
             <Text style={styles.finalizeButtonText}>
               {allMembersSubmitted ? 'Finalize Bill' : 'Waiting for Submissions'}
             </Text>
-          </TouchableOpacity>
+              </TouchableOpacity>
           
           {!allMembersSubmitted && (
             <Text style={styles.waitingText}>
               Waiting for all members to submit their selections
-            </Text>
+                  </Text>
           )}
-        </View>
-      )}
+                </View>
+              )}
     </SafeAreaView>
   );
 }

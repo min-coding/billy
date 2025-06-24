@@ -83,13 +83,13 @@ export default function SummaryScreen() {
             // I'm participant, this is the host
             netAmount = -userCost.total; // I owe host
           }
-          if (!friendBalancesMap[userCost.userId]) {
-            friendBalancesMap[userCost.userId] = {
-              name: getUserName(userCost.userId),
-              avatar: getUserAvatar(userCost.userId),
+              if (!friendBalancesMap[userCost.userId]) {
+                friendBalancesMap[userCost.userId] = {
+                  name: getUserName(userCost.userId),
+                  avatar: getUserAvatar(userCost.userId),
               amount: 0,
-            };
-          }
+                };
+              }
           friendBalancesMap[userCost.userId].amount += netAmount;
         });
       }
