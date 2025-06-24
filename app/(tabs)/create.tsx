@@ -23,9 +23,9 @@ export default function CreateBillScreen() {
   const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [participants, setParticipants] = useState<User[]>([]);
   const [bankDetails, setBankDetails] = useState<BankDetails>({
-    bankName: '',
-    accountName: '',
-    accountNumber: ''
+    bankName: 'SCB',
+    accountName: 'Winner Hackathon',
+    accountNumber: '1234567890'
   });
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
