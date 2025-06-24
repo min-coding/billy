@@ -22,7 +22,6 @@ export default function BillDetailScreen() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
 
   const unreadCount = getUnreadCount(id || '');
 
@@ -34,15 +33,31 @@ export default function BillDetailScreen() {
       if (billError) {
         setError('Bill not found');
         setBill(null);
-        setParticipants([]);
       } else {
-        setBill(billData);
+        // Fetch items for this bill
+        const { data: itemsData } = await supabase
+          .from('bill_items')
+          .select('*, bill_item_selections(user_id)')
+          .eq('bill_id', billData.id);
+        const items = itemsData?.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
+        })) || [];
         // Fetch participants
         const { data: participantsData } = await supabase
           .from('bill_participants')
           .select('users(id, name, email, avatar)')
           .eq('bill_id', billData.id);
-        setParticipants(participantsData?.map(p => p.users).filter(Boolean) || []);
+        const participants = (participantsData?.map(p => p.users) || []).filter(Boolean);
+        setBill({ 
+          ...billData, 
+          totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
+          items, 
+          participants 
+        });
       }
       setLoading(false);
     };
@@ -51,8 +66,8 @@ export default function BillDetailScreen() {
 
   const isHost = bill?.createdBy === currentUserId;
   const isParticipant = bill?.participants?.some((p: any) => p.id === currentUserId);
-  const userCosts = bill && participants.length > 0 && bill.status !== 'select'
-    ? calculateUserCosts({ ...bill, participants })
+  const userCosts = bill && bill.participants && bill.participants.length > 0 && bill.status !== 'select'
+    ? calculateUserCosts(bill)
     : [];
   const currentUserCost = userCosts.find(uc => uc.userId === (user?.id || ''));
 
@@ -65,13 +80,13 @@ export default function BillDetailScreen() {
 
   // Initialize selected items based on bill data
   useEffect(() => {
-    if (bill && !hasSubmitted) {
-      const userSelectedItems = bill.items
-        .filter((item: any) => item.selectedBy.includes(currentUserId))
+    if (bill && Array.isArray(bill.items) && !hasSubmitted && !loading) {
+      const userSelectedItems = (bill.items || [])
+        .filter((item: any) => Array.isArray(item.selectedBy) && item.selectedBy.includes(currentUserId))
         .map((item: any) => item.id);
       setSelectedItems(userSelectedItems);
     }
-  }, [bill, hasSubmitted]);
+  }, [bill, hasSubmitted, loading]);
 
   if (loading) {
     return (
@@ -257,7 +272,7 @@ export default function BillDetailScreen() {
     router.push(`/bill/${bill.id}/chat`);
   };
 
-  const host = participants.find(p => p.id === bill.created_by);
+  const host = bill.participants.find((p: any) => p.id === bill.created_by);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -302,7 +317,7 @@ export default function BillDetailScreen() {
           <View style={styles.billInfo}>
             <View style={styles.infoRow}>
               <Users size={16} color="#64748B" strokeWidth={2} />
-              <Text style={styles.infoText}>{participants.length} people</Text>
+              <Text style={styles.infoText}>{bill.participants.length} people</Text>
             </View>
             
             <View style={styles.infoRow}>
@@ -345,16 +360,20 @@ export default function BillDetailScreen() {
         {/* Items Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Items</Text>
-          {bill.items.map((item: any) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              isSelected={selectedItems.includes(item.id)}
-              onToggle={() => toggleItemSelection(item.id)}
-              participantCount={item.selectedBy.length}
-              editable={bill.status === 'select'}
-            />
-          ))}
+          {Array.isArray(bill.items) && bill.items.length > 0 ? (
+            bill.items.map((item: any) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                isSelected={selectedItems.includes(item.id)}
+                onToggle={() => toggleItemSelection(item.id)}
+                participantCount={item.selectedBy.length}
+                editable={bill.status === 'select'}
+              />
+            ))
+          ) : (
+            <Text style={{ color: '#64748B', marginTop: 8 }}>No items yet.</Text>
+          )}
         </View>
 
         {/* Your Cost - Only show in pay/closed status when shares are finalized */}
@@ -382,7 +401,7 @@ export default function BillDetailScreen() {
         {/* Participants */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Participants</Text>
-          {participants.map((participant: any) => {
+          {bill.participants.map((participant: any) => {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
             const StatusIcon = getStatusIcon(status);
@@ -447,7 +466,7 @@ export default function BillDetailScreen() {
                   .from('bill_participants')
                   .select('users(id, name, email, avatar)')
                   .eq('bill_id', bill.id);
-                setParticipants(participantsData?.map(p => p.users).filter(Boolean) || []);
+                setBill({ ...bill, participants: (participantsData?.map((p: any) => p.users) || []).filter(Boolean) });
                 Alert.alert('Success', 'Member added!');
               }}
             >
