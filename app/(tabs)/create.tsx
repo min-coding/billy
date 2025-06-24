@@ -5,57 +5,23 @@ import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, C
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { generateBillCode, formatCurrency } from '@/utils/billUtils';
-
-// Mock friends data - in real app, this would come from API/database
-const mockFriends: Friend[] = [
-  {
-    id: 'friend1',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-10'),
-    status: 'active'
-  },
-  {
-    id: 'friend2',
-    name: 'Mike Johnson',
-    email: 'mike@example.com',
-    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-08'),
-    status: 'active'
-  },
-  {
-    id: 'friend3',
-    name: 'Sarah Wilson',
-    email: 'sarah@example.com',
-    avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-05'),
-    status: 'active'
-  },
-  {
-    id: 'friend4',
-    name: 'Alex Chen',
-    email: 'alex@example.com',
-    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-03'),
-    status: 'active'
-  },
-];
+import { useFriends } from '@/hooks/useFriends';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function CreateBillScreen() {
   const router = useRouter();
+  const { friends } = useFriends();
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [tag, setTag] = useState('');
   const [items, setItems] = useState<BillItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('1');
-  const [participants, setParticipants] = useState<User[]>([
-    { id: 'creator', name: 'You', email: 'you@example.com' }
-  ]);
+  const [participants, setParticipants] = useState<User[]>([]);
   const [bankDetails, setBankDetails] = useState<BankDetails>({
     bankName: '',
     accountName: '',
@@ -65,66 +31,59 @@ export default function CreateBillScreen() {
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
-  const filteredFriends = mockFriends.filter(friend =>
+  const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
     friend.email.toLowerCase().includes(friendSearchQuery.toLowerCase())
   );
 
   // Test bill data for quick testing
   const fillTestBill = () => {
-    setTitle('Test Restaurant Bill');
+    setTitle('Test Bill');
     setDescription('Quick test bill for app testing');
-    setTotalAmount('85.50');
     setDueDate('2026-02-15');
-    setTag('Food & Dining');
+    setTag('Test');
     
     // Add test items
     const testItems: BillItem[] = [
       {
-        id: 'test1',
-        name: 'Margherita Pizza',
-        price: 18.99,
+        id: 'item1',
+        name: 'Item 1',
+        price: 100,
         quantity: 1,
-        selectedBy: []
+        selectedBy: [],
       },
       {
-        id: 'test2',
-        name: 'Caesar Salad',
-        price: 12.50,
-        quantity: 2,
-        selectedBy: []
-      },
-      {
-        id: 'test3',
-        name: 'Garlic Bread',
-        price: 8.99,
+        id: 'item2',
+        name: 'Item 2',
+        price: 200,
         quantity: 1,
-        selectedBy: []
+        selectedBy: [],
       },
       {
-        id: 'test4',
-        name: 'Tiramisu',
-        price: 9.99,
-        quantity: 3,
-        selectedBy: []
-      }
+        id: 'item3',
+        name: 'Item 3',
+        price: 500,
+        quantity: 1,
+        selectedBy: [],
+      },
+      {
+        id: 'item4',
+        name: 'Item user1&2 share',
+        price: 400,
+        quantity: 1,
+        selectedBy: [],
+      },
+      {
+        id: 'item5',
+        name: 'ItemAllUser',
+        price: 3000,
+        quantity: 1,
+        selectedBy: [],
+      },
     ];
     setItems(testItems);
     
-    // Add test participants
-    const testParticipants: User[] = [
-      { id: 'creator', name: 'You', email: 'you@example.com' },
-      { id: 'friend1', name: 'Jane Smith', email: 'jane@example.com', avatar: mockFriends[0].avatar },
-      { id: 'friend2', name: 'Mike Johnson', email: 'mike@example.com', avatar: mockFriends[1].avatar }
-    ];
-    setParticipants(testParticipants);
-    
-    // Add test bank details
-    setBankDetails({
-      bankName: 'Test Bank',
-      accountName: 'John Doe',
-      accountNumber: '1234567890'
-    });
+    // Do not set participants here; add them manually from real data
 
     Alert.alert('Test Data Loaded', 'Bill has been prefilled with test data for quick testing!');
   };
@@ -197,7 +156,7 @@ export default function CreateBillScreen() {
   };
 
   const addSelectedFriends = () => {
-    const friendsToAdd = mockFriends
+    const friendsToAdd = friends
       .filter(friend => selectedFriends.includes(friend.id))
       .map(friend => ({
         id: friend.id,
@@ -224,60 +183,79 @@ export default function CreateBillScreen() {
     return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const createBill = () => {
+  const createBill = async () => {
     if (!title.trim()) {
       Alert.alert('Error', 'Please enter a bill title');
       return;
     }
-
-    if (!totalAmount.trim() || isNaN(parseFloat(totalAmount)) || parseFloat(totalAmount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid total amount');
-      return;
-    }
-
     if (items.length === 0) {
       Alert.alert('Error', 'Please add at least one item');
       return;
     }
-
     if (dueDate && !validateDueDate(dueDate)) {
       Alert.alert('Error', 'Due date must be today or in the future');
       return;
     }
-
     if (!bankDetails.bankName.trim() || !bankDetails.accountName.trim() || !bankDetails.accountNumber.trim()) {
       Alert.alert('Error', 'Please fill in all bank details');
       return;
     }
-
-    const billCode = generateBillCode();
-    const dueDateText = dueDate ? `\nDue: ${new Date(dueDate).toLocaleDateString()}` : '';
-    const tagText = tag ? `\nTag: ${tag}` : '';
-    
-    Alert.alert(
-      'Bill Created!',
-      `Your bill "${title}" has been created with code: ${billCode}${dueDateText}${tagText}`,
-      [
-        {
-          text: 'Share Code',
-          onPress: () => {
-            console.log('Share bill code:', billCode);
-          }
-        },
-        {
-          text: 'Done',
-          onPress: () => router.push('/(tabs)/'),
-          style: 'default'
-        }
-      ]
-    );
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to create a bill');
+      return;
+    }
+    try {
+      // 1. Insert bill
+      const { data: bill, error: billError } = await supabase
+        .from('bills')
+        .insert({
+          title,
+          description,
+          total_amount: calculateItemsTotal(),
+          created_by: user.id,
+          due_date: dueDate || null,
+          tag: tag || null,
+          bank_name: bankDetails.bankName,
+          account_name: bankDetails.accountName,
+          account_number: bankDetails.accountNumber,
+        })
+        .select()
+        .single();
+      if (billError) throw billError;
+      // 2. Insert participants (including creator)
+      const allParticipantIds = [user.id, ...participants.filter(p => p.id !== user.id).map(p => p.id)];
+      const { error: participantsError } = await supabase
+        .from('bill_participants')
+        .insert(
+          allParticipantIds.map(userId => ({
+            bill_id: bill.id,
+            user_id: userId,
+          }))
+        );
+      if (participantsError) throw participantsError;
+      // 3. Insert items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('bill_items')
+        .insert(
+          items.map(item => ({
+            bill_id: bill.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+          }))
+        );
+      if (itemsError) throw itemsError;
+      // 4. (Optional) Insert item selections if needed
+      // 5. Success
+      Alert.alert('Bill Created!', 'Your bill has been saved.');
+      router.replace('/(tabs)/' as any);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to create bill');
+    }
   };
 
   const isFormValid = () => {
     return title.trim() && 
-           totalAmount.trim() && 
-           !isNaN(parseFloat(totalAmount)) && 
-           parseFloat(totalAmount) > 0 &&
            items.length > 0 &&
            (!dueDate || validateDueDate(dueDate)) &&
            bankDetails.bankName.trim() &&
@@ -341,21 +319,6 @@ export default function CreateBillScreen() {
                 onChangeText={setTag}
                 placeholder="e.g., Food & Dining, Work, Groceries"
                 placeholderTextColor="#64748B"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Total Amount *</Text>
-            <View style={styles.inputWithIcon}>
-              <DollarSign size={18} color="#64748B" strokeWidth={2} />
-              <TextInput
-                style={[styles.input, styles.inputWithIconText]}
-                value={totalAmount}
-                onChangeText={setTotalAmount}
-                placeholder="0.00"
-                placeholderTextColor="#64748B"
-                keyboardType="decimal-pad"
               />
             </View>
           </View>
@@ -448,7 +411,7 @@ export default function CreateBillScreen() {
               onPress={() => setShowFriendsModal(true)}
             >
               <Users size={16} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.addFromFriendsText}>Add Friends</Text>
+              <Text style={styles.addFromFriendsText}>Invite Members</Text>
             </TouchableOpacity>
           </View>
           
@@ -477,7 +440,7 @@ export default function CreateBillScreen() {
             </View>
           ))}
 
-          {participants.length === 1 && (
+          {participants.length === 0 && (
             <View style={styles.noMembersContainer}>
               <Text style={styles.noMembersText}>No friends added yet</Text>
               <Text style={styles.noMembersSubtext}>
@@ -541,7 +504,7 @@ export default function CreateBillScreen() {
           onPress={createBill}
           disabled={!isFormValid()}
         >
-          <Share2 size={18} color="#FFFFFF" strokeWidth={2} />
+          <Plus size={18} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.createBillText}>Create Bill</Text>
         </TouchableOpacity>
       </View>
@@ -556,7 +519,7 @@ export default function CreateBillScreen() {
         <View style={styles.friendsModalOverlay}>
           <View style={styles.friendsModal}>
             <View style={styles.friendsModalHeader}>
-              <Text style={styles.friendsModalTitle}>Add Friends</Text>
+              <Text style={styles.friendsModalTitle}>Add Members</Text>
               <TouchableOpacity 
                 style={styles.closeButton}
                 onPress={() => setShowFriendsModal(false)}
@@ -635,7 +598,7 @@ export default function CreateBillScreen() {
               <View style={styles.friendsModalFooter}>
                 <TouchableOpacity style={styles.addSelectedButton} onPress={addSelectedFriends}>
                   <Text style={styles.addSelectedText}>
-                    Add {selectedFriends.length} Friend{selectedFriends.length !== 1 ? 's' : ''}
+                    Add {selectedFriends.length} Member{selectedFriends.length !== 1 ? 's' : ''}
                   </Text>
                 </TouchableOpacity>
               </View>
