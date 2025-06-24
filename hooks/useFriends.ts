@@ -36,6 +36,7 @@ export function useFriends() {
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,6 +108,38 @@ export function useFriends() {
       }));
 
       setFriendRequests(requestsList);
+
+      // Fetch outgoing friend requests
+      const { data: outgoingData, error: outgoingError } = await supabase
+        .from('friend_requests')
+        .select(`
+          id,
+          from_user_id,
+          to_user_id,
+          status,
+          created_at,
+          to_user:users!friend_requests_to_user_id_fkey(id, name, email, avatar)
+        `)
+        .eq('from_user_id', user.id)
+        .eq('status', 'pending');
+
+      if (outgoingError) throw outgoingError;
+
+      const outgoingList = outgoingData.map(request => ({
+        id: request.id,
+        fromUserId: request.from_user_id,
+        toUserId: request.to_user_id,
+        toUser: {
+          id: request.to_user.id,
+          name: request.to_user.name,
+          email: request.to_user.email,
+          avatar: request.to_user.avatar,
+        },
+        status: request.status as 'pending',
+        createdAt: new Date(request.created_at),
+      }));
+
+      setOutgoingRequests(outgoingList);
     } catch (err) {
       console.error('Error fetching friends:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch friends');
@@ -119,15 +152,15 @@ export function useFriends() {
     fetchFriends();
   }, [user]);
 
-  const sendFriendRequest = async (email: string) => {
+  const sendFriendRequest = async (username: string) => {
     if (!user) throw new Error('User not authenticated');
 
     try {
-      // Find user by email
+      // Find user by username
       const { data: targetUser, error: userError } = await supabase
         .from('users')
-        .select('id, name, email')
-        .eq('email', email.toLowerCase())
+        .select('id, username, name, email, avatar')
+        .eq('username', username.toLowerCase())
         .single();
 
       if (userError || !targetUser) {
@@ -236,6 +269,7 @@ export function useFriends() {
   return {
     friends,
     friendRequests,
+    outgoingRequests,
     loading,
     error,
     sendFriendRequest,

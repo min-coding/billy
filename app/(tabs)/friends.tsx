@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, UserPlus, Users, Mail, Check, X, Plus, Bell } from 'lucide-react-native';
 import { Friend, FriendRequest, User } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { useFriends } from '@/hooks/useFriends';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Mock data - in real app, this would come from API/database
 const mockFriends: Friend[] = [
@@ -80,92 +83,58 @@ const mockFriendRequests: FriendRequest[] = [
 ];
 
 export default function FriendsScreen() {
-  const [friends, setFriends] = useState<Friend[]>(mockFriends);
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>(mockFriendRequests);
+  const { user } = useAuth();
+  const { friends, friendRequests, outgoingRequests, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, refetch } = useFriends();
   const [searchQuery, setSearchQuery] = useState('');
-  const [newFriendEmail, setNewFriendEmail] = useState('');
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [usernameSearch, setUsernameSearch] = useState('');
+  const [usernameResults, setUsernameResults] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     friend.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const addFriend = () => {
-    if (!newFriendEmail.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+  // Search for users by username
+  const handleUsernameSearch = async (text: string) => {
+    setUsernameSearch(text);
+    setSelectedUser(null);
+    if (text.length < 3) {
+      setUsernameResults([]);
       return;
     }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newFriendEmail.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, username, name, avatar')
+      .ilike('username', `%${text}%`)
+      .neq('id', user?.id)
+      .limit(10);
+    if (!error && data) {
+      setUsernameResults(data);
+    } else {
+      setUsernameResults([]);
     }
+  };
 
-    // Check if already friends
-    const existingFriend = friends.find(f => f.email.toLowerCase() === newFriendEmail.toLowerCase());
-    if (existingFriend) {
-      Alert.alert('Already Friends', 'This person is already in your friends list');
-      return;
+  const handleSendFriendRequest = async () => {
+    if (!selectedUser) return;
+    setIsSending(true);
+    try {
+      await sendFriendRequest(selectedUser.username);
+      Alert.alert('Friend Request Sent', `A friend request has been sent to @${selectedUser.username}`);
+      setIsAddingFriend(false);
+      setUsernameSearch('');
+      setUsernameResults([]);
+      setSelectedUser(null);
+      refetch();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to send friend request');
+    } finally {
+      setIsSending(false);
     }
-
-    // Simulate sending friend request
-    Alert.alert(
-      'Friend Request Sent',
-      `A friend request has been sent to ${newFriendEmail}`,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setNewFriendEmail('');
-            setIsAddingFriend(false);
-          }
-        }
-      ]
-    );
-  };
-
-  const acceptFriendRequest = (request: FriendRequest) => {
-    // Add to friends list
-    const newFriend: Friend = {
-      id: request.fromUserId,
-      name: request.fromUser.name,
-      email: request.fromUser.email,
-      avatar: request.fromUser.avatar,
-      addedAt: new Date(),
-      status: 'active'
-    };
-
-    setFriends(prev => [newFriend, ...prev]);
-    setFriendRequests(prev => prev.filter(req => req.id !== request.id));
-    
-    Alert.alert('Friend Added', `${request.fromUser.name} has been added to your friends list`);
-  };
-
-  const declineFriendRequest = (request: FriendRequest) => {
-    setFriendRequests(prev => prev.filter(req => req.id !== request.id));
-    Alert.alert('Request Declined', 'Friend request has been declined');
-  };
-
-  const removeFriend = (friend: Friend) => {
-    Alert.alert(
-      'Remove Friend',
-      `Are you sure you want to remove ${friend.name} from your friends list?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            setFriends(prev => prev.filter(f => f.id !== friend.id));
-            Alert.alert('Friend Removed', `${friend.name} has been removed from your friends list`);
-          }
-        }
-      ]
-    );
   };
 
   return (
@@ -203,33 +172,112 @@ export default function FriendsScreen() {
         {/* Add Friend Section */}
         {isAddingFriend && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Add Friend</Text>
+            <Text style={styles.sectionTitle}>Add Friend by Username</Text>
             <View style={styles.addFriendContainer}>
               <View style={styles.inputContainer}>
-                <Mail size={18} color="#64748B" strokeWidth={2} />
+                <Search size={18} color="#64748B" strokeWidth={2} />
                 <TextInput
                   style={styles.emailInput}
-                  value={newFriendEmail}
-                  onChangeText={setNewFriendEmail}
-                  placeholder="Enter friend's email"
+                  value={usernameSearch}
+                  onChangeText={handleUsernameSearch}
+                  placeholder="Enter friend's username"
                   placeholderTextColor="#64748B"
-                  keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
               </View>
+              {/* Dropdown of matching usernames */}
+              {usernameResults.length > 0 && (
+                <FlatList
+                  data={usernameResults}
+                  keyExtractor={item => item.id}
+                  style={{ maxHeight: 200, backgroundColor: '#1E293B', borderRadius: 8, marginTop: 8 }}
+                  renderItem={({ item }) => {
+                    const isFriend = friends.some(f => f.id === item.id);
+                    const isRequested = outgoingRequests.some(
+                      r => r.toUserId === item.id && r.status === 'pending'
+                    );
+                    return (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          padding: 12,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#334155',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Image
+                            source={{
+                              uri:
+                                item.avatar ||
+                                'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+                            }}
+                            style={{ width: 32, height: 32, borderRadius: 16, marginRight: 12 }}
+                          />
+                          <View>
+                            <Text style={{ color: '#F8FAFC', fontWeight: '600' }}>@{item.username}</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 13 }}>{item.name}</Text>
+                          </View>
+                        </View>
+                        {isFriend ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+                            <Check size={18} color="#10B981" strokeWidth={2} />
+                            <Text style={{ color: '#10B981', fontWeight: '600', marginLeft: 4 }}>Friends</Text>
+                          </View>
+                        ) : isRequested ? (
+                          <View style={{ marginLeft: 12 }}>
+                            <Text style={{ color: '#F59E0B', fontWeight: '600' }}>Requested</Text>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: '#3B82F6',
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                              marginLeft: 12,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                            }}
+                            onPress={async () => {
+                              setIsSending(true);
+                              try {
+                                await sendFriendRequest(item.username);
+                                Alert.alert('Friend Request Sent', `A friend request has been sent to @${item.username}`);
+                                setIsAddingFriend(false);
+                                setUsernameSearch('');
+                                setUsernameResults([]);
+                                refetch();
+                              } catch (err: any) {
+                                Alert.alert('Error', err.message || 'Failed to send friend request');
+                              } finally {
+                                setIsSending(false);
+                              }
+                            }}
+                            disabled={isSending}
+                          >
+                            <UserPlus size={16} color="#fff" strokeWidth={2} />
+                            <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>Add Friend</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  }}
+                />
+              )}
               <View style={styles.addFriendButtons}>
-                <TouchableOpacity 
-                  style={styles.cancelButton} 
+                <TouchableOpacity
+                  style={styles.cancelButton}
                   onPress={() => {
                     setIsAddingFriend(false);
-                    setNewFriendEmail('');
+                    setUsernameSearch('');
+                    setUsernameResults([]);
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.sendButton} onPress={addFriend}>
-                  <Text style={styles.sendButtonText}>Send Request</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -285,7 +333,7 @@ export default function FriendsScreen() {
               <TouchableOpacity 
                 key={friend.id} 
                 style={styles.friendCard}
-                onLongPress={() => removeFriend(friend)}
+                onLongPress={() => removeFriend(friend.id)}
                 activeOpacity={0.8}
               >
                 <View style={styles.friendLeft}>
@@ -369,7 +417,7 @@ export default function FriendsScreen() {
                       <TouchableOpacity 
                         style={styles.acceptButton}
                         onPress={() => {
-                          acceptFriendRequest(request);
+                          acceptFriendRequest(request.id);
                           if (friendRequests.length === 1) {
                             setShowRequestsModal(false);
                           }
@@ -380,7 +428,7 @@ export default function FriendsScreen() {
                       <TouchableOpacity 
                         style={styles.declineButton}
                         onPress={() => {
-                          declineFriendRequest(request);
+                          declineFriendRequest(request.id);
                           if (friendRequests.length === 1) {
                             setShowRequestsModal(false);
                           }
@@ -535,27 +583,6 @@ const styles = StyleSheet.create({
     color: '#CBD5E1',
     fontSize: 16,
     fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  sendButton: {
-    flex: 1,
-    backgroundColor: '#3B82F6',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  sendButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
     letterSpacing: -0.2,
   },
   searchContainer: {
