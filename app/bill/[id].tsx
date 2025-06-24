@@ -69,7 +69,7 @@ export default function BillDetailScreen() {
     if (id) fetchBill();
   }, [id]);
 
-  const isHost = bill?.createdBy === user?.id;
+  const isHost = bill?.created_by === user?.id;
   const isParticipant = bill?.participants?.some((p: any) => p.id === user?.id);
   const userCosts = bill && bill.participants && bill.participants.length > 0 && bill.status !== 'select'
     ? calculateUserCosts(bill)
