@@ -84,13 +84,13 @@ export function useBills() {
       // Fetch detailed data for each bill
       const billsWithDetails = await Promise.all(
         uniqueBills.map(async (bill) => {
-          // Fetch participants
+          // Fetch all participants for this bill
           const { data: participantsData } = await supabase
             .from('bill_participants')
-            .select(`
-              users(id, name, email, avatar)
-            `)
+            .select('users(id, name, email, avatar)')
             .eq('bill_id', bill.id);
+
+          const participants = participantsData?.map(p => p.users).filter(Boolean) || [];
 
           // Fetch items with selections
           const { data: itemsData } = await supabase
@@ -101,13 +101,12 @@ export function useBills() {
             `)
             .eq('bill_id', bill.id);
 
-          const participants = participantsData?.map(p => p.users).filter(Boolean) || [];
           const items = itemsData?.map(item => ({
             id: item.id,
             name: item.name,
             price: item.price,
             quantity: item.quantity,
-            selectedBy: item.bill_item_selections?.map(s => s.user_id) || [],
+            selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
           })) || [];
 
           return {
