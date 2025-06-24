@@ -4,6 +4,7 @@ export interface Database {
       users: {
         Row: {
           id: string;
+          username: string;
           name: string;
           email: string;
           avatar: string | null;
@@ -12,6 +13,7 @@ export interface Database {
         };
         Insert: {
           id: string;
+          username: string;
           name: string;
           email: string;
           avatar?: string | null;
@@ -20,6 +22,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          username?: string;
           name?: string;
           email?: string;
           avatar?: string | null;

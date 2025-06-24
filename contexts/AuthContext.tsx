@@ -55,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const user: AuthUser = {
           id: userProfile.id,
+          username: userProfile.username,
           name: userProfile.name,
           email: userProfile.email,
           avatar: userProfile.avatar,
@@ -111,21 +112,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (credentials.password !== credentials.confirmPassword) {
         throw new Error('Passwords do not match');
       }
-
+      // Validate username
+      if (!credentials.username || credentials.username.length < 3) {
+        throw new Error('Username must be at least 3 characters');
+      }
+      // Check username uniqueness
+      const { data: existingUser, error: usernameError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', credentials.username)
+        .single();
+      if (existingUser) {
+        throw new Error('Username is already taken');
+      }
       // Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: credentials.email,
         password: credentials.password,
       });
-
       if (error) {
         throw new Error(error.message);
       }
-
       if (!data.user) {
         throw new Error('Failed to create user account');
       }
-
       // Sign in the user to set auth.uid()
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
@@ -134,21 +144,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signInError) {
         throw new Error(signInError.message);
       }
-
       // Now insert the user profile
       const { error: profileError } = await supabase
         .from('users')
         .insert({
           id: data.user.id,
+          username: credentials.username,
           name: credentials.name,
           email: credentials.email,
           avatar: `https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2`,
         });
-
       if (profileError) {
         throw new Error(profileError.message); // Show the real error
       }
-
       // Auth state will be updated by the listener
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));

@@ -10,6 +10,7 @@ export default function SignupScreen() {
   const { signup, isLoading } = useAuth();
   
   const [formData, setFormData] = useState({
+    username: '',
     name: '',
     email: '',
     password: '',
@@ -18,6 +19,7 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{ 
+    username?: string;
     name?: string; 
     email?: string; 
     password?: string; 
@@ -26,53 +28,54 @@ export default function SignupScreen() {
   }>({});
 
   const validateForm = () => {
-    const newErrors: { 
-      name?: string; 
-      email?: string; 
-      password?: string; 
+    const newErrors: {
+      username?: string;
+      name?: string;
+      email?: string;
+      password?: string;
       confirmPassword?: string;
     } = {};
-
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.trim().length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    }
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
     }
-
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
     }
-
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
-
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSignup = async () => {
     if (!validateForm()) return;
-
     try {
       setErrors({});
       await signup({
+        username: formData.username.trim(),
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       });
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)/' as any);
     } catch (error) {
       setErrors({ general: error instanceof Error ? error.message : 'Signup failed' });
     }
@@ -119,6 +122,27 @@ export default function SignupScreen() {
                 <Text style={styles.errorText}>{errors.general}</Text>
               </View>
             )}
+
+            {/* Username Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <View style={[styles.inputContainer, errors.username && styles.inputError]}>
+                <User size={18} color="#64748B" strokeWidth={2} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.username}
+                  onChangeText={(text) => updateField('username', text)}
+                  placeholder="Choose a username"
+                  placeholderTextColor="#64748B"
+                  autoCapitalize="none"
+                  editable={!isLoading}
+                />
+              </View>
+              {errors.username && <Text style={styles.fieldError}>{errors.username}</Text>}
+              <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>
+                Username cannot be changed later and must be unique.
+              </Text>
+            </View>
 
             {/* Name Input */}
             <View style={styles.inputGroup}>

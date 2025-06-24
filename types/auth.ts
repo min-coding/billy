@@ -1,5 +1,6 @@
 export interface AuthUser {
   id: string;
+  username: string;
   name: string;
   email: string;
   avatar?: string;
@@ -18,6 +19,7 @@ export interface LoginCredentials {
 }
 
 export interface SignupCredentials {
+  username: string;
   name: string;
   email: string;
   password: string;
