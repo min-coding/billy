@@ -8,6 +8,7 @@ import { generateBillCode, formatCurrency } from '@/utils/billUtils';
 import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { useBills } from '@/hooks/useBills';
 
 export default function CreateBillScreen() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function CreateBillScreen() {
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const { refetch } = useBills();
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
@@ -246,6 +248,7 @@ export default function CreateBillScreen() {
         );
       if (itemsError) throw itemsError;
       Alert.alert('Bill Created!', 'Your bill has been saved.');
+      await refetch();
       router.replace('/(tabs)/' as any);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to create bill');

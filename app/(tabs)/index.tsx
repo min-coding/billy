@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +20,7 @@ interface DateRange {
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { bills, loading, error } = useBills();
+  const { bills, loading, error, refetch } = useBills();
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,6 +137,20 @@ export default function HomeScreen() {
       default: return 'Newest First';
     }
   };
+
+  React.useEffect(() => {
+    if (Platform.OS === 'web') {
+      refetch();
+    }
+  }, []);
+
+  if (Platform.OS !== 'web') {
+    useFocusEffect(
+      React.useCallback(() => {
+        refetch();
+      }, [refetch])
+    );
+  }
 
   if (loading) {
     return (
@@ -257,7 +272,12 @@ export default function HomeScreen() {
           </View>
         ) : (
           filteredAndSortedBills.map((bill) => (
-            <BillCard key={bill.id} bill={bill} />
+            <BillCard key={bill.id} bill={{
+              ...bill,
+              description: bill.description ?? undefined,
+              due_date: bill.due_date ?? undefined,
+              tag: bill.tag ?? undefined
+            }} />
           ))
         )}
       </ScrollView>

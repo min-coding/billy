@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/types/database';
@@ -31,6 +31,7 @@ export function useBills() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchBills = async () => {
+    console.log('fetchBills called');
     if (!user) return;
 
     try {
@@ -137,8 +138,9 @@ export function useBills() {
   };
 
   useEffect(() => {
-    fetchBills();
-  }, [user]);
+    if (user?.id) fetchBills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const createBill = async (billData: {
     title: string;
@@ -265,6 +267,10 @@ export function useBills() {
     }
   };
 
+  const refetch = useCallback(() => {
+    fetchBills();
+  }, [user?.id]);
+
   return {
     bills,
     loading,
@@ -272,6 +278,6 @@ export function useBills() {
     createBill,
     updateBillStatus,
     toggleItemSelection,
-    refetch: fetchBills,
+    refetch,
   };
 }
