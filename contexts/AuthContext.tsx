@@ -126,7 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Failed to create user account');
       }
 
-      // Create user profile in database
+      // Sign in the user to set auth.uid()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
+      if (signInError) {
+        throw new Error(signInError.message);
+      }
+
+      // Now insert the user profile
       const { error: profileError } = await supabase
         .from('users')
         .insert({
@@ -137,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
       if (profileError) {
-        throw new Error('Failed to create user profile');
+        throw new Error(profileError.message); // Show the real error
       }
 
       // Auth state will be updated by the listener
@@ -152,7 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { error } = await supabase.auth.signOut();
-      
+      console.log('Sign out result:', error);
+
       if (error) {
         throw new Error(error.message);
       }

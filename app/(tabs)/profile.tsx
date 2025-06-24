@@ -27,6 +27,17 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
+    console.log('Press logout');
+    const doLogout = async () => {
+      try {
+        await logout();
+        console.log('Sign out result: success');
+      } catch (error) {
+        console.log('Sign out result:', error);
+        Alert.alert('Error', 'Failed to sign out');
+      }
+    };
+
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
@@ -35,13 +46,7 @@ export default function ProfileScreen() {
         {
           text: 'Sign Out',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to sign out');
-            }
-          }
+          onPress: doLogout,
         }
       ]
     );
