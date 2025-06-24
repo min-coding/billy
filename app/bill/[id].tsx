@@ -111,7 +111,11 @@ export default function BillDetailScreen() {
     );
   };
 
-  const submitSelections = () => {
+  const submitSelections = async () => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'You must be logged in to submit selections.');
+      return;
+    }
     if (selectedItems.length === 0) {
       Alert.alert('No Items Selected', 'Please select at least one item before submitting.');
       return;
@@ -123,17 +127,71 @@ export default function BillDetailScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Submit',
-          onPress: () => {
-            setHasSubmitted(true);
-            Alert.alert('Success', 'Your selections have been submitted!');
-            // TODO: Send API request to update selections in DB
+          onPress: async () => {
+            try {
+              // 1. Remove all previous selections for this user and bill
+              await supabase
+                .from('bill_item_selections')
+                .delete()
+                .eq('user_id', user.id)
+                .in('bill_item_id', bill.items.map((item: any) => item.id));
+
+              // 2. Insert new selections
+              if (selectedItems.length > 0) {
+                const inserts = selectedItems.map(itemId => ({
+                  bill_item_id: itemId,
+                  user_id: user.id,
+                }));
+                await supabase.from('bill_item_selections').insert(inserts);
+              }
+
+              // 3. Optionally, update participant's submission status if column exists
+              // await supabase
+              //   .from('bill_participants')
+              //   .update({ has_submitted: true })
+              //   .eq('bill_id', bill.id)
+              //   .eq('user_id', user.id);
+
+              setHasSubmitted(true);
+              Alert.alert('Success', 'Your selections have been submitted!');
+              // 4. Refetch bill data to update UI
+              const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', bill.id).single();
+              if (!billError && billData) {
+                // Fetch items for this bill
+                const { data: itemsData } = await supabase
+                  .from('bill_items')
+                  .select('*, bill_item_selections(user_id)')
+                  .eq('bill_id', billData.id);
+                const items = itemsData?.map(item => ({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
+                })) || [];
+                // Fetch participants
+                const { data: participantsData } = await supabase
+                  .from('bill_participants')
+                  .select('users(id, name, email, avatar)')
+                  .eq('bill_id', billData.id);
+                const participants = (participantsData?.map((p: any) => p.users) || []).filter(Boolean);
+                setBill({ 
+                  ...billData, 
+                  totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
+                  items, 
+                  participants 
+                });
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Failed to submit selections. Please try again.');
+            }
           }
         }
       ]
     );
   };
 
-  const finalizeBill = () => {
+  const finalizeBill = async () => {
     if (!allMembersSubmitted) {
       Alert.alert(
         'Cannot Finalize',
@@ -149,9 +207,45 @@ export default function BillDetailScreen() {
         {
           text: 'Finalize',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
-            // TODO: Update bill status in DB
+          onPress: async () => {
+            try {
+              // 1. Update bill status to 'pay' in the database
+              await supabase
+                .from('bills')
+                .update({ status: 'pay' })
+                .eq('id', bill.id);
+              Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
+              // Refetch bill data
+              const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', bill.id).single();
+              if (!billError && billData) {
+                // Fetch items for this bill
+                const { data: itemsData } = await supabase
+                  .from('bill_items')
+                  .select('*, bill_item_selections(user_id)')
+                  .eq('bill_id', billData.id);
+                const items = itemsData?.map(item => ({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
+                })) || [];
+                // Fetch participants
+                const { data: participantsData } = await supabase
+                  .from('bill_participants')
+                  .select('users(id, name, email, avatar)')
+                  .eq('bill_id', billData.id);
+                const participants = (participantsData?.map((p: any) => p.users) || []).filter(Boolean);
+                setBill({ 
+                  ...billData, 
+                  totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
+                  items, 
+                  participants 
+                });
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Failed to finalize bill. Please try again.');
+            }
           }
         }
       ]
@@ -189,15 +283,23 @@ export default function BillDetailScreen() {
     );
   };
 
-  const resetBillSelections = () => {
-    // TODO: Send API request to clear all selections in database
-    setSelectedItems([]);
-    setHasSubmitted(false);
-    console.log('Bill selections reset for bill:', bill?.id);
-    console.log('All participants will need to reselect items');
+  const resetBillSelections = async () => {
+    try {
+      // 1. Delete all bill_item_selections for this bill
+      await supabase
+        .from('bill_item_selections')
+        .delete()
+        .in('bill_item_id', bill.items.map((item: any) => item.id));
+      setSelectedItems([]);
+      setHasSubmitted(false);
+      Alert.alert('Bill selections reset for bill:', bill?.id);
+      // Optionally refetch bill data here
+    } catch (err) {
+      Alert.alert('Error', 'Failed to reset selections.');
+    }
   };
 
-  const deleteBill = () => {
+  const deleteBill = async () => {
     Alert.alert(
       'Delete Bill',
       'Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.',
@@ -206,14 +308,37 @@ export default function BillDetailScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Bill Deleted', 'The bill has been deleted successfully.', [
-              {
-                text: 'OK',
-                onPress: () => router.back()
-              }
-            ]);
-            // TODO: Delete bill from DB
+          onPress: async () => {
+            try {
+              // 1. Delete all bill_item_selections for this bill
+              await supabase
+                .from('bill_item_selections')
+                .delete()
+                .in('bill_item_id', bill.items.map((item: any) => item.id));
+              // 2. Delete all bill_items for this bill
+              await supabase
+                .from('bill_items')
+                .delete()
+                .eq('bill_id', bill.id);
+              // 3. Delete all bill_participants for this bill
+              await supabase
+                .from('bill_participants')
+                .delete()
+                .eq('bill_id', bill.id);
+              // 4. Delete the bill itself
+              await supabase
+                .from('bills')
+                .delete()
+                .eq('id', bill.id);
+              Alert.alert('Bill Deleted', 'The bill has been deleted successfully.', [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]);
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete bill. Please try again.');
+            }
           }
         }
       ]
