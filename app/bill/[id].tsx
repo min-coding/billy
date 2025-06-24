@@ -9,8 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { supabase } from '@/lib/supabase';
 
-const currentUserId = 'user1'; // This should come from auth context
-
 export default function BillDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -64,8 +62,8 @@ export default function BillDetailScreen() {
     if (id) fetchBill();
   }, [id]);
 
-  const isHost = bill?.createdBy === currentUserId;
-  const isParticipant = bill?.participants?.some((p: any) => p.id === currentUserId);
+  const isHost = bill?.createdBy === user?.id;
+  const isParticipant = bill?.participants?.some((p: any) => p.id === user?.id);
   const userCosts = bill && bill.participants && bill.participants.length > 0 && bill.status !== 'select'
     ? calculateUserCosts(bill)
     : [];
@@ -80,13 +78,13 @@ export default function BillDetailScreen() {
 
   // Initialize selected items based on bill data
   useEffect(() => {
-    if (bill && Array.isArray(bill.items) && !hasSubmitted && !loading) {
+    if (bill && Array.isArray(bill.items) && !hasSubmitted && !loading && user?.id) {
       const userSelectedItems = (bill.items || [])
-        .filter((item: any) => Array.isArray(item.selectedBy) && item.selectedBy.includes(currentUserId))
+        .filter((item: any) => Array.isArray(item.selectedBy) && item.selectedBy.includes(user.id))
         .map((item: any) => item.id);
       setSelectedItems(userSelectedItems);
     }
-  }, [bill, hasSubmitted, loading]);
+  }, [bill, hasSubmitted, loading, user?.id]);
 
   if (loading) {
     return (
