@@ -22,6 +22,7 @@ export default function BillDetailScreen() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
 
   const unreadCount = getUnreadCount(id || '');
 
@@ -29,12 +30,19 @@ export default function BillDetailScreen() {
     const fetchBill = async () => {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase.from('bills').select('*').eq('id', id).single();
-      if (error) {
+      const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', id).single();
+      if (billError) {
         setError('Bill not found');
         setBill(null);
+        setParticipants([]);
       } else {
-        setBill(data);
+        setBill(billData);
+        // Fetch participants
+        const { data: participantsData } = await supabase
+          .from('bill_participants')
+          .select('users(id, name, email, avatar)')
+          .eq('bill_id', billData.id);
+        setParticipants(participantsData?.map(p => p.users).filter(Boolean) || []);
       }
       setLoading(false);
     };
@@ -43,8 +51,10 @@ export default function BillDetailScreen() {
 
   const isHost = bill?.createdBy === currentUserId;
   const isParticipant = bill?.participants?.some((p: any) => p.id === currentUserId);
-  const userCosts = bill ? calculateUserCosts(bill) : [];
-  const currentUserCost = userCosts.find(uc => uc.userId === currentUserId);
+  const userCosts = bill && participants.length > 0 && bill.status !== 'select'
+    ? calculateUserCosts({ ...bill, participants })
+    : [];
+  const currentUserCost = userCosts.find(uc => uc.userId === (user?.id || ''));
 
   // Check if all members have submitted their selections
   const allMembersSubmitted = useMemo(() => {
@@ -247,6 +257,8 @@ export default function BillDetailScreen() {
     router.push(`/bill/${bill.id}/chat`);
   };
 
+  const host = participants.find(p => p.id === bill.created_by);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -290,7 +302,7 @@ export default function BillDetailScreen() {
           <View style={styles.billInfo}>
             <View style={styles.infoRow}>
               <Users size={16} color="#64748B" strokeWidth={2} />
-              <Text style={styles.infoText}>{bill.participants.length} participants</Text>
+              <Text style={styles.infoText}>{participants.length} people</Text>
             </View>
             
             <View style={styles.infoRow}>
@@ -370,7 +382,7 @@ export default function BillDetailScreen() {
         {/* Participants */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Participants</Text>
-          {bill.participants.map((participant: any) => {
+          {participants.map((participant: any) => {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
             const StatusIcon = getStatusIcon(status);
@@ -378,7 +390,7 @@ export default function BillDetailScreen() {
             return (
               <View key={participant.id} style={styles.participantCard}>
                 <View style={styles.participantLeft}>
-                  {participant.id === bill.createdBy && (
+                  {participant.id === bill.created_by && (
                     <View style={styles.hostBadge}>
                       <Text style={styles.hostBadgeText}>HOST</Text>
                     </View>
@@ -396,7 +408,7 @@ export default function BillDetailScreen() {
                       {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
                     </Text>
                   )}
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
                     <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
                     <Text style={styles.statusText}>{getStatusText(status)}</Text>
                   </View>
@@ -404,6 +416,44 @@ export default function BillDetailScreen() {
               </View>
             );
           })}
+          {/* Host add member button */}
+          {isHost && bill.status === 'select' && (
+            <TouchableOpacity
+              style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
+              onPress={async () => {
+                // Prompt for user email or username (simple prompt for demo)
+                const username = prompt('Enter username of friend to add:');
+                if (!username) return;
+                // Find user by username
+                const { data: userData, error: userError } = await supabase
+                  .from('users')
+                  .select('id')
+                  .eq('username', username)
+                  .single();
+                if (userError || !userData) {
+                  Alert.alert('Error', 'User not found');
+                  return;
+                }
+                // Add to bill_participants
+                const { error: addError } = await supabase
+                  .from('bill_participants')
+                  .insert([{ bill_id: bill.id, user_id: userData.id }]);
+                if (addError) {
+                  Alert.alert('Error', addError.message);
+                  return;
+                }
+                // Refresh participants
+                const { data: participantsData } = await supabase
+                  .from('bill_participants')
+                  .select('users(id, name, email, avatar)')
+                  .eq('bill_id', bill.id);
+                setParticipants(participantsData?.map(p => p.users).filter(Boolean) || []);
+                Alert.alert('Success', 'Member added!');
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Bank Details */}

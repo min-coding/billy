@@ -222,16 +222,12 @@ export default function CreateBillScreen() {
         .select()
         .single();
       if (billError) throw billError;
-      // 2. Insert participants (including creator)
-      const allParticipantIds = [user.id, ...participants.filter(p => p.id !== user.id).map(p => p.id)];
+      // 2. Insert only the creator as a participant
       const { error: participantsError } = await supabase
         .from('bill_participants')
-        .insert(
-          allParticipantIds.map(userId => ({
-            bill_id: bill.id,
-            user_id: userId,
-          }))
-        );
+        .insert([
+          { bill_id: bill.id, user_id: user.id }
+        ]);
       if (participantsError) throw participantsError;
       // 3. Insert items
       const { data: itemsData, error: itemsError } = await supabase
@@ -245,9 +241,7 @@ export default function CreateBillScreen() {
           }))
         );
       if (itemsError) throw itemsError;
-      // 4. (Optional) Insert item selections if needed
-      // 5. Success
-      Alert.alert('Bill Created!', 'Your bill has been saved.');
+      Alert.alert('Bill Created!', 'Your bill has been saved. You can add members before changing the bill status to pay.');
       router.replace('/(tabs)/' as any);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to create bill');
