@@ -116,7 +116,7 @@ export default function FriendsScreen() {
       setUsernameResults(data);
     } else {
       setUsernameResults([]);
-    }
+          }
   };
 
   const handleSendFriendRequest = async () => {
@@ -134,7 +134,7 @@ export default function FriendsScreen() {
       Alert.alert('Error', err.message || 'Failed to send friend request');
     } finally {
       setIsSending(false);
-    }
+          }
   };
 
   return (
@@ -269,8 +269,8 @@ export default function FriendsScreen() {
                 />
               )}
               <View style={styles.addFriendButtons}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
                   onPress={() => {
                     setIsAddingFriend(false);
                     setUsernameSearch('');

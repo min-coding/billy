@@ -28,11 +28,11 @@ export default function SignupScreen() {
   }>({});
 
   const validateForm = () => {
-    const newErrors: {
+    const newErrors: { 
       username?: string;
-      name?: string;
-      email?: string;
-      password?: string;
+      name?: string; 
+      email?: string; 
+      password?: string; 
       confirmPassword?: string;
     } = {};
     if (!formData.username.trim()) {

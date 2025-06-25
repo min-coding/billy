@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import type { Database } from '@/types/database';
@@ -41,6 +41,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     messages: [],
     isLoading: false,
   });
+  const currentBillIdRef = useRef<string | null>(null);
 
   const fetchMessages = async (billId: string) => {
     if (!user) return [];
@@ -144,10 +145,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await supabase
         .from('message_reads')
-        .upsert({
-          message_id: messageId,
-          user_id: user.id,
-        });
+        .upsert(
+          {
+            message_id: messageId,
+            user_id: user.id,
+          },
+          { onConflict: 'message_id,user_id' }
+        );
 
       if (error) throw error;
 
@@ -197,6 +201,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   };
 
   const getMessagesForBill = (billId: string) => {
+    currentBillIdRef.current = billId;
     return chatState.messages
       .filter(msg => msg.billId === billId)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -217,6 +222,37 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setChatState({ messages: [], isLoading: false });
     }
   }, [user]);
+
+  // Real-time subscription for chat messages
+  useEffect(() => {
+    if (!user) return;
+    // Only subscribe if a bill is being viewed
+    const billId = currentBillIdRef.current;
+    if (!billId) return;
+    const channel = supabase
+      .channel('realtime:chat_messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `bill_id=eq.${billId}`,
+        },
+        async () => {
+          // Refetch messages for this bill
+          const updatedMessages = await fetchMessages(billId);
+          setChatState(prev => ({
+            ...prev,
+            messages: prev.messages.filter(m => m.billId !== billId).concat(updatedMessages),
+          }));
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, chatState.messages.length]);
 
   return (
     <ChatContext.Provider

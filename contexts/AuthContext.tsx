@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       console.log('Sign out result:', error);
-
+      
       if (error) {
         throw new Error(error.message);
       }

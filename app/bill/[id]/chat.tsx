@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Send, Camera, Image as ImageIcon, Check, X, Clock, Shield, MessageCircle } from 'lucide-react-native';
@@ -190,6 +190,41 @@ export default function BillChatScreen() {
     });
   };
 
+  // Helper to get participant payment status (copied from bill detail)
+  const getParticipantStatus = (participantId: string) => {
+    if (!bill || !bill.participants) return 'unpaid';
+    if (bill.status?.toString() === 'select') return 'pending';
+    if (bill.status?.toString() === 'pay') {
+      const participant = bill.participants?.find((p: any) => p.user_id === participantId);
+      return participant?.payment_status ?? 'unpaid';
+    }
+    return 'completed';
+  };
+
+  const handlePaidInCash = async () => {
+    if (!user || !bill) return;
+    try {
+      await supabase
+        .from('bill_participants')
+        .update({ payment_status: 'paid' })
+        .eq('bill_id', bill.id)
+        .eq('user_id', user.id);
+      // Optionally, send a system message to chat
+      await sendMessage(bill.id, `${user.name || 'A member'} marked as paid (cash).`, 'text');
+      if (Platform.OS === 'web') {
+        window.alert('Marked as paid (cash)');
+      } else {
+        Alert.alert('Success', 'Marked as paid (cash)');
+      }
+    } catch (err) {
+      if (Platform.OS === 'web') {
+        window.alert('Failed to mark as paid (cash)');
+      } else {
+        Alert.alert('Error', 'Failed to mark as paid (cash)');
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -206,6 +241,25 @@ export default function BillChatScreen() {
             <Text style={styles.headerSubtitle}>{bill.title}</Text>
           </View>
         </View>
+        {/* Paid in Cash button for members who are not paid/verified */}
+        {bill.status === 'pay' && getParticipantStatus(user.id) !== 'paid' && getParticipantStatus(user.id) !== 'verified' && (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F59E0B',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 8,
+              marginLeft: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 40,
+              alignSelf: 'center',
+            }}
+            onPress={handlePaidInCash}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Paid in Cash</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Messages */}
@@ -361,6 +415,29 @@ export default function BillChatScreen() {
                   )}
                 </View>
               </View>
+
+              {/* Verify button for cash payment system message */}
+              {message?.type === 'text' && message?.content?.includes('marked as paid (cash)') && isHost && bill && bill.participants && (() => {
+                const paidParticipant = bill.participants.find((p: any) => p.payment_status === 'paid' && message.content.includes(p.name));
+                if (paidParticipant) {
+                  return (
+                    <TouchableOpacity
+                      style={[styles.verifyButton, { marginTop: 8 }]}
+                      onPress={async () => {
+                        await supabase
+                          .from('bill_participants')
+                          .update({ payment_status: 'verified' })
+                          .eq('bill_id', bill.id)
+                          .eq('user_id', paidParticipant.user_id);
+                        await sendMessage(bill.id, `${paidParticipant.name} payment (cash) verified by host.`, 'text');
+                      }}
+                    >
+                      <Text style={styles.verifyButtonText}>Verify</Text>
+                    </TouchableOpacity>
+                  );
+                }
+                return null;
+              })()}
             </View>
           );
         })}

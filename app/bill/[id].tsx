@@ -236,13 +236,13 @@ export default function BillDetailScreen() {
         window.alert('Failed to finalize bill. Please try again.');
       }
     } else {
-      Alert.alert(
-        'Finalize Bill',
+    Alert.alert(
+      'Finalize Bill',
         'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Finalize', 
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Finalize', 
             style: 'destructive',
             onPress: async () => {
               try {
@@ -257,10 +257,10 @@ export default function BillDetailScreen() {
               } catch (err) {
                 Alert.alert('Error', 'Failed to finalize bill. Please try again.');
               }
-            }
           }
-        ]
-      );
+        }
+      ]
+    );
     }
   };
 
@@ -428,7 +428,7 @@ export default function BillDetailScreen() {
 
       if (Platform.OS === 'web') {
         window.alert(`Payment status updated to ${newStatus}`);
-      } else {
+    } else {
         Alert.alert('Success', `Payment status updated to ${newStatus}`);
       }
     } catch (err) {
@@ -481,8 +481,8 @@ export default function BillDetailScreen() {
       }
     }
   };
-
-  return (
+          
+          return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -520,19 +520,19 @@ export default function BillDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Bill Info */}
+        {/* Bill Info - Always first */}
       <View style={styles.section}>
           <View style={styles.billInfo}>
             <View style={styles.infoRow}>
               <Users size={16} color="#64748B" strokeWidth={2} />
               <Text style={styles.infoText}>{bill.participants.length} people</Text>
-          </View>
-          
+            </View>
+            
             <View style={styles.infoRow}>
               <DollarSign size={16} color="#10B981" strokeWidth={2} />
               <Text style={styles.infoText}>{formatCurrency(bill.totalAmount)}</Text>
-                      </View>
-            
+          </View>
+          
             <View style={styles.infoRow}>
               <Calendar size={16} color="#64748B" strokeWidth={2} />
               <Text style={styles.infoText}>
@@ -546,32 +546,155 @@ export default function BillDetailScreen() {
 
           {bill.description && (
             <Text style={styles.description}>{bill.description}</Text>
-                  )}
-                </View>
+          )}
+                      </View>
 
-        {/* Reset Warning - Show when host has made changes */}
+        {/* Reset Warning - Only for select status */}
         {isHost && bill.status === 'select' && (
-      <View style={styles.section}>
+          <View style={styles.section}>
             <View style={styles.warningCard}>
               <View style={styles.warningHeader}>
                 <Bell size={16} color="#F59E0B" strokeWidth={2} />
                 <Text style={styles.warningTitle}>Edit Bill Impact</Text>
-              </View>
+                    </View>
               <Text style={styles.warningText}>
                 Editing bill details will reset all member selections and submissions. 
                 All participants will need to reselect their items after you make changes.
-                </Text>
+              </Text>
+                </View>
+              </View>
+            )}
+            
+        {/* Your Share - Only show in pay/closed status when shares are finalized */}
+        {currentUserCost && bill.status !== 'select' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Share</Text>
+            <View style={styles.costCard}>
+              <View style={styles.costHeader}>
+                <Text style={styles.costAmount}>{formatCurrency(currentUserCost.total)}</Text>
+                <Text style={styles.costLabel}>Total Amount</Text>
+                      </View>
+              
+              <View style={styles.costItems}>
+                {currentUserCost.items.map((item) => (
+                  <View key={item.id} style={styles.costItem}>
+                    <Text style={styles.costItemName}>{item.name}</Text>
+                    <Text style={styles.costItemPrice}>{formatCurrency(item.price)}</Text>
                     </View>
+                  ))}
+                      </View>
+                    </View>
+            
+            {/* Payment Action Button - Only for current user in pay status */}
+            {bill.status === 'pay' && (
+                    <TouchableOpacity
+                style={[
+                  styles.paymentButton,
+                  getParticipantStatus(user?.id || '') === 'paid' && styles.paymentButtonPaid
+                ]}
+                onPress={() => togglePaymentStatus(user?.id || '')}
+              >
+                <Text style={styles.paymentButtonText}>
+                  {getParticipantStatus(user?.id || '') === 'paid' ? 'Mark as Unpaid' : 'Mark as Paid'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                     </View>
                   )}
 
-        {/* Items Section */}
+        {/* Participants */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Participants</Text>
+          {bill.participants.map((participant: any) => {
+            const participantCost = userCosts.find(uc => uc.userId === participant.id);
+            const status = getParticipantStatus(participant.id);
+            const StatusIcon = getStatusIcon(status);
+            const isCurrentUser = participant.id === user?.id;
+            const canVerifyPayment = bill.status === 'pay' && isHost && status === 'paid' && !isCurrentUser;
+            
+            return (
+              <View key={participant.id} style={styles.participantCard}>
+                <View style={styles.participantLeft}>
+                  {participant.id === bill.created_by && (
+                    <View style={styles.hostBadge}>
+                      <Text style={styles.hostBadgeText}>HOST</Text>
+                    </View>
+                  )}
+                  <View style={styles.participantInfo}>
+                    <Text style={styles.participantName}>{participant.name}</Text>
+                    <Text style={styles.participantEmail}>{participant.email}</Text>
+                </View>
+              </View>
+              
+                <View style={styles.participantRight}>
+                  {/* Only show amounts when bill is not in select status */}
+                  {bill.status !== 'select' && (
+                    <Text style={styles.participantAmount}>
+                      {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
+                  </Text>
+                  )}
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
+                    <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
+                    <Text style={styles.statusText}>{getStatusText(status)}</Text>
+      </View>
+
+                  {/* Host verification button only */}
+                  {canVerifyPayment && (
+            <TouchableOpacity
+                      style={styles.verifyButton}
+                      onPress={() => verifyPayment(participant.id)}
+                    >
+                      <Text style={styles.verifyButtonText}>Verify</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                </View>
+          );
+        })}
+
+          {/* Host add member button */}
+          {isHost && bill.status === 'select' && (
+        <TouchableOpacity 
+              style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
+              onPress={async () => {
+                // Prompt for user email or username (simple prompt for demo)
+                const username = prompt('Enter username of friend to add:');
+                if (!username) return;
+                // Find user by username
+                const { data: userData, error: userError } = await supabase
+                  .from('users')
+                  .select('id')
+                  .eq('username', username)
+                  .single();
+                if (userError || !userData) {
+                  Alert.alert('Error', 'User not found');
+                  return;
+                }
+                // Add to bill_participants
+                const { error: addError } = await supabase
+                  .from('bill_participants')
+                  .insert([{ bill_id: bill.id, user_id: userData.id }]);
+                if (addError) {
+                  Alert.alert('Error', addError.message);
+                  return;
+                }
+                // Refresh bill data
+                await fetchBill();
+                Alert.alert('Success', 'Member added!');
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
+        </TouchableOpacity>
+          )}
+      </View>
+
+        {/* Items Section - Moved to last for pay/closed status */}
       <View style={styles.section}>
           <Text style={styles.sectionTitle}>Items</Text>
           {Array.isArray(bill.items) && bill.items.length > 0 ? (
             bill.items.map((item: any) => (
               <ItemCard
-              key={item.id}
+                key={item.id}
                 item={item}
                 isSelected={selectedItems.includes(item.id)}
                 onToggle={() => toggleItemSelection(item.id)}
@@ -581,141 +704,19 @@ export default function BillDetailScreen() {
             ))
           ) : (
             <Text style={{ color: '#64748B', marginTop: 8 }}>No items yet.</Text>
-                  )}
-                </View>
-                
-        {/* Your Cost - Only show in pay/closed status when shares are finalized */}
-        {currentUserCost && bill.status !== 'select' && (
-      <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Share</Text>
-            <View style={styles.costCard}>
-              <View style={styles.costHeader}>
-                <Text style={styles.costAmount}>{formatCurrency(currentUserCost.total)}</Text>
-                <Text style={styles.costLabel}>Total Amount</Text>
+          )}
           </View>
           
-              <View style={styles.costItems}>
-                {currentUserCost.items.map((item) => (
-                  <View key={item.id} style={styles.costItem}>
-                    <Text style={styles.costItemName}>{item.name}</Text>
-                    <Text style={styles.costItemPrice}>{formatCurrency(item.price)}</Text>
-          </View>
-                ))}
-          </View>
-        </View>
-      </View>
-        )}
-
-        {/* Participants */}
-    <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Participants</Text>
-          {bill.participants.map((participant: any) => {
-            const participantCost = userCosts.find(uc => uc.userId === participant.id);
-            const status = getParticipantStatus(participant.id);
-            const StatusIcon = getStatusIcon(status);
-            const isCurrentUser = participant.id === user?.id;
-            const canTogglePayment = bill.status === 'pay' && isCurrentUser && (status === 'unpaid' || status === 'paid');
-            const canVerifyPayment = bill.status === 'pay' && isHost && status === 'paid' && !isCurrentUser;
-            
-            return (
-              <View key={participant.id} style={styles.participantCard}>
-                <View style={styles.participantLeft}>
-                  {participant.id === bill.created_by && (
-                    <View style={styles.hostBadge}>
-                      <Text style={styles.hostBadgeText}>HOST</Text>
-            </View>
-                  )}
-                  <View style={styles.participantInfo}>
-                    <Text style={styles.participantName}>{participant.name}</Text>
-                    <Text style={styles.participantEmail}>{participant.email}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.participantRight}>
-            {/* Only show amounts when bill is not in select status */}
-            {bill.status !== 'select' && (
-              <Text style={styles.participantAmount}>
-                {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
-              </Text>
-            )}
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
-              <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.statusText}>{getStatusText(status)}</Text>
-            </View>
-            
-            {/* Payment Action Buttons */}
-            {canTogglePayment && (
-              <TouchableOpacity 
-                style={[
-                  styles.paymentButton,
-                  status === 'paid' && styles.paymentButtonPaid
-                ]}
-                onPress={() => togglePaymentStatus(participant.id)}
-              >
-                <Text style={styles.paymentButtonText}>
-                  {status === 'paid' ? 'Mark as Unpaid' : 'Mark as Paid'}
-                </Text>
-              </TouchableOpacity>
-            )}
-            
-            {canVerifyPayment && (
-              <TouchableOpacity 
-                style={styles.verifyButton}
-                onPress={() => verifyPayment(participant.id)}
-              >
-                <Text style={styles.verifyButtonText}>Verify</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-            </View>
-          );
-        })}
-        {/* Host add member button */}
-      {isHost && bill.status === 'select' && (
-        <TouchableOpacity 
-            style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
-            onPress={async () => {
-              // Prompt for user email or username (simple prompt for demo)
-              const username = prompt('Enter username of friend to add:');
-              if (!username) return;
-              // Find user by username
-              const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('id')
-                .eq('username', username)
-                .single();
-              if (userError || !userData) {
-                Alert.alert('Error', 'User not found');
-                return;
-              }
-              // Add to bill_participants
-              const { error: addError } = await supabase
-                .from('bill_participants')
-                .insert([{ bill_id: bill.id, user_id: userData.id }]);
-              if (addError) {
-                Alert.alert('Error', addError.message);
-                return;
-              }
-              // Refresh bill data
-              await fetchBill();
-              Alert.alert('Success', 'Member added!');
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-
-        {/* Bank Details */}
+        {/* Bank Details - Only for pay status */}
         {bill.status === 'pay' && (
-          <View style={styles.section}>
+    <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Details</Text>
             <View style={styles.bankCard}>
               <Text style={styles.bankTitle}>Send payment to:</Text>
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
               <Text style={styles.accountNumber}>Account: {bill.bankDetails.accountNumber}</Text>
-            </View>
+      </View>
           </View>
         )}
 
@@ -725,8 +726,8 @@ export default function BillDetailScreen() {
             <View style={styles.successCard}>
               <Check size={16} color="#10B981" strokeWidth={2} />
               <Text style={styles.successText}>All payments verified! Bill is now closed.</Text>
-            </View>
-          </View>
+              </View>
+              </View>
         )}
       </ScrollView>
 
@@ -1166,8 +1167,10 @@ const styles = StyleSheet.create({
   },
   paymentButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 6,
   },
   verifyButton: {
     backgroundColor: '#10B981',
