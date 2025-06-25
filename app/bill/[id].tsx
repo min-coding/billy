@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag } from 'lucide-react-native';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +41,12 @@ export default function BillDetailScreen() {
 
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [savingMembers, setSavingMembers] = useState(false);
+
+  const [editItems, setEditItems] = useState<any[]>([]);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState('1');
+  const [savingItems, setSavingItems] = useState(false);
 
   const unreadCount = getUnreadCount(id || '');
 
@@ -120,6 +126,15 @@ export default function BillDetailScreen() {
       setFriendSearchQuery('');
     }
   }, [showEditMembersModal, bill]);
+
+  useEffect(() => {
+    if (showEditItemsModal && bill) {
+      setEditItems(bill.items.map((item: any) => ({ ...item })));
+      setNewItemName('');
+      setNewItemPrice('');
+      setNewItemQuantity('1');
+    }
+  }, [showEditItemsModal, bill]);
 
   const isHost = bill?.created_by === user?.id;
   const isParticipant = bill?.participants?.some((p: any) => p.id === user?.id);
@@ -686,6 +701,112 @@ export default function BillDetailScreen() {
       Alert.alert('Error', 'Failed to update members');
     }
     setSavingMembers(false);
+  };
+
+  // Add item handler
+  const handleAddEditItem = () => {
+    if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
+      Alert.alert('Error', 'Please enter item name, price, and quantity');
+      return;
+    }
+    const price = parseFloat(newItemPrice);
+    const quantity = parseInt(newItemQuantity);
+    if (isNaN(price) || price <= 0) {
+      Alert.alert('Error', 'Please enter a valid price');
+      return;
+    }
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid quantity');
+      return;
+    }
+    setEditItems([
+      ...editItems,
+      {
+        id: `new-${Date.now()}`,
+        name: newItemName.trim(),
+        price,
+        quantity,
+      }
+    ]);
+    setNewItemName('');
+    setNewItemPrice('');
+    setNewItemQuantity('1');
+  };
+
+  // Remove item handler
+  const handleRemoveEditItem = (itemId: string) => {
+    setEditItems(editItems.filter(item => item.id !== itemId));
+  };
+
+  // Save handler
+  const handleSaveEditItems = async () => {
+    if (!bill) return;
+    Alert.alert(
+      'Reset Selections?',
+      'Editing items will reset all participants selections. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: async () => {
+            setSavingItems(true);
+            try {
+              // 1. Delete removed items
+              const currentIds = bill.items.map((item: any) => item.id);
+              const newIds = editItems.filter(item => !item.id.startsWith('new-')).map(item => item.id);
+              const toDelete = currentIds.filter(id => !newIds.includes(id));
+              if (toDelete.length > 0) {
+                await supabase.from('bill_items').delete().in('id', toDelete);
+              }
+              // 2. Add new items
+              const toAdd = editItems.filter(item => item.id.startsWith('new-'));
+              if (toAdd.length > 0) {
+                await supabase.from('bill_items').insert(
+                  toAdd.map(item => ({
+                    bill_id: bill.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                  }))
+                );
+              }
+              // 3. Optionally update changed items (not implemented here, but can be added)
+              // 4. Reset all selections and has_submitted
+              const { data: participants } = await supabase
+                .from('bill_participants')
+                .select('user_id')
+                .eq('bill_id', bill.id);
+              if (participants) {
+                for (const p of participants) {
+                  await supabase
+                    .from('bill_participants')
+                    .update({ has_submitted: false })
+                    .eq('bill_id', bill.id)
+                    .eq('user_id', p.user_id);
+                }
+              }
+              const { data: allItems } = await supabase
+                .from('bill_items')
+                .select('id')
+                .eq('bill_id', bill.id);
+              if (allItems && allItems.length > 0) {
+                await supabase
+                  .from('bill_item_selections')
+                  .delete()
+                  .in('bill_item_id', allItems.map((item: any) => item.id));
+              }
+              await fetchBill();
+              setShowEditItemsModal(false);
+              Alert.alert('Success', 'Items updated and selections reset!');
+            } catch (err) {
+              Alert.alert('Error', 'Failed to update items');
+            }
+            setSavingItems(false);
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -1258,6 +1379,90 @@ export default function BillDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.addSelectedButton, { paddingHorizontal: 20 }]} onPress={handleSaveMembers} disabled={savingMembers}>
                 <Text style={styles.addSelectedText}>{savingMembers ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Items Modal */}
+      <Modal
+        visible={showEditItemsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEditItemsModal(false)}
+      >
+        <View style={styles.friendsModalOverlay}>
+          <View style={styles.friendsModal}>
+            <View style={styles.friendsModalHeader}>
+              <Text style={styles.friendsModalTitle}>Edit Items</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowEditItemsModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.friendsModalContent}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 100 }}
+            >
+              {/* Add item row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <TextInput
+                  style={[styles.input, { flex: 3, minWidth: 0 }]}
+                  value={newItemName}
+                  onChangeText={setNewItemName}
+                  placeholder="Item name"
+                  placeholderTextColor="#64748B"
+                />
+                <TextInput
+                  style={[styles.input, { flex: 2, minWidth: 0 }]}
+                  value={newItemPrice}
+                  onChangeText={setNewItemPrice}
+                  placeholder="$0.00"
+                  placeholderTextColor="#64748B"
+                  keyboardType="decimal-pad"
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1, minWidth: 0 }]}
+                  value={newItemQuantity}
+                  onChangeText={setNewItemQuantity}
+                  placeholder="Qty"
+                  placeholderTextColor="#64748B"
+                  keyboardType="numeric"
+                />
+                <TouchableOpacity style={styles.addButton} onPress={handleAddEditItem}>
+                  <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </View>
+              {/* Item list */}
+              {editItems.map((item) => (
+                <View key={item.id} style={[styles.itemCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemPrice}>
+                      {formatCurrency(item.price)} × {item.quantity}
+                    </Text>
+                  </View>
+                  <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
+                  <TouchableOpacity
+                    style={[styles.pillButton, styles.pillButtonRedOutline, { marginLeft: 8 }]}
+                    onPress={() => handleRemoveEditItem(item.id)}
+                  >
+                    <Trash2 size={16} color="#EF4444" strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+            {/* Sticky footer for buttons */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1E293B', padding: 20, borderTopWidth: 1, borderTopColor: '#334155' }}>
+              <TouchableOpacity style={[styles.addSelectedButton, { backgroundColor: '#64748B', paddingHorizontal: 20 }]} onPress={() => setShowEditItemsModal(false)}>
+                <Text style={styles.addSelectedText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.addSelectedButton, { paddingHorizontal: 20 }]} onPress={handleSaveEditItems} disabled={savingItems}>
+                <Text style={styles.addSelectedText}>{savingItems ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1962,5 +2167,76 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '500',
     marginBottom: 8,
+  },
+  itemCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  itemDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemPrice: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  itemTotal: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  pillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+    borderWidth: 1,
+  },
+  pillButtonRedOutline: {
+    borderColor: '#EF4444',
+    backgroundColor: 'transparent',
+  },
+  pillButtonBlue: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  pillButtonTextRed: {
+    color: '#EF4444',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  pillButtonTextBlue: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  addButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
