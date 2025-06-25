@@ -81,6 +81,7 @@ export default function BillDetailScreen() {
         .filter(Boolean);
       setBill({ 
         ...billData, 
+        dueDate: billData.due_date,
         totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
         items, 
         participants,
@@ -613,7 +614,7 @@ export default function BillDetailScreen() {
           title: editTitle,
           description: editDescription,
           tag: editTag,
-          dueDate: editDueDate,
+          due_date: editDueDate,
         })
         .eq('id', bill.id);
 
