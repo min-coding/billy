@@ -176,14 +176,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setChatState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      const { error } = await supabase
+      // 1. Update the chat message status and get sender_id and bill_id
+      const { data: messageData, error: messageError } = await supabase
         .from('chat_messages')
         .update({ payment_status: status })
-        .eq('id', messageId);
+        .eq('id', messageId)
+        .select('sender_id, bill_id')
+        .single();
 
-      if (error) throw error;
+      if (messageError) throw messageError;
 
-      // Update local state
+      // 2. Update the participant's payment status
+      if (messageData?.sender_id && messageData?.bill_id) {
+        await supabase
+          .from('bill_participants')
+          .update({ payment_status: status })
+          .eq('bill_id', messageData.bill_id)
+          .eq('user_id', messageData.sender_id);
+      }
+
+      // 3. Update local state as before
       setChatState(prev => ({
         ...prev,
         messages: prev.messages.map(msg => 

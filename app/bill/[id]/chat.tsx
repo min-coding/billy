@@ -131,18 +131,25 @@ export default function BillChatScreen() {
   };
 
   const handleVerifyPayment = (messageId: string, status: 'verified' | 'rejected') => {
-    Alert.alert(
-      status === 'verified' ? 'Verify Payment' : 'Reject Payment',
-      `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: status === 'verified' ? 'Verify' : 'Reject',
-          style: status === 'verified' ? 'default' : 'destructive',
-          onPress: () => verifyPayment(messageId, status)
-        }
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment?`
+      );
+      if (confirmed) verifyPayment(messageId, status);
+    } else {
+      Alert.alert(
+        status === 'verified' ? 'Verify Payment' : 'Reject Payment',
+        `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: status === 'verified' ? 'Verify' : 'Reject',
+            style: status === 'verified' ? 'default' : 'destructive',
+            onPress: () => verifyPayment(messageId, status)
+          }
+        ]
+      );
+    }
   };
 
   const openImageModal = (imageUrl: string) => {
