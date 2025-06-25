@@ -42,7 +42,7 @@ export default function BillChatScreen() {
   }, [id]);
 
   const messages = getMessagesForBill(id || '');
-  const isHost = bill?.createdBy === user?.id;
+  const isHost = bill?.created_by === user?.id;
 
   useEffect(() => {
     // Mark messages as read when viewing chat

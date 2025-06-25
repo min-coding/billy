@@ -63,7 +63,7 @@ export default function SummaryScreen() {
     const friendBalancesMap: { [userId: string]: { name: string; avatar: string; amount: number } } = {};
 
     bills.forEach(bill => {
-      const isHost = bill.createdBy === currentUserId;
+      const isHost = bill.created_by === currentUserId;
       const isParticipant = bill.participants.some((p: any) => p.id === currentUserId);
       if (isHost) {
         billsAsHostCount++;
@@ -79,7 +79,7 @@ export default function SummaryScreen() {
           let netAmount = 0;
           if (isHost) {
             netAmount = userCost.total; // they owe me
-          } else if (userCost.userId === bill.createdBy) {
+          } else if (userCost.userId === bill.created_by) {
             // I'm participant, this is the host
             netAmount = -userCost.total; // I owe host
           }
