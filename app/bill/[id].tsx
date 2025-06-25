@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus } from 'lucide-react-native';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
+import { useFriends } from '@/hooks/useFriends';
 import { supabase } from '@/lib/supabase';
 
 export default function BillDetailScreen() {
@@ -14,6 +15,7 @@ export default function BillDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { getUnreadCount } = useChat();
+  const { friends } = useFriends();
 
   const [bill, setBill] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -21,8 +23,19 @@ export default function BillDetailScreen() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Friends modal state
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
   const unreadCount = getUnreadCount(id || '');
+
+  // Filter friends based on search query
+  const filteredFriends = friends.filter(friend =>
+    friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
+    friend.email.toLowerCase().includes(friendSearchQuery.toLowerCase())
+  );
 
   const fetchBill = async () => {
     setLoading(true);
@@ -481,6 +494,95 @@ export default function BillDetailScreen() {
       }
     }
   };
+
+  // Friend selection functions
+  const toggleFriendSelection = (friendId: string) => {
+    setSelectedFriends(prev => 
+      prev.includes(friendId) 
+        ? prev.filter(id => id !== friendId)
+        : [...prev, friendId]
+    );
+  };
+
+  const addSelectedFriends = async () => {
+    if (!bill || selectedFriends.length === 0) return;
+
+    try {
+      const friendsToAdd = friends
+        .filter(friend => selectedFriends.includes(friend.id))
+        .map(friend => ({
+          id: friend.id,
+          name: friend.name,
+          email: friend.email,
+          avatar: friend.avatar
+        }));
+
+      // Remove duplicates - check if already participants
+      const existingIds = bill.participants.map((p: any) => p.id);
+      const newFriends = friendsToAdd.filter(friend => !existingIds.includes(friend.id));
+
+      if (newFriends.length === 0) {
+        Alert.alert('Info', 'All selected friends are already members of this bill');
+        setSelectedFriends([]);
+        setShowFriendsModal(false);
+        setFriendSearchQuery('');
+        return;
+      }
+
+      // Add new friends to bill_participants
+      const { error: addError } = await supabase
+        .from('bill_participants')
+        .insert(
+          newFriends.map(friend => ({
+            bill_id: bill.id,
+            user_id: friend.id,
+          }))
+        );
+
+      if (addError) throw addError;
+
+      // Refetch bill data
+      await fetchBill();
+
+      setSelectedFriends([]);
+      setShowFriendsModal(false);
+      setFriendSearchQuery('');
+
+      Alert.alert('Success', `${newFriends.length} friend${newFriends.length !== 1 ? 's' : ''} added to the bill`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to add friends to bill');
+    }
+  };
+
+  const removeParticipant = async (participantId: string) => {
+    if (!bill || participantId === bill.created_by) return;
+
+    Alert.alert(
+      'Remove Member',
+      'Are you sure you want to remove this member from the bill?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await supabase
+                .from('bill_participants')
+                .delete()
+                .eq('bill_id', bill.id)
+                .eq('user_id', participantId);
+
+              await fetchBill();
+              Alert.alert('Success', 'Member removed from bill');
+            } catch (err) {
+              Alert.alert('Error', 'Failed to remove member');
+            }
+          }
+        }
+      ]
+    );
+  };
           
           return (
     <SafeAreaView style={styles.container}>
@@ -606,7 +708,19 @@ export default function BillDetailScreen() {
 
         {/* Participants */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Participants</Text>
+          <View style={styles.membersHeader}>
+            <Text style={styles.sectionTitle}>Participants</Text>
+            {isHost && bill.status === 'select' && (
+              <TouchableOpacity 
+                style={styles.addFromFriendsButton}
+                onPress={() => setShowFriendsModal(true)}
+              >
+                <Users size={16} color="#3B82F6" strokeWidth={2} />
+                <Text style={styles.addFromFriendsText}>Invite Members</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
           {bill.participants.map((participant: any) => {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
@@ -622,73 +736,63 @@ export default function BillDetailScreen() {
                       <Text style={styles.hostBadgeText}>HOST</Text>
                     </View>
                   )}
+                  {participant.avatar && (
+                    <Image 
+                      source={{ uri: participant.avatar }} 
+                      style={styles.participantAvatar}
+                    />
+                  )}
                   <View style={styles.participantInfo}>
                     <Text style={styles.participantName}>{participant.name}</Text>
                     <Text style={styles.participantEmail}>{participant.email}</Text>
+                  </View>
                 </View>
-              </View>
               
                 <View style={styles.participantRight}>
                   {/* Only show amounts when bill is not in select status */}
                   {bill.status !== 'select' && (
                     <Text style={styles.participantAmount}>
                       {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
-                  </Text>
+                    </Text>
                   )}
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
                     <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
                     <Text style={styles.statusText}>{getStatusText(status)}</Text>
-      </View>
+                  </View>
 
                   {/* Host verification button only */}
                   {canVerifyPayment && isHost && (
-            <TouchableOpacity
+                    <TouchableOpacity
                       style={styles.verifyButton}
                       onPress={() => verifyPayment(participant.id)}
                     >
                       <Text style={styles.verifyButtonText}>Verify</Text>
                     </TouchableOpacity>
                   )}
-                </View>
-                </View>
-          );
-        })}
 
-          {/* Host add member button */}
-          {isHost && bill.status === 'select' && (
-        <TouchableOpacity 
-              style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
-              onPress={async () => {
-                // Prompt for user email or username (simple prompt for demo)
-                const username = prompt('Enter username of friend to add:');
-                if (!username) return;
-                // Find user by username
-                const { data: userData, error: userError } = await supabase
-                  .from('users')
-                  .select('id')
-                  .eq('username', username)
-                  .single();
-                if (userError || !userData) {
-                  Alert.alert('Error', 'User not found');
-                  return;
-                }
-                // Add to bill_participants
-                const { error: addError } = await supabase
-                  .from('bill_participants')
-                  .insert([{ bill_id: bill.id, user_id: userData.id }]);
-                if (addError) {
-                  Alert.alert('Error', addError.message);
-                  return;
-                }
-                // Refresh bill data
-                await fetchBill();
-                Alert.alert('Success', 'Member added!');
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
-        </TouchableOpacity>
+                  {/* Remove participant button for host */}
+                  {isHost && bill.status === 'select' && participant.id !== bill.created_by && (
+                    <TouchableOpacity 
+                      style={styles.removeButton} 
+                      onPress={() => removeParticipant(participant.id)}
+                    >
+                      <X size={16} color="#EF4444" strokeWidth={2} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+
+          {bill.participants.length === 0 && (
+            <View style={styles.noMembersContainer}>
+              <Text style={styles.noMembersText}>No members added yet</Text>
+              <Text style={styles.noMembersSubtext}>
+                Add friends from your friends list to split this bill
+              </Text>
+            </View>
           )}
-      </View>
+        </View>
 
         {/* Items Section - Moved to last for pay/closed status */}
       <View style={styles.section}>
@@ -792,6 +896,104 @@ export default function BillDetailScreen() {
           )}
                 </View>
               )}
+
+      {/* Friends Modal */}
+      <Modal
+        visible={showFriendsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFriendsModal(false)}
+      >
+        <View style={styles.friendsModalOverlay}>
+          <View style={styles.friendsModal}>
+            <View style={styles.friendsModalHeader}>
+              <Text style={styles.friendsModalTitle}>Add Members</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowFriendsModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Search */}
+            <View style={styles.friendsSearchContainer}>
+              <Search size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={styles.friendsSearchInput}
+                value={friendSearchQuery}
+                onChangeText={setFriendSearchQuery}
+                placeholder="Search friends..."
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            
+            <ScrollView style={styles.friendsModalContent} showsVerticalScrollIndicator={false}>
+              {filteredFriends.length === 0 ? (
+                <View style={styles.noFriendsContainer}>
+                  <Text style={styles.noFriendsText}>
+                    {friendSearchQuery ? 'No friends found' : 'No friends available'}
+                  </Text>
+                  <Text style={styles.noFriendsSubtext}>
+                    {friendSearchQuery ? 'Try adjusting your search' : 'Add friends from the Friends tab first'}
+                  </Text>
+                </View>
+              ) : (
+                filteredFriends.map((friend) => {
+                  const isSelected = selectedFriends.includes(friend.id);
+                  const isAlreadyAdded = bill.participants.some((p: any) => p.id === friend.id);
+                  
+                  return (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={[
+                        styles.friendItem,
+                        isSelected && styles.selectedFriendItem,
+                        isAlreadyAdded && styles.disabledFriendItem
+                      ]}
+                      onPress={() => !isAlreadyAdded && toggleFriendSelection(friend.id)}
+                      disabled={isAlreadyAdded}
+                    >
+                      <View style={styles.friendItemLeft}>
+                        <Image 
+                          source={{ uri: friend.avatar }} 
+                          style={[styles.friendItemAvatar, isAlreadyAdded && styles.disabledAvatar]}
+                        />
+                        <View style={styles.friendItemInfo}>
+                          <Text style={[styles.friendItemName, isAlreadyAdded && styles.disabledText]}>
+                            {friend.name}
+                          </Text>
+                          <Text style={[styles.friendItemEmail, isAlreadyAdded && styles.disabledText]}>
+                            {friend.email}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      {isAlreadyAdded ? (
+                        <Text style={styles.addedText}>Added</Text>
+                      ) : (
+                        <View style={[styles.friendCheckbox, isSelected && styles.checkedFriendBox]}>
+                          {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+            
+            {selectedFriends.length > 0 && (
+              <View style={styles.friendsModalFooter}>
+                <TouchableOpacity style={styles.addSelectedButton} onPress={addSelectedFriends}>
+                  <Text style={styles.addSelectedText}>
+                    Add {selectedFriends.length} Member{selectedFriends.length !== 1 ? 's' : ''}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1024,6 +1226,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  participantAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
   participantInfo: {
     flex: 1,
   },
@@ -1031,7 +1239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#F8FAFC',
-    marginBottom: 2,
+    marginBottom: 4,
     letterSpacing: -0.2,
   },
   participantEmail: {
@@ -1040,29 +1248,28 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   participantRight: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   participantAmount: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#10B981',
-    letterSpacing: -0.2,
+    marginRight: 8,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 6,
     gap: 4,
   },
   statusText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: '#FFFFFF',
   },
   bankCard: {
     backgroundColor: '#0F172A',
@@ -1187,15 +1394,14 @@ const styles = StyleSheet.create({
   },
   verifyButton: {
     backgroundColor: '#10B981',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   verifyButtonText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
   successCard: {
     backgroundColor: '#10B981',
@@ -1214,5 +1420,228 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  membersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  addFromFriendsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    gap: 6,
+  },
+  addFromFriendsText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  removeButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+  },
+  noMembersContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noMembersText: {
+    color: '#CBD5E1',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  noMembersSubtext: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  friendsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  friendsModal: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#334155',
+  },
+  friendsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  friendsModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendsSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginHorizontal: 20,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 12,
+  },
+  friendsSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#F8FAFC',
+    fontWeight: '500',
+  },
+  friendsModalContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  noFriendsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noFriendsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 8,
+    letterSpacing: -0.2,
+  },
+  noFriendsSubtext: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  friendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0F172A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  selectedFriendItem: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#1E293B',
+  },
+  disabledFriendItem: {
+    opacity: 0.5,
+  },
+  friendItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  friendItemAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  disabledAvatar: {
+    opacity: 0.6,
+  },
+  friendItemInfo: {
+    flex: 1,
+  },
+  friendItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+  friendItemEmail: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  disabledText: {
+    opacity: 0.6,
+  },
+  addedText: {
+    fontSize: 12,
+    color: '#10B981',
+    fontWeight: '600',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  friendCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0F172A',
+  },
+  checkedFriendBox: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  friendsModalFooter: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+  },
+  addSelectedButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  addSelectedText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
 });
