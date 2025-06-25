@@ -146,7 +146,6 @@ export default function BillDetailScreen() {
   // Check if all members have submitted their selections
   const allMembersSubmitted = useMemo(() => {
     if (!bill) return false;
-    // Replace with real submission logic if available
     return bill.participants?.every((p: any) => p.hasSubmitted);
   }, [bill]);
 
@@ -162,7 +161,7 @@ export default function BillDetailScreen() {
       const userSelectedItems = (bill.items || [])
         .filter((item: any) => Array.isArray(item.selectedBy) && item.selectedBy.includes(user.id))
         .map((item: any) => item.id);
-    setSelectedItems(userSelectedItems);
+      setSelectedItems(userSelectedItems);
     }
   }, [bill, hasSubmitted, loading, user?.id]);
 
@@ -183,7 +182,7 @@ export default function BillDetailScreen() {
   }
 
   const toggleItemSelection = (itemId: string) => {
-    if (hasSubmitted && bill.status === 'pay') return; // Can't change after submission in pay status
+    if (hasSubmitted && bill.status === 'pay') return;
     setSelectedItems(prev =>
       prev.includes(itemId)
         ? prev.filter(id => id !== itemId)
@@ -200,6 +199,7 @@ export default function BillDetailScreen() {
       Alert.alert('No Items Selected', 'Please select at least one item before submitting.');
       return;
     }
+
     const handleSubmitSelections = async () => {
       setSubmitting(true);
       try {
@@ -244,6 +244,7 @@ export default function BillDetailScreen() {
         }
       }
     };
+
     if (Platform.OS === 'web') {
       handleSubmitSelections();
     } else {
@@ -262,7 +263,6 @@ export default function BillDetailScreen() {
   };
 
   const finalizeBill = async () => {
-    console.log('finalizeBill triggered');
     if (!allMembersSubmitted) {
       if (Platform.OS === 'web') {
         window.alert('Not all members have submitted their selections yet. Please wait for all participants to make their choices.');
@@ -282,43 +282,39 @@ export default function BillDetailScreen() {
       if (!confirmed) return;
       
       try {
-        // 1. Update bill status to 'pay' in the database
         await supabase
           .from('bills')
           .update({ status: 'pay' })
           .eq('id', bill.id);
         window.alert('The bill has been finalized and participants can now make payments.');
-        // Refetch bill data
         await fetchBill();
       } catch (err) {
         window.alert('Failed to finalize bill. Please try again.');
       }
     } else {
-    Alert.alert(
-      'Finalize Bill',
+      Alert.alert(
+        'Finalize Bill',
         'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Finalize', 
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Finalize', 
             style: 'destructive',
             onPress: async () => {
               try {
-                // 1. Update bill status to 'pay' in the database
                 await supabase
                   .from('bills')
                   .update({ status: 'pay' })
                   .eq('id', bill.id);
                 Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
-                // Refetch bill data
                 await fetchBill();
               } catch (err) {
                 Alert.alert('Error', 'Failed to finalize bill. Please try again.');
               }
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
     }
   };
 
@@ -340,8 +336,6 @@ export default function BillDetailScreen() {
                 {
                   text: 'OK',
                   onPress: () => {
-                    // In a real app, this would navigate to edit screen
-                    // router.push(`/bill/${bill.id}/edit`);
                     Alert.alert('Coming Soon', 'Bill editing functionality will be available soon.');
                   }
                 }
@@ -355,7 +349,6 @@ export default function BillDetailScreen() {
 
   const resetBillSelections = async () => {
     try {
-      // 1. Delete all bill_item_selections for this bill
       await supabase
         .from('bill_item_selections')
         .delete()
@@ -363,7 +356,6 @@ export default function BillDetailScreen() {
       setSelectedItems([]);
       setHasSubmitted(false);
       Alert.alert('Bill selections reset for bill:', bill?.id);
-      // Optionally refetch bill data here
     } catch (err) {
       Alert.alert('Error', 'Failed to reset selections.');
     }
@@ -404,7 +396,6 @@ export default function BillDetailScreen() {
       return;
     }
 
-    // Web: proceed with delete
     try {
       await supabase.from('bills').delete().eq('id', bill.id);
       window.alert('The bill has been deleted successfully.');
@@ -415,7 +406,6 @@ export default function BillDetailScreen() {
   };
 
   const getParticipantStatus = (participantId: string) => {
-    console.log('bill.participants', bill.participants);
     if (bill.status === 'select') {
       const participant = bill.participants.find((p: any) => p.id === participantId);
       return participant?.hasSubmitted ? 'submitted' : 'pending';
@@ -463,8 +453,6 @@ export default function BillDetailScreen() {
     router.push(`/bill/${bill.id}/chat`);
   };
 
-  const host = bill.participants.find((p: any) => p.id === bill.created_by);
-          
   const togglePaymentStatus = async (participantId: string) => {
     if (!user || !bill) return;
     
@@ -481,12 +469,11 @@ export default function BillDetailScreen() {
         .eq('bill_id', bill.id)
         .eq('user_id', participantId);
 
-      // Refetch bill data
       await fetchBill();
 
       if (Platform.OS === 'web') {
         window.alert(`Payment status updated to ${newStatus}`);
-    } else {
+      } else {
         Alert.alert('Success', `Payment status updated to ${newStatus}`);
       }
     } catch (err) {
@@ -508,7 +495,6 @@ export default function BillDetailScreen() {
         .eq('bill_id', bill.id)
         .eq('user_id', participantId);
 
-      // Check if all payments are now verified
       const updatedParticipants = bill.participants.map((p: any) => 
         p.id === participantId ? { ...p, paymentStatus: 'verified' } : p
       );
@@ -516,14 +502,12 @@ export default function BillDetailScreen() {
       const allVerified = updatedParticipants.every((p: any) => p.paymentStatus === 'verified');
       
       if (allVerified) {
-        // Auto-close the bill
         await supabase
           .from('bills')
           .update({ status: 'closed' })
           .eq('id', bill.id);
       }
 
-      // Refetch bill data
       await fetchBill();
 
       if (Platform.OS === 'web') {
@@ -540,7 +524,6 @@ export default function BillDetailScreen() {
     }
   };
 
-  // Friend selection functions
   const toggleFriendSelection = (friendId: string) => {
     setSelectedFriends(prev => 
       prev.includes(friendId) 
@@ -562,7 +545,6 @@ export default function BillDetailScreen() {
           avatar: friend.avatar
         }));
 
-      // Remove duplicates - check if already participants
       const existingIds = bill.participants.map((p: any) => p.id);
       const newFriends = friendsToAdd.filter(friend => !existingIds.includes(friend.id));
 
@@ -574,7 +556,6 @@ export default function BillDetailScreen() {
         return;
       }
 
-      // Add new friends to bill_participants
       const { error: addError } = await supabase
         .from('bill_participants')
         .insert(
@@ -586,7 +567,6 @@ export default function BillDetailScreen() {
 
       if (addError) throw addError;
 
-      // Refetch bill data
       await fetchBill();
 
       setSelectedFriends([]);
@@ -667,20 +647,17 @@ export default function BillDetailScreen() {
       const toAdd = selectedMembers.filter(id => !currentIds.includes(id));
       const toRemove = currentIds.filter(id => !selectedMembers.includes(id));
 
-      // Add new members
       if (toAdd.length > 0) {
         await supabase.from('bill_participants').insert(
           toAdd.map(user_id => ({ bill_id: bill.id, user_id }))
         );
       }
 
-      // Remove members and their selections
       for (const user_id of toRemove) {
         await supabase.from('bill_participants')
           .delete()
           .eq('bill_id', bill.id)
           .eq('user_id', user_id);
-        // Remove their selections
         const { data: items } = await supabase
           .from('bill_items')
           .select('id')
@@ -703,7 +680,6 @@ export default function BillDetailScreen() {
     setSavingMembers(false);
   };
 
-  // Add item handler
   const handleAddEditItem = () => {
     if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
       Alert.alert('Error', 'Please enter item name, price, and quantity');
@@ -733,12 +709,10 @@ export default function BillDetailScreen() {
     setNewItemQuantity('1');
   };
 
-  // Remove item handler
   const handleRemoveEditItem = (itemId: string) => {
     setEditItems(editItems.filter(item => item.id !== itemId));
   };
 
-  // Save handler
   const handleSaveEditItems = async () => {
     if (!bill) return;
     Alert.alert(
@@ -752,14 +726,12 @@ export default function BillDetailScreen() {
           onPress: async () => {
             setSavingItems(true);
             try {
-              // 1. Delete removed items
               const currentIds = bill.items.map((item: any) => item.id);
               const newIds = editItems.filter(item => !item.id.startsWith('new-')).map(item => item.id);
               const toDelete = currentIds.filter(id => !newIds.includes(id));
               if (toDelete.length > 0) {
                 await supabase.from('bill_items').delete().in('id', toDelete);
               }
-              // 2. Add new items
               const toAdd = editItems.filter(item => item.id.startsWith('new-'));
               if (toAdd.length > 0) {
                 await supabase.from('bill_items').insert(
@@ -771,8 +743,6 @@ export default function BillDetailScreen() {
                   }))
                 );
               }
-              // 3. Optionally update changed items (not implemented here, but can be added)
-              // 4. Reset all selections and has_submitted
               const { data: participants } = await supabase
                 .from('bill_participants')
                 .select('user_id')
@@ -823,7 +793,6 @@ export default function BillDetailScreen() {
           </Text>
         </View>
         
-        {/* Host Actions */}
         {isHost && bill.status === 'select' && (
           <View style={styles.hostActions}>
             <TouchableOpacity style={styles.editButton} onPress={editBill}>
@@ -835,7 +804,6 @@ export default function BillDetailScreen() {
           </View>
         )}
 
-        {/* Chat Button */}
         <TouchableOpacity style={styles.chatButton} onPress={openChat}>
           <MessageCircle size={18} color="#3B82F6" strokeWidth={2} />
           {unreadCount > 0 && (
@@ -847,7 +815,6 @@ export default function BillDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Bill Info - Always first */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Bill Info</Text>
@@ -884,7 +851,6 @@ export default function BillDetailScreen() {
           )}
         </View>
 
-        {/* Reset Warning - Only for select status */}
         {isHost && bill.status === 'select' && (
           <View style={styles.section}>
             <View style={styles.warningCard}>
@@ -900,7 +866,6 @@ export default function BillDetailScreen() {
           </View>
         )}
         
-        {/* Your Share - Only show in pay/closed status when shares are finalized */}
         {currentUserCost && bill.status !== 'select' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your Share</Text>
@@ -920,7 +885,6 @@ export default function BillDetailScreen() {
               </View>
             </View>
             
-            {/* Payment Action Button - Only for current user in pay status */}
             {bill.status === 'pay' && (
               <TouchableOpacity
                 style={[
@@ -939,7 +903,6 @@ export default function BillDetailScreen() {
           </View>
         )}
 
-        {/* Participants */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Members</Text>
@@ -954,7 +917,6 @@ export default function BillDetailScreen() {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
             const StatusIcon = getStatusIcon(status);
-            const isCurrentUser = participant.id === user?.id;
             const canVerifyPayment = bill.status === 'pay' && status === 'paid';
             
             return (
@@ -978,7 +940,6 @@ export default function BillDetailScreen() {
                 </View>
               
                 <View style={styles.participantRight}>
-                  {/* Only show amounts when bill is not in select status */}
                   {bill.status !== 'select' && (
                     <Text style={styles.participantAmount}>
                       {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
@@ -989,7 +950,6 @@ export default function BillDetailScreen() {
                     <Text style={styles.statusText}>{getStatusText(status)}</Text>
                   </View>
 
-                  {/* Host verification button only */}
                   {canVerifyPayment && isHost && (
                     <TouchableOpacity
                       style={styles.verifyButton}
@@ -1013,7 +973,6 @@ export default function BillDetailScreen() {
           )}
         </View>
 
-        {/* Items Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Items</Text>
@@ -1039,7 +998,6 @@ export default function BillDetailScreen() {
           )}
         </View>
         
-        {/* Bank Details - Only for pay status */}
         {bill.status === 'pay' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Details</Text>
@@ -1052,7 +1010,6 @@ export default function BillDetailScreen() {
           </View>
         )}
 
-        {/* Auto-close notification */}
         {allPaymentsVerified && bill.status === 'pay' && (
           <View style={styles.section}>
             <View style={styles.successCard}>
@@ -1075,7 +1032,6 @@ export default function BillDetailScreen() {
         )}
       </ScrollView>
 
-      {/* Action Buttons */}
       {isParticipant && bill.status === 'select' && (
         <View style={styles.footer}>
           <TouchableOpacity 
@@ -1098,7 +1054,6 @@ export default function BillDetailScreen() {
         </View>
       )}
 
-      {/* Host Finalize Button */}
       {isHost && bill.status === 'select' && (
         <View style={styles.footer}>
           <TouchableOpacity 
@@ -1142,7 +1097,6 @@ export default function BillDetailScreen() {
               </TouchableOpacity>
             </View>
             
-            {/* Search */}
             <View style={styles.friendsSearchContainer}>
               <Search size={18} color="#64748B" strokeWidth={2} />
               <TextInput
