@@ -715,68 +715,87 @@ export default function BillDetailScreen() {
 
   const handleSaveEditItems = async () => {
     if (!bill) return;
-    Alert.alert(
-      'Reset Selections?',
-      'Editing items will reset all participants selections. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          style: 'destructive',
-          onPress: async () => {
-            setSavingItems(true);
-            try {
-              const currentIds = bill.items.map((item: any) => item.id);
-              const newIds = editItems.filter(item => !item.id.startsWith('new-')).map(item => item.id);
-              const toDelete = currentIds.filter(id => !newIds.includes(id));
-              if (toDelete.length > 0) {
-                await supabase.from('bill_items').delete().in('id', toDelete);
-              }
-              const toAdd = editItems.filter(item => item.id.startsWith('new-'));
-              if (toAdd.length > 0) {
-                await supabase.from('bill_items').insert(
-                  toAdd.map(item => ({
-                    bill_id: bill.id,
-                    name: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                  }))
-                );
-              }
-              const { data: participants } = await supabase
-                .from('bill_participants')
-                .select('user_id')
-                .eq('bill_id', bill.id);
-              if (participants) {
-                for (const p of participants) {
-                  await supabase
-                    .from('bill_participants')
-                    .update({ has_submitted: false })
-                    .eq('bill_id', bill.id)
-                    .eq('user_id', p.user_id);
-                }
-              }
-              const { data: allItems } = await supabase
-                .from('bill_items')
-                .select('id')
-                .eq('bill_id', bill.id);
-              if (allItems && allItems.length > 0) {
-                await supabase
-                  .from('bill_item_selections')
-                  .delete()
-                  .in('bill_item_id', allItems.map((item: any) => item.id));
-              }
-              await fetchBill();
-              setShowEditItemsModal(false);
-              Alert.alert('Success', 'Items updated and selections reset!');
-            } catch (err) {
-              Alert.alert('Error', 'Failed to update items');
-            }
-            setSavingItems(false);
+    
+    const performSave = async () => {
+      setSavingItems(true);
+      try {
+        const currentIds = bill.items.map((item: any) => item.id);
+        const newIds = editItems.filter(item => !item.id.startsWith('new-')).map(item => item.id);
+        const toDelete = currentIds.filter(id => !newIds.includes(id));
+        if (toDelete.length > 0) {
+          await supabase.from('bill_items').delete().in('id', toDelete);
+        }
+        const toAdd = editItems.filter(item => item.id.startsWith('new-'));
+        if (toAdd.length > 0) {
+          await supabase.from('bill_items').insert(
+            toAdd.map(item => ({
+              bill_id: bill.id,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+            }))
+          );
+        }
+        const { data: participants } = await supabase
+          .from('bill_participants')
+          .select('user_id')
+          .eq('bill_id', bill.id);
+        if (participants) {
+          for (const p of participants) {
+            await supabase
+              .from('bill_participants')
+              .update({ has_submitted: false })
+              .eq('bill_id', bill.id)
+              .eq('user_id', p.user_id);
           }
         }
-      ]
-    );
+        const { data: allItems } = await supabase
+          .from('bill_items')
+          .select('id')
+          .eq('bill_id', bill.id);
+        if (allItems && allItems.length > 0) {
+          await supabase
+            .from('bill_item_selections')
+            .delete()
+            .in('bill_item_id', allItems.map((item: any) => item.id));
+        }
+        await fetchBill();
+        setShowEditItemsModal(false);
+        
+        if (Platform.OS === 'web') {
+          window.alert('Items updated and selections reset!');
+        } else {
+          Alert.alert('Success', 'Items updated and selections reset!');
+        }
+      } catch (err) {
+        if (Platform.OS === 'web') {
+          window.alert('Failed to update items');
+        } else {
+          Alert.alert('Error', 'Failed to update items');
+        }
+      }
+      setSavingItems(false);
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Editing items will reset all participants selections. Continue?');
+      if (confirmed) {
+        performSave();
+      }
+    } else {
+      Alert.alert(
+        'Reset Selections?',
+        'Editing items will reset all participants selections. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Continue',
+            style: 'destructive',
+            onPress: performSave
+          }
+        ]
+      );
+    }
   };
 
   return (
@@ -793,17 +812,6 @@ export default function BillDetailScreen() {
           </Text>
         </View>
         
-        {isHost && bill.status === 'select' && (
-          <View style={styles.hostActions}>
-            <TouchableOpacity style={styles.editButton} onPress={editBill}>
-              <SquarePen size={16} color="#3B82F6" strokeWidth={2} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton} onPress={deleteBill}>
-              <Trash2 size={16} color="#EF4444" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-        )}
-
         <TouchableOpacity style={styles.chatButton} onPress={openChat}>
           <MessageCircle size={18} color="#3B82F6" strokeWidth={2} />
           {unreadCount > 0 && (
@@ -1022,11 +1030,11 @@ export default function BillDetailScreen() {
         {isHost && (
           <View style={styles.section}>
             <TouchableOpacity
-              style={[styles.deleteButton, { backgroundColor: '#EF4444' }]}
+              style={[styles.finalizeButton, { backgroundColor: '#EF4444' }]}
               onPress={deleteBill}
             >
               <Trash2 size={18} color='white' strokeWidth={2} />
-              <Text style={[styles.deleteButtonText, { color: 'white' }]}>Delete Bill</Text>
+              <Text style={[styles.finalizeButtonText, { color: 'white' }]}>Delete Bill</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1462,30 +1470,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
-  hostActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginRight: 12,
-  },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#1E293B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  deleteButton: {
-    backgroundColor: '#1E293B',
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
   chatButton: {
     position: 'relative',
     width: 40,
@@ -1577,7 +1561,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#F8FAFC',
-    // marginBottom: 16,
     letterSpacing: -0.3,
   },
   costCard: {
@@ -1842,11 +1825,6 @@ const styles = StyleSheet.create({
   successText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
-  },
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: '600',
   },
   sectionHeaderRow: {
