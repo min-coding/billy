@@ -29,6 +29,16 @@ export default function BillDetailScreen() {
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
+  // Edit modals state
+  const [showEditBillInfoModal, setShowEditBillInfoModal] = useState(false);
+  const [showEditMembersModal, setShowEditMembersModal] = useState(false);
+  const [showEditItemsModal, setShowEditItemsModal] = useState(false);
+
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editTag, setEditTag] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+
   const unreadCount = getUnreadCount(id || '');
 
   // Filter friends based on search query
@@ -583,8 +593,30 @@ export default function BillDetailScreen() {
       ]
     );
   };
-          
-          return (
+
+  const handleSaveBillInfo = async () => {
+    if (!bill) return;
+
+    try {
+      await supabase
+        .from('bills')
+        .update({
+          title: editTitle,
+          description: editDescription,
+          tag: editTag,
+          dueDate: editDueDate,
+        })
+        .eq('id', bill.id);
+
+      await fetchBill();
+      setShowEditBillInfoModal(false);
+      Alert.alert('Success', 'Bill info updated successfully');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update bill info');
+    }
+  };
+
+  return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -595,9 +627,9 @@ export default function BillDetailScreen() {
           <Text style={styles.subtitle}>
             {bill.status === 'select' ? 'Select Items' : 
              bill.status === 'pay' ? 'Payment Phase' : 'Completed'}
-                  </Text>
-                </View>
-                
+          </Text>
+        </View>
+        
         {/* Host Actions */}
         {isHost && bill.status === 'select' && (
           <View style={styles.hostActions}>
@@ -606,9 +638,9 @@ export default function BillDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.deleteButton} onPress={deleteBill}>
               <Trash2 size={16} color="#EF4444" strokeWidth={2} />
-          </TouchableOpacity>
-            </View>
-          )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Chat Button */}
         <TouchableOpacity style={styles.chatButton} onPress={openChat}>
@@ -623,7 +655,15 @@ export default function BillDetailScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Bill Info - Always first */}
-      <View style={styles.section}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Bill Info</Text>
+            {isHost && bill.status === 'select' && (
+              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditBillInfoModal(true)}>
+                <Text style={styles.addFromFriendsText}>Edit info</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.billInfo}>
             <View style={styles.infoRow}>
               <Users size={16} color="#64748B" strokeWidth={2} />
@@ -633,8 +673,8 @@ export default function BillDetailScreen() {
             <View style={styles.infoRow}>
               <DollarSign size={16} color="#10B981" strokeWidth={2} />
               <Text style={styles.infoText}>{formatCurrency(bill.totalAmount)}</Text>
-          </View>
-          
+            </View>
+            
             <View style={styles.infoRow}>
               <Calendar size={16} color="#64748B" strokeWidth={2} />
               <Text style={styles.infoText}>
@@ -643,13 +683,13 @@ export default function BillDetailScreen() {
                   : `Created ${new Date(bill.createdAt).toLocaleDateString()}`
                 }
               </Text>
-                      </View>
-                    </View>
+            </View>
+          </View>
 
           {bill.description && (
             <Text style={styles.description}>{bill.description}</Text>
           )}
-                      </View>
+        </View>
 
         {/* Reset Warning - Only for select status */}
         {isHost && bill.status === 'select' && (
@@ -658,15 +698,15 @@ export default function BillDetailScreen() {
               <View style={styles.warningHeader}>
                 <Bell size={16} color="#F59E0B" strokeWidth={2} />
                 <Text style={styles.warningTitle}>Edit Bill Impact</Text>
-                    </View>
+              </View>
               <Text style={styles.warningText}>
                 Editing bill details will reset all member selections and submissions. 
                 All participants will need to reselect their items after you make changes.
               </Text>
-                </View>
-              </View>
-            )}
-            
+            </View>
+          </View>
+        )}
+        
         {/* Your Share - Only show in pay/closed status when shares are finalized */}
         {currentUserCost && bill.status !== 'select' && (
           <View style={styles.section}>
@@ -675,21 +715,21 @@ export default function BillDetailScreen() {
               <View style={styles.costHeader}>
                 <Text style={styles.costAmount}>{formatCurrency(currentUserCost.total)}</Text>
                 <Text style={styles.costLabel}>Total Amount</Text>
-                      </View>
+              </View>
               
               <View style={styles.costItems}>
                 {currentUserCost.items.map((item) => (
                   <View key={item.id} style={styles.costItem}>
                     <Text style={styles.costItemName}>{item.name}</Text>
                     <Text style={styles.costItemPrice}>{formatCurrency(item.price)}</Text>
-                    </View>
-                  ))}
-                      </View>
-                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
             
             {/* Payment Action Button - Only for current user in pay status */}
             {bill.status === 'pay' && (
-                    <TouchableOpacity
+              <TouchableOpacity
                 style={[
                   styles.paymentButton,
                   getParticipantStatus(user?.id || '') === 'paid' && styles.paymentButtonPaid,
@@ -700,23 +740,19 @@ export default function BillDetailScreen() {
               >
                 <Text style={styles.paymentButtonText}>
                   {getParticipantStatus(user?.id || '') === 'paid' ? 'Mark as Unpaid' : 'Mark as Paid'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                    </View>
-                  )}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Participants */}
         <View style={styles.section}>
-          <View style={styles.membersHeader}>
-            <Text style={styles.sectionTitle}>Participants</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Members</Text>
             {isHost && bill.status === 'select' && (
-              <TouchableOpacity 
-                style={styles.addFromFriendsButton}
-                onPress={() => setShowFriendsModal(true)}
-              >
-                <Users size={16} color="#3B82F6" strokeWidth={2} />
-                <Text style={styles.addFromFriendsText}>Invite Members</Text>
+              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditMembersModal(true)}>
+                <Text style={styles.addFromFriendsText}>Edit members</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -794,9 +830,16 @@ export default function BillDetailScreen() {
           )}
         </View>
 
-        {/* Items Section - Moved to last for pay/closed status */}
-      <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Items</Text>
+        {/* Items Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Items</Text>
+            {isHost && bill.status === 'select' && (
+              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditItemsModal(true)}>
+                <Text style={styles.addFromFriendsText}>Edit items</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {Array.isArray(bill.items) && bill.items.length > 0 ? (
             bill.items.map((item: any) => (
               <ItemCard
@@ -811,18 +854,18 @@ export default function BillDetailScreen() {
           ) : (
             <Text style={{ color: '#64748B', marginTop: 8 }}>No items yet.</Text>
           )}
-          </View>
-          
+        </View>
+        
         {/* Bank Details - Only for pay status */}
         {bill.status === 'pay' && (
-    <View style={styles.section}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Details</Text>
             <View style={styles.bankCard}>
               <Text style={styles.bankTitle}>Send payment to:</Text>
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
               <Text style={styles.accountNumber}>Account: {bill.bankDetails.accountNumber}</Text>
-      </View>
+            </View>
           </View>
         )}
 
@@ -832,8 +875,8 @@ export default function BillDetailScreen() {
             <View style={styles.successCard}>
               <Check size={16} color="#10B981" strokeWidth={2} />
               <Text style={styles.successText}>All payments verified! Bill is now closed.</Text>
-              </View>
-              </View>
+            </View>
+          </View>
         )}
 
         {isHost && (
@@ -852,7 +895,7 @@ export default function BillDetailScreen() {
       {/* Action Buttons */}
       {isParticipant && bill.status === 'select' && (
         <View style={styles.footer}>
-        <TouchableOpacity 
+          <TouchableOpacity 
             style={[
               styles.submitButton,
               (selectedItems.length === 0 || submitting) && styles.disabledButton
@@ -868,14 +911,14 @@ export default function BillDetailScreen() {
             <Text style={styles.submitButtonText}>
               {hasSubmitted ? 'Update Selections' : 'Submit Selections'}
             </Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Host Finalize Button */}
       {isHost && bill.status === 'select' && (
         <View style={styles.footer}>
-              <TouchableOpacity 
+          <TouchableOpacity 
             style={[
               styles.finalizeButton,
               !allMembersSubmitted && styles.disabledButton
@@ -887,15 +930,15 @@ export default function BillDetailScreen() {
             <Text style={styles.finalizeButtonText}>
               {allMembersSubmitted ? 'Finalize Bill' : 'Waiting for Submissions'}
             </Text>
-              </TouchableOpacity>
+          </TouchableOpacity>
           
           {!allMembersSubmitted && (
             <Text style={styles.waitingText}>
               Waiting for all members to submit their selections
-                  </Text>
+            </Text>
           )}
-                </View>
-              )}
+        </View>
+      )}
 
       {/* Friends Modal */}
       <Modal
@@ -991,6 +1034,72 @@ export default function BillDetailScreen() {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Bill Info Modal */}
+      <Modal
+        visible={showEditBillInfoModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEditBillInfoModal(false)}
+      >
+        <View style={styles.friendsModalOverlay}>
+          <View style={styles.friendsModal}>
+            <View style={styles.friendsModalHeader}>
+              <Text style={styles.friendsModalTitle}>Edit Bill Info</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowEditBillInfoModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ gap: 16 }}>
+              <Text style={styles.label}>Title</Text>
+              <TextInput
+                style={styles.input}
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholder="Enter bill title"
+                placeholderTextColor="#64748B"
+              />
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={editDescription}
+                onChangeText={setEditDescription}
+                placeholder="Add a description (optional)"
+                placeholderTextColor="#64748B"
+                multiline
+                numberOfLines={3}
+              />
+              <Text style={styles.label}>Tag/Label</Text>
+              <TextInput
+                style={styles.input}
+                value={editTag}
+                onChangeText={setEditTag}
+                placeholder="e.g., Food & Dining, Work, Groceries"
+                placeholderTextColor="#64748B"
+              />
+              <Text style={styles.label}>Due Date</Text>
+              <TextInput
+                style={styles.input}
+                value={editDueDate}
+                onChangeText={setEditDueDate}
+                placeholder="YYYY-MM-DD (optional)"
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 12 }}>
+              <TouchableOpacity style={[styles.addSelectedButton, { backgroundColor: '#64748B' }]} onPress={() => setShowEditBillInfoModal(false)}>
+                <Text style={styles.addSelectedText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addSelectedButton} onPress={handleSaveBillInfo}>
+                <Text style={styles.addSelectedText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1149,7 +1258,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#F8FAFC',
-    marginBottom: 16,
+    // marginBottom: 16,
     letterSpacing: -0.3,
   },
   costCard: {
@@ -1421,6 +1530,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 16,
+  },
   membersHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1442,11 +1557,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.1,
-  },
-  removeButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#1E293B',
   },
   noMembersContainer: {
     flexDirection: 'column',
@@ -1643,5 +1753,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  removeButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#1E293B',
+    padding: 16,
+    borderRadius: 8,
+    color: '#F8FAFC',
+  },
+  textArea: {
+    height: 120,
   },
 });
