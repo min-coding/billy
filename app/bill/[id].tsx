@@ -858,21 +858,6 @@ export default function BillDetailScreen() {
             <Text style={styles.description}>{bill.description}</Text>
           )}
         </View>
-
-        {isHost && bill.status === 'select' && (
-          <View style={styles.section}>
-            <View style={styles.warningCard}>
-              <View style={styles.warningHeader}>
-                <Bell size={16} color="#F59E0B" strokeWidth={2} />
-                <Text style={styles.warningTitle}>Edit Bill Impact</Text>
-              </View>
-              <Text style={styles.warningText}>
-                Editing bill details will reset all member selections and submissions. 
-                All participants will need to reselect their items after you make changes.
-              </Text>
-            </View>
-          </View>
-        )}
         
         {currentUserCost && bill.status !== 'select' && (
           <View style={styles.section}>
