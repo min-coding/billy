@@ -44,13 +44,17 @@ export default function BillDetailScreen() {
         quantity: item.quantity,
         selectedBy: item.bill_item_selections?.map((s: any) => s.user_id) || [],
       })) || [];
-      // Fetch participants
+      // Fetch participants with payment status
       const { data: participantsData } = await supabase
         .from('bill_participants')
-        .select('user_id, has_submitted, users:user_id(id, name, email, avatar)')
+        .select('user_id, has_submitted, payment_status, users:user_id(id, name, email, avatar)')
         .eq('bill_id', billData.id);
       const participants = (participantsData || [])
-        .map((p: any) => p.users ? { ...p.users, hasSubmitted: p.has_submitted } : null)
+        .map((p: any) => p.users ? { 
+          ...p.users, 
+          hasSubmitted: p.has_submitted,
+          paymentStatus: p.payment_status || 'unpaid'
+        } : null)
         .filter(Boolean);
       setBill({ 
         ...billData, 
@@ -86,6 +90,12 @@ export default function BillDetailScreen() {
     if (!bill) return false;
     // Replace with real submission logic if available
     return bill.participants?.every((p: any) => p.hasSubmitted);
+  }, [bill]);
+
+  // Check if all payments are verified
+  const allPaymentsVerified = useMemo(() => {
+    if (!bill || bill.status !== 'pay') return false;
+    return bill.participants?.every((p: any) => p.paymentStatus === 'verified');
   }, [bill]);
 
   // Initialize selected items based on bill data
@@ -349,11 +359,9 @@ export default function BillDetailScreen() {
 
   const getParticipantStatus = (participantId: string) => {
     if (bill.status === 'select') {
-      // Replace with real submission logic if available
       const participant = bill.participants.find((p: any) => p.id === participantId);
       return participant?.hasSubmitted ? 'submitted' : 'pending';
     } else if (bill.status === 'pay') {
-      // Replace with real payment status logic if available
       const participant = bill.participants.find((p: any) => p.id === participantId);
       return participant?.paymentStatus || 'unpaid';
     }
@@ -399,7 +407,82 @@ export default function BillDetailScreen() {
 
   const host = bill.participants.find((p: any) => p.id === bill.created_by);
           
-          return (
+  const togglePaymentStatus = async (participantId: string) => {
+    if (!user || !bill) return;
+    
+    const participant = bill.participants.find((p: any) => p.id === participantId);
+    if (!participant) return;
+
+    const currentStatus = participant.paymentStatus || 'unpaid';
+    const newStatus = currentStatus === 'unpaid' ? 'paid' : 'unpaid';
+
+    try {
+      await supabase
+        .from('bill_participants')
+        .update({ payment_status: newStatus })
+        .eq('bill_id', bill.id)
+        .eq('user_id', participantId);
+
+      // Refetch bill data
+      await fetchBill();
+
+      if (Platform.OS === 'web') {
+        window.alert(`Payment status updated to ${newStatus}`);
+      } else {
+        Alert.alert('Success', `Payment status updated to ${newStatus}`);
+      }
+    } catch (err) {
+      if (Platform.OS === 'web') {
+        window.alert('Failed to update payment status');
+      } else {
+        Alert.alert('Error', 'Failed to update payment status');
+      }
+    }
+  };
+
+  const verifyPayment = async (participantId: string) => {
+    if (!user || !bill || !isHost) return;
+
+    try {
+      await supabase
+        .from('bill_participants')
+        .update({ payment_status: 'verified' })
+        .eq('bill_id', bill.id)
+        .eq('user_id', participantId);
+
+      // Check if all payments are now verified
+      const updatedParticipants = bill.participants.map((p: any) => 
+        p.id === participantId ? { ...p, paymentStatus: 'verified' } : p
+      );
+      
+      const allVerified = updatedParticipants.every((p: any) => p.paymentStatus === 'verified');
+      
+      if (allVerified) {
+        // Auto-close the bill
+        await supabase
+          .from('bills')
+          .update({ status: 'closed' })
+          .eq('id', bill.id);
+      }
+
+      // Refetch bill data
+      await fetchBill();
+
+      if (Platform.OS === 'web') {
+        window.alert(allVerified ? 'Payment verified! Bill is now closed.' : 'Payment verified!');
+      } else {
+        Alert.alert('Success', allVerified ? 'Payment verified! Bill is now closed.' : 'Payment verified!');
+      }
+    } catch (err) {
+      if (Platform.OS === 'web') {
+        window.alert('Failed to verify payment');
+      } else {
+        Alert.alert('Error', 'Failed to verify payment');
+      }
+    }
+  };
+
+  return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -530,6 +613,9 @@ export default function BillDetailScreen() {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
             const StatusIcon = getStatusIcon(status);
+            const isCurrentUser = participant.id === user?.id;
+            const canTogglePayment = bill.status === 'pay' && isCurrentUser && (status === 'unpaid' || status === 'paid');
+            const canVerifyPayment = bill.status === 'pay' && isHost && status === 'paid' && !isCurrentUser;
             
             return (
               <View key={participant.id} style={styles.participantCard}>
@@ -537,64 +623,88 @@ export default function BillDetailScreen() {
                   {participant.id === bill.created_by && (
                     <View style={styles.hostBadge}>
                       <Text style={styles.hostBadgeText}>HOST</Text>
-          </View>
+            </View>
                   )}
                   <View style={styles.participantInfo}>
                     <Text style={styles.participantName}>{participant.name}</Text>
                     <Text style={styles.participantEmail}>{participant.email}</Text>
+            </View>
           </View>
-        </View>
-                
-                <View style={styles.participantRight}>
-                  {/* Only show amounts when bill is not in select status */}
-                  {bill.status !== 'select' && (
-                    <Text style={styles.participantAmount}>
-                      {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
-            </Text>
-                  )}
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
-                    <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
-                    <Text style={styles.statusText}>{getStatusText(status)}</Text>
+          
+          <View style={styles.participantRight}>
+            {/* Only show amounts when bill is not in select status */}
+            {bill.status !== 'select' && (
+              <Text style={styles.participantAmount}>
+                {participantCost ? formatCurrency(participantCost.total) : '$0.00'}
+              </Text>
+            )}
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}> 
+              <StatusIcon size={12} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.statusText}>{getStatusText(status)}</Text>
+            </View>
+            
+            {/* Payment Action Buttons */}
+            {canTogglePayment && (
+              <TouchableOpacity 
+                style={[
+                  styles.paymentButton,
+                  status === 'paid' && styles.paymentButtonPaid
+                ]}
+                onPress={() => togglePaymentStatus(participant.id)}
+              >
+                <Text style={styles.paymentButtonText}>
+                  {status === 'paid' ? 'Mark as Unpaid' : 'Mark as Paid'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {canVerifyPayment && (
+              <TouchableOpacity 
+                style={styles.verifyButton}
+                onPress={() => verifyPayment(participant.id)}
+              >
+                <Text style={styles.verifyButtonText}>Verify</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
-              </View>
-            );
-          })}
-          {/* Host add member button */}
-        {isHost && bill.status === 'select' && (
-          <TouchableOpacity 
-              style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
-              onPress={async () => {
-                // Prompt for user email or username (simple prompt for demo)
-                const username = prompt('Enter username of friend to add:');
-                if (!username) return;
-                // Find user by username
-                const { data: userData, error: userError } = await supabase
-                  .from('users')
-                  .select('id')
-                  .eq('username', username)
-                  .single();
-                if (userError || !userData) {
-                  Alert.alert('Error', 'User not found');
-                  return;
-                }
-                // Add to bill_participants
-                const { error: addError } = await supabase
-                  .from('bill_participants')
-                  .insert([{ bill_id: bill.id, user_id: userData.id }]);
-                if (addError) {
-                  Alert.alert('Error', addError.message);
-                  return;
-                }
-                // Refresh bill data
-                await fetchBill();
-                Alert.alert('Success', 'Member added!');
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+            </View>
+          );
+        })}
+        {/* Host add member button */}
+      {isHost && bill.status === 'select' && (
+        <TouchableOpacity 
+            style={{ marginTop: 16, backgroundColor: '#3B82F6', padding: 12, borderRadius: 8, alignItems: 'center' }}
+            onPress={async () => {
+              // Prompt for user email or username (simple prompt for demo)
+              const username = prompt('Enter username of friend to add:');
+              if (!username) return;
+              // Find user by username
+              const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('username', username)
+                .single();
+              if (userError || !userData) {
+                Alert.alert('Error', 'User not found');
+                return;
+              }
+              // Add to bill_participants
+              const { error: addError } = await supabase
+                .from('bill_participants')
+                .insert([{ bill_id: bill.id, user_id: userData.id }]);
+              if (addError) {
+                Alert.alert('Error', addError.message);
+                return;
+              }
+              // Refresh bill data
+              await fetchBill();
+              Alert.alert('Success', 'Member added!');
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Add Member</Text>
+        </TouchableOpacity>
+      )}
+    </View>
 
         {/* Bank Details */}
         {bill.status === 'pay' && (
@@ -605,6 +715,16 @@ export default function BillDetailScreen() {
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
               <Text style={styles.accountNumber}>Account: {bill.bankDetails.accountNumber}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Auto-close notification */}
+        {allPaymentsVerified && bill.status === 'pay' && (
+          <View style={styles.section}>
+            <View style={styles.successCard}>
+              <Check size={16} color="#10B981" strokeWidth={2} />
+              <Text style={styles.successText}>All payments verified! Bill is now closed.</Text>
             </View>
           </View>
         )}
@@ -1033,5 +1153,45 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     textAlign: 'center',
     marginTop: 50,
+  },
+  paymentButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  paymentButtonPaid: {
+    backgroundColor: '#F59E0B',
+  },
+  paymentButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  verifyButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  verifyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  successCard: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  successText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
