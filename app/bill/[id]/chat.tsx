@@ -12,7 +12,7 @@ export default function BillChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { getMessagesForBill, sendMessage, markAsRead, verifyPayment, isLoading } = useChat();
+  const { sendMessage, markAsRead, verifyPayment, isLoading, setBillSubscription, filterMessagesForBill, fetchMessagesForBill } = useChat();
   
   const [messageText, setMessageText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function BillChatScreen() {
     if (id) fetchBill();
   }, [id]);
 
-  const messages = getMessagesForBill(id || '');
+  const messages = filterMessagesForBill(bill?.id || '');
   const isHost = bill?.created_by === user?.id;
 
   useEffect(() => {
@@ -59,6 +59,13 @@ export default function BillChatScreen() {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [messages.length]);
+
+  useEffect(() => {
+    if (bill?.id) {
+      setBillSubscription(bill.id);
+      fetchMessagesForBill(bill.id);
+    }
+  }, [bill?.id]);
 
   if (loading) {
     return (
@@ -419,7 +426,7 @@ export default function BillChatScreen() {
               {/* Verify button for cash payment system message */}
               {message?.type === 'text' && message?.content?.includes('marked as paid (cash)') && isHost && bill && bill.participants && (() => {
                 const paidParticipant = bill.participants.find((p: any) => p.payment_status === 'paid' && message.content.includes(p.name));
-                if (paidParticipant) {
+                if (paidParticipant && paidParticipant.user_id && paidParticipant.name) {
                   return (
                     <TouchableOpacity
                       style={[styles.verifyButton, { marginTop: 8 }]}

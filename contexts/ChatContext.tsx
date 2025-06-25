@@ -29,8 +29,10 @@ interface ChatContextType extends ChatState {
   sendMessage: (billId: string, content: string, type?: 'text' | 'image' | 'payment_slip', imageUrl?: string, paymentAmount?: number) => Promise<void>;
   markAsRead: (messageId: string) => Promise<void>;
   verifyPayment: (messageId: string, status: 'verified' | 'rejected') => Promise<void>;
-  getMessagesForBill: (billId: string) => ChatMessage[];
+  setBillSubscription: (billId: string) => void;
+  filterMessagesForBill: (billId: string) => ChatMessage[];
   getUnreadCount: (billId: string) => number;
+  fetchMessagesForBill: (billId: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -42,6 +44,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     isLoading: false,
   });
   const currentBillIdRef = useRef<string | null>(null);
+  const [subscribedBillId, setSubscribedBillId] = useState<string | null>(null);
 
   const fetchMessages = async (billId: string) => {
     if (!user) return [];
@@ -200,8 +203,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const getMessagesForBill = (billId: string) => {
+  const setBillSubscription = (billId: string) => {
     currentBillIdRef.current = billId;
+    setSubscribedBillId(billId);
+  };
+
+  const filterMessagesForBill = (billId: string) => {
     return chatState.messages
       .filter(msg => msg.billId === billId)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -215,6 +222,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       .length;
   };
 
+  const fetchMessagesForBill = async (billId: string) => {
+    setChatState(prev => ({ ...prev, isLoading: true }));
+    const updatedMessages = await fetchMessages(billId);
+    setChatState(prev => ({
+      ...prev,
+      messages: prev.messages.filter(m => m.billId !== billId).concat(updatedMessages),
+      isLoading: false,
+    }));
+  };
+
   // Load messages for bills when user changes
   useEffect(() => {
     if (user) {
@@ -225,10 +242,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // Real-time subscription for chat messages
   useEffect(() => {
-    if (!user) return;
-    // Only subscribe if a bill is being viewed
-    const billId = currentBillIdRef.current;
-    if (!billId) return;
+    if (!user || !subscribedBillId) return;
     const channel = supabase
       .channel('realtime:chat_messages')
       .on(
@@ -237,14 +251,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'chat_messages',
-          filter: `bill_id=eq.${billId}`,
+          filter: `bill_id=eq.${subscribedBillId}`,
         },
         async () => {
           // Refetch messages for this bill
-          const updatedMessages = await fetchMessages(billId);
+          const updatedMessages = await fetchMessages(subscribedBillId);
           setChatState(prev => ({
             ...prev,
-            messages: prev.messages.filter(m => m.billId !== billId).concat(updatedMessages),
+            messages: prev.messages.filter(m => m.billId !== subscribedBillId).concat(updatedMessages),
           }));
         }
       )
@@ -252,7 +266,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, chatState.messages.length]);
+  }, [user, subscribedBillId]);
 
   return (
     <ChatContext.Provider
@@ -261,8 +275,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sendMessage,
         markAsRead,
         verifyPayment,
-        getMessagesForBill,
+        setBillSubscription,
+        filterMessagesForBill,
         getUnreadCount,
+        fetchMessagesForBill,
       }}
     >
       {children}
