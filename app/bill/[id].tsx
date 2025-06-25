@@ -312,49 +312,48 @@ export default function BillDetailScreen() {
   };
 
   const deleteBill = async () => {
+    const confirmDelete = Platform.OS === 'web'
+      ? window.confirm('Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.')
+      : null;
+
+    if (Platform.OS === 'web' && !confirmDelete) return;
+
+    if (Platform.OS !== 'web') {
       Alert.alert(
-      'Delete Bill',
-      'Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 1. Delete all bill_item_selections for this bill
-              await supabase
-                .from('bill_item_selections')
-                .delete()
-                .in('bill_item_id', bill.items.map((item: any) => item.id));
-              // 2. Delete all bill_items for this bill
-              await supabase
-                .from('bill_items')
-                .delete()
-                .eq('bill_id', bill.id);
-              // 3. Delete all bill_participants for this bill
-              await supabase
-                .from('bill_participants')
-                .delete()
-                .eq('bill_id', bill.id);
-              // 4. Delete the bill itself
-              await supabase
-                .from('bills')
-                .delete()
-                .eq('id', bill.id);
-              Alert.alert('Bill Deleted', 'The bill has been deleted successfully.', [
-                {
-                  text: 'OK',
-                  onPress: () => router.back()
-                }
-              ]);
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete bill. Please try again.');
-            }
+        'Delete Bill',
+        'Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await supabase.from('bills').delete().eq('id', bill.id);
+                Alert.alert('Bill Deleted', 'The bill has been deleted successfully.', [
+                  {
+                    text: 'OK',
+                    onPress: () => router.back()
+                  }
+                ]);
+              } catch (err) {
+                Alert.alert('Error', 'Failed to delete bill. Please try again.');
+              }
             }
           }
         ]
       );
+      return;
+    }
+
+    // Web: proceed with delete
+    try {
+      await supabase.from('bills').delete().eq('id', bill.id);
+      window.alert('The bill has been deleted successfully.');
+      router.back();
+    } catch (err) {
+      window.alert('Failed to delete bill. Please try again.');
+    }
   };
 
   const getParticipantStatus = (participantId: string) => {
@@ -732,6 +731,18 @@ export default function BillDetailScreen() {
               </View>
               </View>
         )}
+
+        {isHost && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={[styles.deleteButton, { backgroundColor: '#EF4444' }]}
+              onPress={deleteBill}
+            >
+              <Trash2 size={18} color='white' strokeWidth={2} />
+              <Text style={[styles.deleteButtonText, { color: 'white' }]}>Delete Bill</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/* Action Buttons */}
@@ -837,14 +848,13 @@ const styles = StyleSheet.create({
     borderColor: '#3B82F6',
   },
   deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
     backgroundColor: '#1E293B',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#EF4444',
+    gap: 8,
   },
   chatButton: {
     position: 'relative',
@@ -1198,6 +1208,11 @@ const styles = StyleSheet.create({
   successText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });
