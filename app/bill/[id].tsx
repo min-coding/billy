@@ -39,6 +39,9 @@ export default function BillDetailScreen() {
   const [editTag, setEditTag] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
 
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [savingMembers, setSavingMembers] = useState(false);
+
   const unreadCount = getUnreadCount(id || '');
 
   // Filter friends based on search query
@@ -110,6 +113,13 @@ export default function BillDetailScreen() {
       setEditDueDate(bill.dueDate ? String(bill.dueDate).slice(0, 10) : '');
     }
   }, [showEditBillInfoModal, bill]);
+
+  useEffect(() => {
+    if (showEditMembersModal && bill) {
+      setSelectedMembers(bill.participants.map((p: any) => p.id));
+      setFriendSearchQuery('');
+    }
+  }, [showEditMembersModal, bill]);
 
   const isHost = bill?.created_by === user?.id;
   const isParticipant = bill?.participants?.some((p: any) => p.id === user?.id);
@@ -626,6 +636,58 @@ export default function BillDetailScreen() {
     }
   };
 
+  const toggleMemberSelection = (userId: string) => {
+    setSelectedMembers(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleSaveMembers = async () => {
+    if (!bill) return;
+    setSavingMembers(true);
+    try {
+      const currentIds = bill.participants.map((p: any) => p.id);
+      const toAdd = selectedMembers.filter(id => !currentIds.includes(id));
+      const toRemove = currentIds.filter(id => !selectedMembers.includes(id));
+
+      // Add new members
+      if (toAdd.length > 0) {
+        await supabase.from('bill_participants').insert(
+          toAdd.map(user_id => ({ bill_id: bill.id, user_id }))
+        );
+      }
+
+      // Remove members and their selections
+      for (const user_id of toRemove) {
+        await supabase.from('bill_participants')
+          .delete()
+          .eq('bill_id', bill.id)
+          .eq('user_id', user_id);
+        // Remove their selections
+        const { data: items } = await supabase
+          .from('bill_items')
+          .select('id')
+          .eq('bill_id', bill.id);
+        if (items && items.length > 0) {
+          await supabase
+            .from('bill_item_selections')
+            .delete()
+            .eq('user_id', user_id)
+            .in('bill_item_id', items.map((item: any) => item.id));
+        }
+      }
+
+      await fetchBill();
+      setShowEditMembersModal(false);
+      Alert.alert('Success', 'Members updated!');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update members');
+    }
+    setSavingMembers(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -815,16 +877,6 @@ export default function BillDetailScreen() {
                       <Text style={styles.verifyButtonText}>Verify</Text>
                     </TouchableOpacity>
                   )}
-
-                  {/* Remove participant button for host */}
-                  {isHost && bill.status === 'select' && participant.id !== bill.created_by && (
-                    <TouchableOpacity 
-                      style={styles.removeButton} 
-                      onPress={() => removeParticipant(participant.id)}
-                    >
-                      <X size={16} color="#EF4444" strokeWidth={2} />
-                    </TouchableOpacity>
-                  )}
                 </View>
               </View>
             );
@@ -981,7 +1033,7 @@ export default function BillDetailScreen() {
               />
             </View>
             
-            <ScrollView style={styles.friendsModalContent} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.friendsModalContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
               {filteredFriends.length === 0 ? (
                 <View style={styles.noFriendsContainer}>
                   <Text style={styles.noFriendsText}>
@@ -1124,6 +1176,88 @@ export default function BillDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.addSelectedButton, { paddingHorizontal: 20 }]} onPress={handleSaveBillInfo}>
                 <Text style={styles.addSelectedText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Members Modal */}
+      <Modal
+        visible={showEditMembersModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEditMembersModal(false)}
+      >
+        <View style={styles.friendsModalOverlay}>
+          <View style={styles.friendsModal}>
+            <View style={styles.friendsModalHeader}>
+              <Text style={styles.friendsModalTitle}>Edit Members</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowEditMembersModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            {/* Search */}
+            <View style={styles.friendsSearchContainer}>
+              <Search size={18} color="#64748B" strokeWidth={2} />
+              <TextInput
+                style={styles.friendsSearchInput}
+                value={friendSearchQuery}
+                onChangeText={setFriendSearchQuery}
+                placeholder="Search friends..."
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            <ScrollView style={styles.friendsModalContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+              {filteredFriends.length === 0 ? (
+                <View style={styles.noFriendsContainer}>
+                  <Text style={styles.noFriendsText}>
+                    {friendSearchQuery ? 'No friends found' : 'No friends available'}
+                  </Text>
+                  <Text style={styles.noFriendsSubtext}>
+                    {friendSearchQuery ? 'Try adjusting your search' : 'Add friends from the Friends tab first'}
+                  </Text>
+                </View>
+              ) : (
+                filteredFriends.map((friend) => {
+                  const isChecked = selectedMembers.includes(friend.id);
+                  return (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={[
+                        styles.friendItem,
+                        isChecked && styles.selectedFriendItem,
+                      ]}
+                      onPress={() => toggleMemberSelection(friend.id)}
+                    >
+                      <View style={styles.friendItemLeft}>
+                        <Image
+                          source={{ uri: friend.avatar }}
+                          style={styles.friendItemAvatar}
+                        />
+                        <View style={styles.friendItemInfo}>
+                          <Text style={styles.friendItemName}>{friend.name}</Text>
+                          <Text style={styles.friendItemEmail}>{friend.email}</Text>
+                        </View>
+                      </View>
+                      <View style={[styles.friendCheckbox, isChecked && styles.checkedFriendBox]}>
+                        {isChecked && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+            {/* Sticky footer for buttons */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1E293B', padding: 20, borderTopWidth: 1, borderTopColor: '#334155' }}>
+              <TouchableOpacity style={[styles.addSelectedButton, { backgroundColor: '#64748B', paddingHorizontal: 20 }]} onPress={() => setShowEditMembersModal(false)}>
+                <Text style={styles.addSelectedText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.addSelectedButton, { paddingHorizontal: 20 }]} onPress={handleSaveMembers} disabled={savingMembers}>
+                <Text style={styles.addSelectedText}>{savingMembers ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1779,11 +1913,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
-  },
-  removeButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#1E293B',
   },
   inputGroup: {
     marginBottom: 16,
