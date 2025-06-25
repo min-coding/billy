@@ -56,7 +56,12 @@ export default function BillDetailScreen() {
         ...billData, 
         totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
         items, 
-        participants 
+        participants,
+        bankDetails: {
+          bankName: billData.bank_name,
+          accountName: billData.account_name,
+          accountNumber: billData.account_number,
+        }
       });
       // Update hasSubmitted for the current user
       const currentUserParticipant = participants.find(p => p.id === user?.id);
@@ -600,8 +605,8 @@ export default function BillDetailScreen() {
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
               <Text style={styles.accountNumber}>Account: {bill.bankDetails.accountNumber}</Text>
-              </View>
-              </View>
+            </View>
+          </View>
         )}
       </ScrollView>
 
