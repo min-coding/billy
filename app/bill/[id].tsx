@@ -928,7 +928,6 @@ export default function BillDetailScreen() {
                   )}
                   <View style={styles.participantInfo}>
                     <Text style={styles.participantName}>{participant.name}</Text>
-                    <Text style={styles.participantEmail}>{participant.email}</Text>
                   </View>
                 </View>
               
@@ -1395,7 +1394,7 @@ export default function BillDetailScreen() {
                   </View>
                   <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
                   <TouchableOpacity
-                    style={[styles.pillButton, styles.pillButtonRedOutline, { marginLeft: 8 }]}
+                    style={[styles.pillButton, styles.pillButtonRedOutline, { marginLeft: 8, opacity: 0.8 }]}
                     onPress={() => handleRemoveEditItem(item.id)}
                   >
                     <Trash2 size={16} color="#EF4444" strokeWidth={2} />
