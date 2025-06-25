@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, User, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag } from 'lucide-react-native';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -100,6 +100,15 @@ export default function BillDetailScreen() {
   useEffect(() => {
     if (id) fetchBill();
   }, [id]);
+
+  useEffect(() => {
+    if (showEditBillInfoModal && bill) {
+      setEditTitle(bill.title || '');
+      setEditDescription(bill.description || '');
+      setEditTag(bill.tag || '');
+      setEditDueDate(bill.dueDate ? String(bill.dueDate).slice(0, 10) : '');
+    }
+  }, [showEditBillInfoModal, bill]);
 
   const isHost = bill?.created_by === user?.id;
   const isParticipant = bill?.participants?.some((p: any) => p.id === user?.id);
@@ -1046,7 +1055,7 @@ export default function BillDetailScreen() {
         onRequestClose={() => setShowEditBillInfoModal(false)}
       >
         <View style={styles.friendsModalOverlay}>
-          <View style={styles.friendsModal}>
+          <View style={[styles.friendsModal, { maxHeight: '80%' }]}>
             <View style={styles.friendsModalHeader}>
               <Text style={styles.friendsModalTitle}>Edit Bill Info</Text>
               <TouchableOpacity 
@@ -1056,47 +1065,63 @@ export default function BillDetailScreen() {
                 <X size={20} color="#64748B" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            <View style={{ gap: 16 }}>
-              <Text style={styles.label}>Title</Text>
-              <TextInput
-                style={styles.input}
-                value={editTitle}
-                onChangeText={setEditTitle}
-                placeholder="Enter bill title"
-                placeholderTextColor="#64748B"
-              />
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={editDescription}
-                onChangeText={setEditDescription}
-                placeholder="Add a description (optional)"
-                placeholderTextColor="#64748B"
-                multiline
-                numberOfLines={3}
-              />
-              <Text style={styles.label}>Tag/Label</Text>
-              <TextInput
-                style={styles.input}
-                value={editTag}
-                onChangeText={setEditTag}
-                placeholder="e.g., Food & Dining, Work, Groceries"
-                placeholderTextColor="#64748B"
-              />
-              <Text style={styles.label}>Due Date</Text>
-              <TextInput
-                style={styles.input}
-                value={editDueDate}
-                onChangeText={setEditDueDate}
-                placeholder="YYYY-MM-DD (optional)"
-                placeholderTextColor="#64748B"
-              />
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 12 }}>
-              <TouchableOpacity style={[styles.addSelectedButton, { backgroundColor: '#64748B' }]} onPress={() => setShowEditBillInfoModal(false)}>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Bill Title *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editTitle}
+                  onChangeText={setEditTitle}
+                  placeholder="Enter bill title"
+                  placeholderTextColor="#64748B"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={editDescription}
+                  onChangeText={setEditDescription}
+                  placeholder="Add a description (optional)"
+                  placeholderTextColor="#64748B"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Tag/Label</Text>
+                <View style={styles.inputWithIcon}>
+                  <Tag size={18} color="#64748B" strokeWidth={2} />
+                  <TextInput
+                    style={[styles.input, styles.inputWithIconText]}
+                    value={editTag}
+                    onChangeText={setEditTag}
+                    placeholder="e.g., Food & Dining, Work, Groceries"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Due Date</Text>
+                <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
+                <View style={styles.inputWithIcon}>
+                  <Calendar size={18} color="#64748B" strokeWidth={2} />
+                  <TextInput
+                    style={[styles.input, styles.inputWithIconText]}
+                    value={editDueDate}
+                    onChangeText={setEditDueDate}
+                    placeholder="YYYY-MM-DD (optional)"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+            {/* Sticky footer for buttons */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1E293B', padding: 20, borderTopWidth: 1, borderTopColor: '#334155' }}>
+              <TouchableOpacity style={[styles.addSelectedButton, { backgroundColor: '#64748B', paddingHorizontal: 20 }]} onPress={() => setShowEditBillInfoModal(false)}>
                 <Text style={styles.addSelectedText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.addSelectedButton} onPress={handleSaveBillInfo}>
+              <TouchableOpacity style={[styles.addSelectedButton, { paddingHorizontal: 20 }]} onPress={handleSaveBillInfo}>
                 <Text style={styles.addSelectedText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -1759,19 +1784,53 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#1E293B',
   },
+  inputGroup: {
+    marginBottom: 16,
+  },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: '#CBD5E1',
     marginBottom: 8,
+    letterSpacing: -0.1,
   },
   input: {
-    backgroundColor: '#1E293B',
-    padding: 16,
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
     color: '#F8FAFC',
+    backgroundColor: '#0F172A',
+    fontWeight: '500',
+  },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  inputWithIconText: {
+    flex: 1,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
   },
   textArea: {
-    height: 120,
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  labelSubtext: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 8,
   },
 });
