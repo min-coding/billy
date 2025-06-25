@@ -590,9 +590,11 @@ export default function BillDetailScreen() {
                     <TouchableOpacity
                 style={[
                   styles.paymentButton,
-                  getParticipantStatus(user?.id || '') === 'paid' && styles.paymentButtonPaid
+                  getParticipantStatus(user?.id || '') === 'paid' && styles.paymentButtonPaid,
+                  getParticipantStatus(user?.id || '') === 'verified' && { opacity: 0.5 }
                 ]}
                 onPress={() => togglePaymentStatus(user?.id || '')}
+                disabled={getParticipantStatus(user?.id || '') === 'verified'}
               >
                 <Text style={styles.paymentButtonText}>
                   {getParticipantStatus(user?.id || '') === 'paid' ? 'Mark as Unpaid' : 'Mark as Paid'}
@@ -610,7 +612,7 @@ export default function BillDetailScreen() {
             const status = getParticipantStatus(participant.id);
             const StatusIcon = getStatusIcon(status);
             const isCurrentUser = participant.id === user?.id;
-            const canVerifyPayment = bill.status === 'pay' && isHost && status === 'paid' && !isCurrentUser;
+            const canVerifyPayment = bill.status === 'pay' && status === 'paid';
             
             return (
               <View key={participant.id} style={styles.participantCard}>
@@ -639,7 +641,7 @@ export default function BillDetailScreen() {
       </View>
 
                   {/* Host verification button only */}
-                  {canVerifyPayment && (
+                  {canVerifyPayment && isHost && (
             <TouchableOpacity
                       style={styles.verifyButton}
                       onPress={() => verifyPayment(participant.id)}
