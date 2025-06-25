@@ -358,6 +358,7 @@ export default function BillDetailScreen() {
   };
 
   const getParticipantStatus = (participantId: string) => {
+    console.log('bill.participants', bill.participants);
     if (bill.status === 'select') {
       const participant = bill.participants.find((p: any) => p.id === participantId);
       return participant?.hasSubmitted ? 'submitted' : 'pending';
@@ -365,7 +366,7 @@ export default function BillDetailScreen() {
       const participant = bill.participants.find((p: any) => p.id === participantId);
       return participant?.paymentStatus || 'unpaid';
     }
-    return 'completed';
+    return 'verified';
   };
 
   const getStatusColor = (status: string) => {
