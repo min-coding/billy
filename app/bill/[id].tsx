@@ -189,38 +189,64 @@ export default function BillDetailScreen() {
   };
 
   const finalizeBill = async () => {
+    console.log('finalizeBill triggered');
     if (!allMembersSubmitted) {
-      Alert.alert(
-        'Cannot Finalize',
-        'Not all members have submitted their selections yet. Please wait for all participants to make their choices.'
-      );
+      if (Platform.OS === 'web') {
+        window.alert('Not all members have submitted their selections yet. Please wait for all participants to make their choices.');
+      } else {
+        Alert.alert(
+          'Cannot Finalize',
+          'Not all members have submitted their selections yet. Please wait for all participants to make their choices.'
+        );
+      }
       return;
     }
-    Alert.alert(
-      'Finalize Bill',
-      'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Finalize', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 1. Update bill status to 'pay' in the database
-              await supabase
-                .from('bills')
-                .update({ status: 'pay' })
-                .eq('id', bill.id);
-              Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
-              // Refetch bill data
-              await fetchBill();
-            } catch (err) {
-              Alert.alert('Error', 'Failed to finalize bill. Please try again.');
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'This will lock all selections and move the bill to payment phase. This action cannot be undone. Continue?'
+      );
+      if (!confirmed) return;
+      
+      try {
+        // 1. Update bill status to 'pay' in the database
+        await supabase
+          .from('bills')
+          .update({ status: 'pay' })
+          .eq('id', bill.id);
+        window.alert('The bill has been finalized and participants can now make payments.');
+        // Refetch bill data
+        await fetchBill();
+      } catch (err) {
+        window.alert('Failed to finalize bill. Please try again.');
+      }
+    } else {
+      Alert.alert(
+        'Finalize Bill',
+        'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Finalize', 
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // 1. Update bill status to 'pay' in the database
+                await supabase
+                  .from('bills')
+                  .update({ status: 'pay' })
+                  .eq('id', bill.id);
+                Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
+                // Refetch bill data
+                await fetchBill();
+              } catch (err) {
+                Alert.alert('Error', 'Failed to finalize bill. Please try again.');
+              }
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const editBill = () => {
