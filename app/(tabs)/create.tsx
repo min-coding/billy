@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag, TestTube } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag, TestTube, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { generateBillCode, formatCurrency } from '@/utils/billUtils';
@@ -585,18 +585,21 @@ export default function CreateBillScreen() {
         {/* Receipt Images Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Receipt Images (up to 3, optional)</Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={styles.receiptGrid}>
             {receiptImageUris.map((uri, idx) => (
-              <View key={uri} style={styles.receiptPreviewContainer}>
-                <Image source={{ uri }} style={styles.receiptPreview} />
-                <TouchableOpacity style={styles.removeReceiptButton} onPress={() => removeReceiptImage(idx)}>
-                  <Text style={styles.removeReceiptText}>Remove</Text>
+              <View key={uri} style={styles.receiptCard}>
+                <Image source={{ uri }} style={styles.receiptImage} />
+                <TouchableOpacity
+                  style={styles.removeIcon}
+                  onPress={() => removeReceiptImage(idx)}
+                >
+                  <X size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
             ))}
             {receiptImageUris.length < 3 && (
-              <TouchableOpacity style={styles.addReceiptButton} onPress={pickReceiptImage}>
-                <Text style={styles.addReceiptText}>Add</Text>
+              <TouchableOpacity style={styles.receiptCard} onPress={pickReceiptImage}>
+                <Camera size={32} color="#64748B" />
               </TouchableOpacity>
             )}
           </View>
@@ -1230,39 +1233,59 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  receiptPreviewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+  receiptUploadBox: {
     borderWidth: 1,
     borderColor: '#334155',
     borderRadius: 12,
-  },
-  receiptPreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 16,
-  },
-  removeReceiptButton: {
-    padding: 8,
-    borderRadius: 8,
     backgroundColor: '#1E293B',
-  },
-  removeReceiptText: {
-    color: '#EF4444',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  addReceiptButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    marginTop: 8,
+    marginBottom: 8,
   },
-  addReceiptText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+  uploadBoxText: {
+    color: '#64748B',
+    marginTop: 8,
+    fontSize: 15,
+  },
+  receiptGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
+  },
+  receiptCard: {
+    width: 96,
+    height: 96,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginBottom: 8,
+    marginRight: 8,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  receiptImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
+  removeIcon: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    padding: 2,
+    zIndex: 2,
   },
 });
