@@ -31,15 +31,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* <Tabs.Screen
-        name="create"
-        options={{
-          title: 'Create',
-          tabBarIcon: ({ size, color }) => (
-            <Plus size={size} color={color} strokeWidth={2} />
-          ),
-        }}
-      /> */}
       <Tabs.Screen
         name="friends"
         options={{

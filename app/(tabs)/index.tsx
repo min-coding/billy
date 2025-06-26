@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    backgroundColor: '#0F172A',
+    paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
@@ -531,12 +531,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   searchFilterSection: {
-    backgroundColor: '#1E293B',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#334155',
   },
   searchFilterRow: {
     flexDirection: 'row',
