@@ -1,22 +1,139 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen, Camera } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [selectedAvatarUri, setSelectedAvatarUri] = useState<string | null>(user?.avatar || null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const pickImage = async () => {
+    try {
+      // Request permission to access media library
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        if (Platform.OS === 'web') {
+          alert('Sorry, we need camera roll permissions to make this work!');
+        } else {
+          Alert.alert('Permission Required', 'Sorry, we need camera roll permissions to make this work!');
+        }
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedAvatarUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      if (Platform.OS === 'web') {
+        alert('Error selecting image. Please try again.');
+      } else {
+        Alert.alert('Error', 'Error selecting image. Please try again.');
+      }
+    }
+  };
+
+  const uploadImage = async (imageUri: string): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      setIsUploadingImage(true);
+
+      // Fetch the image as a blob
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      // Create a unique file path
+      const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${user.id}/profile.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, blob, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: `image/${fileExt}`,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
-      await updateProfile({ name, email });
+      let avatarUrl = user?.avatar;
+
+      // Check if a new image was selected
+      if (selectedAvatarUri && selectedAvatarUri !== user?.avatar) {
+        try {
+          avatarUrl = await uploadImage(selectedAvatarUri);
+          if (!avatarUrl) {
+            throw new Error('Failed to upload image');
+          }
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          if (Platform.OS === 'web') {
+            alert('Failed to upload image. Please try again.');
+          } else {
+            Alert.alert('Upload Error', 'Failed to upload image. Please try again.');
+          }
+          return;
+        }
+      }
+
+      // Update profile with new data
+      await updateProfile({ 
+        name, 
+        email, 
+        avatar: avatarUrl 
+      });
+
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      
+      if (Platform.OS === 'web') {
+        alert('Profile updated successfully');
+      } else {
+        Alert.alert('Success', 'Profile updated successfully');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      console.error('Profile update error:', error);
+      if (Platform.OS === 'web') {
+        alert('Failed to update profile');
+      } else {
+        Alert.alert('Error', 'Failed to update profile');
+      }
     }
   };
 
@@ -24,6 +141,7 @@ export default function ProfileScreen() {
     setIsEditing(false);
     setName(user?.name || '');
     setEmail(user?.email || '');
+    setSelectedAvatarUri(user?.avatar || null);
   };
 
   const handleLogout = () => {
@@ -34,22 +152,31 @@ export default function ProfileScreen() {
         console.log('Sign out result: success');
       } catch (error) {
         console.log('Sign out result:', error);
-        Alert.alert('Error', 'Failed to sign out');
+        if (Platform.OS === 'web') {
+          alert('Failed to sign out');
+        } else {
+          Alert.alert('Error', 'Failed to sign out');
+        }
       }
     };
 
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: doLogout,
-        }
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to sign out?');
+      if (confirmed) doLogout();
+    } else {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: doLogout,
+          }
+        ]
+      );
+    }
   };
 
   const menuItems = [
@@ -80,16 +207,28 @@ export default function ProfileScreen() {
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarWrapper}>
-              {user.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+              {selectedAvatarUri ? (
+                <Image source={{ uri: selectedAvatarUri }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatar}>
                   <User size={32} color="#FFFFFF" strokeWidth={2} />
                 </View>
               )}
-              <TouchableOpacity style={styles.cameraButton}>
-                <Camera size={16} color="#FFFFFF" strokeWidth={2} />
-              </TouchableOpacity>
+              
+              {/* Camera Button - only show when editing */}
+              {isEditing && (
+                <TouchableOpacity 
+                  style={styles.cameraButton} 
+                  onPress={pickImage}
+                  disabled={isUploadingImage}
+                >
+                  {isUploadingImage ? (
+                    <ActivityIndicator size={16} color="#FFFFFF" />
+                  ) : (
+                    <Camera size={16} color="#FFFFFF" strokeWidth={2} />
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -103,7 +242,7 @@ export default function ProfileScreen() {
                   onChangeText={setName}
                   placeholder="Enter your name"
                   placeholderTextColor="#64748B"
-                  editable={!isLoading}
+                  editable={!isLoading && !isUploadingImage}
                 />
               </View>
               
@@ -117,7 +256,7 @@ export default function ProfileScreen() {
                   placeholderTextColor="#64748B"
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  editable={!isLoading}
+                  editable={!isLoading && !isUploadingImage}
                 />
               </View>
 
@@ -125,19 +264,30 @@ export default function ProfileScreen() {
                 <TouchableOpacity 
                   style={[styles.button, styles.cancelButton]} 
                   onPress={handleCancel}
-                  disabled={isLoading}
+                  disabled={isLoading || isUploadingImage}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={[styles.button, styles.saveButton, isLoading && styles.disabledButton]} 
+                  style={[
+                    styles.button, 
+                    styles.saveButton, 
+                    (isLoading || isUploadingImage) && styles.disabledButton
+                  ]} 
                   onPress={handleSave}
-                  disabled={isLoading}
+                  disabled={isLoading || isUploadingImage}
                 >
-                  <Text style={styles.saveButtonText}>
-                    {isLoading ? 'Saving...' : 'Save'}
-                  </Text>
+                  {isLoading || isUploadingImage ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size={16} color="#FFFFFF" />
+                      <Text style={styles.saveButtonText}>
+                        {isUploadingImage ? 'Uploading...' : 'Saving...'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -384,6 +534,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   statsSection: {
     flexDirection: 'row',
