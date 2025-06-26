@@ -7,6 +7,7 @@ import { useFocusEffect } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
+import BoltBadge from '@/components/BoltBadge';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
 type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
@@ -281,6 +282,8 @@ export default function HomeScreen() {
           ))
         )}
       </ScrollView>
+
+      <BoltBadge />
 
       {/* Filter Modal */}
       <Modal

@@ -6,6 +6,7 @@ import { Friend, FriendRequest, User } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
+import BoltBadge from '@/components/BoltBadge';
 
 // Mock data - in real app, this would come from API/database
 const mockFriends: Friend[] = [
@@ -444,6 +445,7 @@ export default function FriendsScreen() {
           </View>
         </View>
       </Modal>
+      <BoltBadge />
     </SafeAreaView>
   );
 }
