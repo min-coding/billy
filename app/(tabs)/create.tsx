@@ -204,14 +204,13 @@ export default function CreateBillScreen() {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
         quality: 1,
       });
       if (result.canceled || !result.assets?.length) return;
       const manipResult = await ImageManipulator.manipulateAsync(
         result.assets[0].uri,
-        [{ resize: { width: 1024, height: 768 } }],
+        [{ resize: { width: 1024 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
       setReceiptImageUris(prev => [...prev, manipResult.uri]);
@@ -231,7 +230,7 @@ export default function CreateBillScreen() {
       setIsUploadingReceipt(true);
       const manipResult = await ImageManipulator.manipulateAsync(
         imageUri,
-        [{ resize: { width: 1024, height: 768 } }],
+        [{ resize: { width: 1024 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
       const base64 = await FileSystem.readAsStringAsync(manipResult.uri, {
