@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag, Receipt } from 'lucide-react-native';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +48,10 @@ export default function BillDetailScreen() {
   const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [savingItems, setSavingItems] = useState(false);
 
+  const [receiptImages, setReceiptImages] = useState<{ id: string, url: string }[]>([]);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
+
   const unreadCount = getUnreadCount(id || '');
 
   // Filter friends based on search query
@@ -59,7 +63,8 @@ export default function BillDetailScreen() {
   const fetchBill = async () => {
     setLoading(true);
     setError(null);
-    const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', id).single();
+    const billId: string = id as string;
+    const { data: billData, error: billError } = await supabase.from('bills').select('*').eq('id', billId).single();
     if (billError) {
       setError('Bill not found');
       setBill(null);
@@ -68,7 +73,7 @@ export default function BillDetailScreen() {
       const { data: itemsData } = await supabase
         .from('bill_items')
         .select('*, bill_item_selections(user_id)')
-        .eq('bill_id', billData.id);
+        .eq('bill_id', billId);
       const items = itemsData?.map(item => ({
         id: item.id,
         name: item.name,
@@ -80,7 +85,7 @@ export default function BillDetailScreen() {
       const { data: participantsData } = await supabase
         .from('bill_participants')
         .select('user_id, has_submitted, payment_status, users:user_id(id, name, email, avatar)')
-        .eq('bill_id', billData.id);
+        .eq('bill_id', billId);
       const participants = (participantsData || [])
         .map((p: any) => p.users ? { 
           ...p.users, 
@@ -88,6 +93,13 @@ export default function BillDetailScreen() {
           paymentStatus: p.payment_status || 'unpaid'
         } : null)
         .filter(Boolean);
+      // Fetch receipt images (up to 3)
+      const { data: receiptsData } = await supabase
+        .from('bill_receipts')
+        .select('id, url')
+        .eq('bill_id', billId)
+        .limit(3);
+      setReceiptImages(receiptsData || []);
       setBill({ 
         ...billData, 
         dueDate: billData.due_date,
@@ -823,6 +835,53 @@ export default function BillDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Receipt Images</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            {receiptImages.length === 0 ? (
+              <View style={styles.noReceiptContainer}>
+                <Receipt size={32} color="#94A3B8" />
+                <Text style={styles.noReceiptText}>No receipts uploaded</Text>
+              </View>
+            ) : (
+              receiptImages.map((img, idx) => (
+                <TouchableOpacity
+                  key={img.id}
+                  onPress={() => { setModalImageUrl(img.url); setShowReceiptModal(true); }}
+                >
+                  <Image
+                    source={{ uri: img.url }}
+                    style={styles.receiptThumbnail}
+                    resizeMode="cover"
+                    accessibilityLabel={`Receipt image ${idx + 1}`}
+                  />
+                  {isHost && (
+                    <TouchableOpacity
+                      style={styles.removeReceiptButton}
+                      onPress={async () => {
+                        const { error } = await supabase.from('bill_receipts').delete().eq('id', img.id);
+                        if (!error) setReceiptImages(receiptImages.filter(r => r.id !== img.id));
+                      }}
+                    >
+                      <Text style={styles.removeReceiptText}>Delete</Text>
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+          <Modal visible={showReceiptModal} transparent onRequestClose={() => setShowReceiptModal(false)}>
+            <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowReceiptModal(false)}>
+              {modalImageUrl && (
+                <Image
+                  source={{ uri: modalImageUrl }}
+                  style={styles.fullScreenReceipt}
+                  resizeMode="contain"
+                />
+              )}
+            </TouchableOpacity>
+          </Modal>
+        </View>
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Bill Info</Text>
@@ -2154,5 +2213,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  receiptThumbnail: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginTop: 8,
+  },
+  removeReceiptButton: {
+    marginTop: 4,
+    backgroundColor: '#1E293B',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignSelf: 'center',
+  },
+  removeReceiptText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  noReceiptContainer: {
+    alignItems: 'center',
+    padding: 16,
+    opacity: 0.6,
+  },
+  noReceiptText: {
+    color: '#94A3B8',
+    marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenReceipt: {
+    width: '90%',
+    height: '80%',
+    borderRadius: 16,
   },
 });

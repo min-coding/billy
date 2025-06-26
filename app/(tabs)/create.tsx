@@ -36,7 +36,7 @@ export default function CreateBillScreen() {
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const { refetch } = useBills();
-  const [receiptImageUri, setReceiptImageUri] = useState<string | null>(null);
+  const [receiptImageUris, setReceiptImageUris] = useState<string[]>([]);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
   const filteredFriends = friends.filter(friend =>
@@ -192,6 +192,10 @@ export default function CreateBillScreen() {
   };
 
   const pickReceiptImage = async () => {
+    if (receiptImageUris.length >= 3) {
+      Alert.alert('Limit Reached', 'You can only add up to 3 receipt images.');
+      return;
+    }
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -210,16 +214,18 @@ export default function CreateBillScreen() {
         [{ resize: { width: 1024, height: 768 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
-      setReceiptImageUri(manipResult.uri);
+      setReceiptImageUris(prev => [...prev, manipResult.uri]);
     } catch (error) {
       console.error('Error picking receipt image:', error);
       Alert.alert('Error', 'Unable to select receipt image.');
     }
   };
 
-  const removeReceiptImage = () => setReceiptImageUri(null);
+  const removeReceiptImage = (index: number) => {
+    setReceiptImageUris(prev => prev.filter((_, i) => i !== index));
+  };
 
-  const uploadReceiptImage = async (imageUri: string, billId: string): Promise<string | null> => {
+  const uploadReceiptImage = async (imageUri: string, billId: string, idx: number): Promise<string | null> => {
     if (!user) return null;
     try {
       setIsUploadingReceipt(true);
@@ -234,7 +240,7 @@ export default function CreateBillScreen() {
       const arrayBuffer = decode(base64);
       const fileExtMatch = manipResult.uri.match(/\.(\w+)$/);
       const fileExt = fileExtMatch ? fileExtMatch[1] : 'jpg';
-      const fileName = `${billId}/receipt.${fileExt}`;
+      const fileName = `${billId}/receipt-${idx + 1}.${fileExt}`;
       const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('receipts')
@@ -278,7 +284,7 @@ export default function CreateBillScreen() {
       return;
     }
     try {
-      // 1. Insert bill (without receipt_url)
+      // 1. Insert bill
       const { data: bill, error: billError } = await supabase
         .from('bills')
         .insert({
@@ -318,12 +324,13 @@ export default function CreateBillScreen() {
           }))
         );
       if (itemsError) throw itemsError;
-      // 4. Upload receipt image if present
-      let receiptUrl = null;
-      if (receiptImageUri) {
-        receiptUrl = await uploadReceiptImage(receiptImageUri, bill.id);
-        if (receiptUrl) {
-          await supabase.from('bills').update({ receipt_url: receiptUrl }).eq('id', bill.id);
+      // 4. Upload up to 3 receipt images if present
+      if (receiptImageUris.length > 0) {
+        for (let i = 0; i < receiptImageUris.length; i++) {
+          const url = await uploadReceiptImage(receiptImageUris[i], bill.id, i);
+          if (url) {
+            await supabase.from('bill_receipts').insert({ bill_id: bill.id, url });
+          }
         }
       }
       Alert.alert('Bill Created!', 'Your bill has been saved.');
@@ -576,21 +583,24 @@ export default function CreateBillScreen() {
           </View>
         </View>
 
-        {/* Receipt Image Section */}
+        {/* Receipt Images Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Receipt Image (optional)</Text>
-          {receiptImageUri ? (
-            <View style={styles.receiptPreviewContainer}>
-              <Image source={{ uri: receiptImageUri }} style={styles.receiptPreview} />
-              <TouchableOpacity style={styles.removeReceiptButton} onPress={removeReceiptImage}>
-                <Text style={styles.removeReceiptText}>Remove</Text>
+          <Text style={styles.sectionTitle}>Receipt Images (up to 3, optional)</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            {receiptImageUris.map((uri, idx) => (
+              <View key={uri} style={styles.receiptPreviewContainer}>
+                <Image source={{ uri }} style={styles.receiptPreview} />
+                <TouchableOpacity style={styles.removeReceiptButton} onPress={() => removeReceiptImage(idx)}>
+                  <Text style={styles.removeReceiptText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {receiptImageUris.length < 3 && (
+              <TouchableOpacity style={styles.addReceiptButton} onPress={pickReceiptImage}>
+                <Text style={styles.addReceiptText}>Add</Text>
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.addReceiptButton} onPress={pickReceiptImage}>
-              <Text style={styles.addReceiptText}>Add Receipt Image</Text>
-            </TouchableOpacity>
-          )}
+            )}
+          </View>
           {isUploadingReceipt && <ActivityIndicator size="small" color="#3B82F6" style={{ marginTop: 8 }} />}
         </View>
       </ScrollView>
