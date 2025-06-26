@@ -835,83 +835,6 @@ export default function BillDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Items Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Items</Text>
-            {isHost && bill.status === 'select' && (
-              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditItemsModal(true)}>
-                <Text style={styles.addFromFriendsText}>Edit items</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {Array.isArray(bill.items) && bill.items.length > 0 ? (
-            bill.items.map((item: any) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                isSelected={selectedItems.includes(item.id)}
-                onToggle={() => toggleItemSelection(item.id)}
-                participantCount={item.selectedBy.length}
-                editable={bill.status === 'select'}
-              />
-            ))
-          ) : (
-            <Text style={{ color: '#64748B', marginTop: 8 }}>No items yet.</Text>
-          )}
-        </View>
-
-        {/* Receipt Images Section (modern grid) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Receipt Images</Text>
-          {receiptImages.length === 0 ? (
-            <View style={styles.noReceiptContainer}>
-              <Text style={styles.noReceiptText}>No receipts uploaded</Text>
-            </View>
-          ) : (
-            <View style={styles.receiptGrid}>
-              {receiptImages.map((img, idx) => (
-                <View key={img.id} style={styles.receiptCard}>
-                  <TouchableOpacity
-                    onPress={() => { setModalImageUrl(img.url); setShowReceiptModal(true); }}
-                    style={{ width: '100%', height: '100%' }}
-                    activeOpacity={0.85}
-                  >
-                    <Image
-                      source={{ uri: img.url }}
-                      style={styles.receiptImage}
-                      resizeMode="cover"
-                      accessibilityLabel={`Receipt image ${idx + 1}`}
-                    />
-                    {isHost && (
-                      <TouchableOpacity
-                        style={styles.removeIcon}
-                        onPress={async (e) => {
-                          e.stopPropagation && e.stopPropagation();
-                          const { error } = await supabase.from('bill_receipts').delete().eq('id', img.id);
-                          if (!error) setReceiptImages(receiptImages.filter(r => r.id !== img.id));
-                        }}
-                      >
-                        <X size={18} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-          <Modal visible={showReceiptModal} transparent onRequestClose={() => setShowReceiptModal(false)}>
-            <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowReceiptModal(false)}>
-              {modalImageUrl && (
-                <Image
-                  source={{ uri: modalImageUrl }}
-                  style={styles.fullScreenReceipt}
-                  resizeMode="contain"
-                />
-              )}
-            </TouchableOpacity>
-          </Modal>
-        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
@@ -1075,6 +998,84 @@ export default function BillDetailScreen() {
             </View>
           </View>
         )}
+
+{/* Items Section */}
+<View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Items</Text>
+            {isHost && bill.status === 'select' && (
+              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditItemsModal(true)}>
+                <Text style={styles.addFromFriendsText}>Edit items</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {Array.isArray(bill.items) && bill.items.length > 0 ? (
+            bill.items.map((item: any) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                isSelected={selectedItems.includes(item.id)}
+                onToggle={() => toggleItemSelection(item.id)}
+                participantCount={item.selectedBy.length}
+                editable={bill.status === 'select'}
+              />
+            ))
+          ) : (
+            <Text style={{ color: '#64748B', marginTop: 8 }}>No items yet.</Text>
+          )}
+        </View>
+
+        {/* Receipt Images Section (modern grid) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Receipt Images</Text>
+          {receiptImages.length === 0 ? (
+            <View style={styles.noReceiptContainer}>
+              <Text style={styles.noReceiptText}>No receipts uploaded</Text>
+            </View>
+          ) : (
+            <View style={styles.receiptGrid}>
+              {receiptImages.map((img, idx) => (
+                <View key={img.id} style={styles.receiptCard}>
+                  <TouchableOpacity
+                    onPress={() => { setModalImageUrl(img.url); setShowReceiptModal(true); }}
+                    style={{ width: '100%', height: '100%' }}
+                    activeOpacity={0.85}
+                  >
+                    <Image
+                      source={{ uri: img.url }}
+                      style={styles.receiptImage}
+                      resizeMode="cover"
+                      accessibilityLabel={`Receipt image ${idx + 1}`}
+                    />
+                    {isHost && (
+                      <TouchableOpacity
+                        style={styles.removeIcon}
+                        onPress={async (e) => {
+                          e.stopPropagation && e.stopPropagation();
+                          const { error } = await supabase.from('bill_receipts').delete().eq('id', img.id);
+                          if (!error) setReceiptImages(receiptImages.filter(r => r.id !== img.id));
+                        }}
+                      >
+                        <X size={18} color="#fff" />
+                      </TouchableOpacity>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+          <Modal visible={showReceiptModal} transparent onRequestClose={() => setShowReceiptModal(false)}>
+            <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowReceiptModal(false)}>
+              {modalImageUrl && (
+                <Image
+                  source={{ uri: modalImageUrl }}
+                  style={styles.fullScreenReceipt}
+                  resizeMode="contain"
+                />
+              )}
+            </TouchableOpacity>
+          </Modal>
+        </View>
 
         {isHost && (
           <View style={styles.section}>
