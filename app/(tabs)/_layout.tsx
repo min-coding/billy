@@ -14,7 +14,7 @@ export default function TabLayout() {
           borderTopColor: '#1E293B',
           paddingBottom: 8,
           paddingTop: 8,
-          height: 60,
+          height: 80,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -31,7 +31,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="create"
         options={{
           title: 'Create',
@@ -39,7 +39,7 @@ export default function TabLayout() {
             <Plus size={size} color={color} strokeWidth={2} />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="friends"
         options={{

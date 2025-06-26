@@ -97,7 +97,7 @@ export default function HomeScreen() {
   }, [bills, searchQuery, statusFilter, roleFilter, sortOption, dateRange, user?.id]);
 
   const handleCreateBill = () => {
-    router.push('/(tabs)/create');
+    router.push('/bill/create');
   };
 
   const clearFilters = () => {
