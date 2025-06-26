@@ -50,15 +50,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="summary"
-        options={{
-          title: 'Summary',
-          tabBarIcon: ({ size, color }) => (
-            <BarChart size={size} color={color} strokeWidth={2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
