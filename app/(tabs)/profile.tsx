@@ -5,87 +5,88 @@ import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, Use
 import { useAuth } from '@/contexts/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
+import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { decode } from 'base64-arraybuffer';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [selectedAvatarUri, setSelectedAvatarUri] = useState<string | null>(user?.avatar || null);
+  const [selectedAvatarUri, setSelectedAvatarUri] = useState(user?.avatar || null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const pickImage = async () => {
     try {
-      // Request permission to access media library
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (status !== 'granted') {
-        if (Platform.OS === 'web') {
-          alert('Sorry, we need camera roll permissions to make this work!');
-        } else {
-          Alert.alert('Permission Required', 'Sorry, we need camera roll permissions to make this work!');
-        }
+        Alert.alert('Permission Required', 'Camera roll permission is needed.');
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
+        quality: 1,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setSelectedAvatarUri(result.assets[0].uri);
-      }
+      if (result.canceled || !result.assets?.length) return;
+
+      const manipResult = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 512, height: 512 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      setSelectedAvatarUri(manipResult.uri);
     } catch (error) {
       console.error('Error picking image:', error);
-      if (Platform.OS === 'web') {
-        alert('Error selecting image. Please try again.');
-      } else {
-        Alert.alert('Error', 'Error selecting image. Please try again.');
-      }
+      Alert.alert('Error', 'Unable to select image.');
     }
   };
 
-  const uploadImage = async (imageUri: string): Promise<string | null> => {
+  const uploadImage = async (imageUri) => {
     if (!user) return null;
-
     try {
       setIsUploadingImage(true);
 
-      // Fetch the image as a blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      const manipResult = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: 512, height: 512 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
 
-      // Create a unique file path
-      const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+      const base64 = await FileSystem.readAsStringAsync(manipResult.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const arrayBuffer = decode(base64);
+
+      const fileExtMatch = manipResult.uri.match(/\.(\w+)$/);
+      const fileExt = fileExtMatch ? fileExtMatch[1] : 'jpg';
       const fileName = `${user.id}/profile.${fileExt}`;
+      const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, blob, {
-          cacheControl: '3600',
+        .upload(fileName, arrayBuffer, {
+          contentType,
           upsert: true,
-          contentType: `image/${fileExt}`,
         });
 
-      if (error) {
-        throw error;
-      }
+      if (uploadError) throw uploadError;
 
-      // Get the public URL
-      const { data: urlData } = supabase.storage
+      const { publicUrl } = supabase.storage
         .from('avatars')
-        .getPublicUrl(fileName);
+        .getPublicUrl(fileName).data;
 
-      return urlData.publicUrl;
+      return publicUrl;
     } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
+      console.error('Upload failed:', error);
+      Alert.alert('Error', 'Failed to upload image.');
+      return null;
     } finally {
       setIsUploadingImage(false);
     }
@@ -95,45 +96,19 @@ export default function ProfileScreen() {
     try {
       let avatarUrl = user?.avatar;
 
-      // Check if a new image was selected
       if (selectedAvatarUri && selectedAvatarUri !== user?.avatar) {
-        try {
-          avatarUrl = await uploadImage(selectedAvatarUri);
-          if (!avatarUrl) {
-            throw new Error('Failed to upload image');
-          }
-        } catch (uploadError) {
-          console.error('Image upload error:', uploadError);
-          if (Platform.OS === 'web') {
-            alert('Failed to upload image. Please try again.');
-          } else {
-            Alert.alert('Upload Error', 'Failed to upload image. Please try again.');
-          }
-          return;
-        }
+        const uploaded = await uploadImage(selectedAvatarUri);
+        if (!uploaded) return;
+        avatarUrl = uploaded;
       }
 
-      // Update profile with new data
-      await updateProfile({ 
-        name, 
-        email, 
-        avatar: avatarUrl 
-      });
-
+      const updateData = { name, email, avatar: avatarUrl };
+      await updateProfile(updateData);
       setIsEditing(false);
-      
-      if (Platform.OS === 'web') {
-        alert('Profile updated successfully');
-      } else {
-        Alert.alert('Success', 'Profile updated successfully');
-      }
+      Alert.alert('Success', 'Profile updated successfully.');
     } catch (error) {
       console.error('Profile update error:', error);
-      if (Platform.OS === 'web') {
-        alert('Failed to update profile');
-      } else {
-        Alert.alert('Error', 'Failed to update profile');
-      }
+      Alert.alert('Error', 'Failed to update profile.');
     }
   };
 
