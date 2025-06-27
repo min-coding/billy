@@ -82,9 +82,31 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Check if project ID is configured
+      const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+      if (!projectId) {
+        setNotificationState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          error: 'Expo project ID not configured. Please set EXPO_PUBLIC_PROJECT_ID in your .env file.'
+        }));
+        return;
+      }
+
+      // Validate that project ID looks like a UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(projectId)) {
+        setNotificationState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          error: 'Invalid Expo project ID. Please ensure EXPO_PUBLIC_PROJECT_ID is a valid UUID from your Expo dashboard.'
+        }));
+        return;
+      }
+
       // Get the Expo push token
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+        projectId: projectId,
       });
 
       const token = tokenData.data;
