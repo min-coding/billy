@@ -10,6 +10,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import BoltBadge from '@/components/BoltBadge';
 import NotificationSettings from '@/components/NotificationSettings';
+import { useBills } from '@/hooks/useBills';
+import { useFriends } from '@/hooks/useFriends';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
@@ -18,6 +20,11 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState(user?.email || '');
   const [selectedAvatarUri, setSelectedAvatarUri] = useState(user?.avatar || null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const { bills, loading: billsLoading } = useBills();
+  const { friends, loading: friendsLoading } = useFriends();
+
+  // Calculate total spent (sum of totalAmount for all bills where user is a participant)
+  const totalSpent = bills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
 
   const pickImage = async () => {
     try {
@@ -49,7 +56,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const uploadImage = async (imageUri) => {
+  const uploadImage = async (imageUri: string) => {
     if (!user) return null;
     try {
       setIsUploadingImage(true);
@@ -284,17 +291,17 @@ export default function ProfileScreen() {
         {/* Stats Section */}
         <View style={styles.statsSection}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>12</Text>
+            <Text style={styles.statNumber}>{billsLoading ? '-' : bills.length}</Text>
             <Text style={styles.statLabel}>Total Bills</Text>
           </View>
           
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>$248.50</Text>
+            <Text style={styles.statNumber}>{billsLoading ? '-' : `$${totalSpent.toFixed(2)}`}</Text>
             <Text style={styles.statLabel}>Total Spent</Text>
           </View>
           
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>8</Text>
+            <Text style={styles.statNumber}>{friendsLoading ? '-' : friends.length}</Text>
             <Text style={styles.statLabel}>Friends</Text>
           </View>
         </View>
