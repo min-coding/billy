@@ -106,14 +106,6 @@ export default function BillChatScreen() {
         .from('chat-images')
         .upload(fileName, arrayBuffer, {
           contentType,
-          upsert: true,
-        });
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, arrayBuffer, {
-          contentType,
-          upsert: true,
         });
 
       if (uploadError) {
