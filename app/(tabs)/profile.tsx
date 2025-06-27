@@ -9,6 +9,7 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import BoltBadge from '@/components/BoltBadge';
+import NotificationSettings from '@/components/NotificationSettings';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
@@ -156,7 +157,6 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-    { icon: Bell, title: 'Notifications', subtitle: 'Manage your notifications' },
     { icon: CreditCard, title: 'Payment Methods', subtitle: 'Manage cards and payment options' },
     { icon: Settings, title: 'Settings', subtitle: 'App preferences and privacy' },
     { icon: HelpCircle, title: 'Help & Support', subtitle: 'Get help and contact support' },
@@ -298,6 +298,9 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Friends</Text>
           </View>
         </View>
+
+        {/* Notification Settings */}
+        <NotificationSettings />
 
         {/* Menu Section */}
         <View style={styles.menuSection}>
