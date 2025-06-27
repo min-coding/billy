@@ -35,13 +35,35 @@ export default function BillChatScreen() {
     const fetchBill = async () => {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase.from('bills').select('*').eq('id', id).single();
-      if (error) {
+      // Fetch bill
+      const { data: billData, error: billError } = await supabase
+        .from('bills')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (billError) {
         setError('Bill not found');
         setBill(null);
-      } else {
-        setBill(data);
+        setLoading(false);
+        return;
       }
+      // Fetch participants
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('bill_participants')
+        .select('user_id, payment_status, users(name)')
+        .eq('bill_id', id);
+      if (participantsError) {
+        setError('Failed to fetch participants');
+        setBill(null);
+        setLoading(false);
+        return;
+      }
+      // Attach participants to bill
+      billData.participants = participantsData.map((p) => ({
+        ...p,
+        name: (p.users && typeof p.users === 'object' && 'name' in p.users) ? p.users.name : '',
+      }));
+      setBill(billData);
       setLoading(false);
     };
     if (id) fetchBill();
@@ -526,31 +548,44 @@ export default function BillChatScreen() {
                       {formatTime(message?.timestamp ?? new Date())}
                     </Text>
                   )}
+
+                  {/* Verify button for cash payment system message */}
+                  {message?.type === 'text' &&
+                   message?.content?.includes('marked as paid (cash)') &&
+                   isHost &&
+                   bill &&
+                   bill.participants && (() => {
+                      const paidParticipant = bill.participants.find(
+                        (p: any) =>
+                          p.payment_status === 'paid' &&
+                          message.content.toLowerCase().includes(p.name.toLowerCase())
+                      );
+                      if (paidParticipant && paidParticipant.user_id && paidParticipant.name) {
+                        return (
+                          <View style={[styles.verificationButtons, { marginTop: 12 }]}>
+                            <TouchableOpacity
+                              style={styles.rejectButton}
+                              onPress={() => handleVerifyPayment(message.id, 'rejected')}
+                              disabled={isLoading}
+                            >
+                              <X size={16} color="#FFFFFF" strokeWidth={2} />
+                              <Text style={styles.rejectButtonText}>Reject</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.verifyButton}
+                              onPress={() => handleVerifyPayment(message.id, 'verified')}
+                              disabled={isLoading}
+                            >
+                              <Check size={16} color="#FFFFFF" strokeWidth={2} />
+                              <Text style={styles.verifyButtonText}>Verify</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      }
+                      return null;
+                    })()}
                 </View>
               </View>
-
-              {/* Verify button for cash payment system message */}
-              {message?.type === 'text' && message?.content?.includes('marked as paid (cash)') && isHost && bill && bill.participants && (() => {
-                const paidParticipant = bill.participants.find((p: any) => p.payment_status === 'paid' && message.content.includes(p.name));
-                if (paidParticipant && paidParticipant.user_id && paidParticipant.name) {
-                  return (
-                    <TouchableOpacity
-                      style={[styles.verifyButton, { marginTop: 8 }]}
-                      onPress={async () => {
-                        await supabase
-                          .from('bill_participants')
-                          .update({ payment_status: 'verified' })
-                          .eq('bill_id', bill.id)
-                          .eq('user_id', paidParticipant.user_id);
-                        await sendMessage(bill.id, `${paidParticipant.name} payment (cash) verified by host.`, 'text');
-                      }}
-                    >
-                      <Text style={styles.verifyButtonText}>Verify</Text>
-                    </TouchableOpacity>
-                  );
-                }
-                return null;
-              })()}
             </View>
           );
         })}

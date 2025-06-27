@@ -483,10 +483,23 @@ export default function BillDetailScreen() {
 
       await fetchBill();
 
-      if (Platform.OS === 'web') {
-        window.alert(`Payment status updated to ${newStatus}`);
+      if (newStatus === 'paid') {
+        // Redirect to chat first
+        router.push(`/bill/${bill.id}/chat`);
+        // Show alert/message in chat after navigation
+        setTimeout(() => {
+          if (Platform.OS === 'web') {
+            window.alert('Please send a payment slip in the chat for verification!');
+          } else {
+            Alert.alert('Action Required', 'Please send a payment slip in the chat for verification!');
+          }
+        }, 500); // Delay to ensure navigation
       } else {
-        Alert.alert('Success', `Payment status updated to ${newStatus}`);
+        if (Platform.OS === 'web') {
+          window.alert(`Payment status updated to ${newStatus}`);
+        } else {
+          Alert.alert('Success', `Payment status updated to ${newStatus}`);
+        }
       }
     } catch (err) {
       if (Platform.OS === 'web') {
