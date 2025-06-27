@@ -7,6 +7,10 @@ import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/billUtils';
 import { supabase } from '@/lib/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { decode } from 'base64-arraybuffer';
 
 export default function BillChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,6 +26,8 @@ export default function BillChatScreen() {
   const [bill, setBill] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPickingImage, setIsPickingImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   const scrollViewRef = useRef<ScrollView>(null);
   
@@ -67,67 +73,149 @@ export default function BillChatScreen() {
     }
   }, [bill?.id]);
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 50 }} />
-      </SafeAreaView>
-    );
-  }
+  // Upload image to Supabase Storage
+  const uploadImageToSupabase = async (imageUri: string): Promise<string | null> => {
+    if (!user || !bill) return null;
 
-  if (error || !bill || !user) {
-    return null;
-  }
+    try {
+      setIsUploadingImage(true);
+
+      // Manipulate image to reduce size
+      const manipResult = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      // Read image as base64
+      const base64 = await FileSystem.readAsStringAsync(manipResult.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Convert to ArrayBuffer
+      const arrayBuffer = decode(base64);
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const fileExt = 'jpg'; // We're converting to JPEG
+      const fileName = `${bill.id}/message_${timestamp}.${fileExt}`;
+      const contentType = 'image/jpeg';
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('chat-images')
+        .upload(fileName, arrayBuffer, {
+          contentType,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload image');
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-images')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to upload image. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to upload image. Please try again.');
+      }
+      return null;
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!messageText.trim() && !selectedImage) return;
 
     try {
+      let imageUrl: string | undefined;
+
+      // Upload image if selected
       if (selectedImage) {
-        // Send as payment slip if amount is provided
-        const amount = paymentAmount ? parseFloat(paymentAmount) : undefined;
-        await sendMessage(
-          bill.id,
-          messageText.trim() || 'Payment slip attached',
-          amount ? 'payment_slip' : 'image',
-          selectedImage,
-          amount
-        );
-        setPaymentAmount('');
-      } else {
-        await sendMessage(bill.id, messageText.trim());
+        imageUrl = await uploadImageToSupabase(selectedImage);
+        if (!imageUrl) {
+          // Upload failed, don't send message
+          return;
+        }
       }
+
+      // Determine message type and content
+      const messageContent = messageText.trim() || (selectedImage ? 'Image' : '');
+      const messageType = selectedImage 
+        ? (paymentAmount ? 'payment_slip' : 'image')
+        : 'text';
+      const amount = paymentAmount ? parseFloat(paymentAmount) : undefined;
+
+      // Send message
+      await sendMessage(
+        bill.id,
+        messageContent,
+        messageType,
+        imageUrl,
+        amount
+      );
       
+      // Reset form
       setMessageText('');
       setSelectedImage(null);
+      setPaymentAmount('');
     } catch (error) {
-      Alert.alert('Error', 'Failed to send message');
+      console.error('Send message error:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to send message');
+      } else {
+        Alert.alert('Error', 'Failed to send message');
+      }
     }
   };
 
-  const handleImagePicker = () => {
-    // In a real app, this would open the camera/gallery
-    Alert.alert(
-      'Add Image',
-      'Choose an option',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Camera', 
-          onPress: () => {
-            // Mock camera capture
-            setSelectedImage('https://images.pexels.com/photos/4386431/pexels-photo-4386431.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&dpr=2');
-          }
-        },
-        { 
-          text: 'Gallery', 
-          onPress: () => {
-            // Mock gallery selection
-            setSelectedImage('https://images.pexels.com/photos/4386431/pexels-photo-4386431.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&dpr=2');
-          }
-        },
-      ]
-    );
+  const handleImagePicker = async () => {
+    try {
+      setIsPickingImage(true);
+
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        if (Platform.OS === 'web') {
+          window.alert('Camera roll permission is needed to select images.');
+        } else {
+          Alert.alert('Permission Required', 'Camera roll permission is needed to select images.');
+        }
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      // Set selected image
+      setSelectedImage(result.assets[0].uri);
+    } catch (error) {
+      console.error('Error picking image:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Unable to select image. Please try again.');
+      } else {
+        Alert.alert('Error', 'Unable to select image. Please try again.');
+      }
+    } finally {
+      setIsPickingImage(false);
+    }
   };
 
   const handleVerifyPayment = (messageId: string, status: 'verified' | 'rejected') => {
@@ -239,6 +327,18 @@ export default function BillChatScreen() {
     }
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 50 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !bill || !user) {
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -348,7 +448,7 @@ export default function BillChatScreen() {
                   {/* Image/Payment slip message */}
                   {(message?.type === 'image' || message?.type === 'payment_slip') && (
                     <View style={styles.imageMessage}>
-                      {message?.content && (
+                      {message?.content && message.content !== 'Image' && (
                         <Text style={[
                           styles.messageText,
                           isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
@@ -489,8 +589,16 @@ export default function BillChatScreen() {
       {/* Input Area */}
       <View style={styles.inputContainer}>
         <View style={styles.inputRow}>
-          <TouchableOpacity style={styles.imageButton} onPress={handleImagePicker}>
-            <Camera size={20} color="#64748B" strokeWidth={2} />
+          <TouchableOpacity 
+            style={[styles.imageButton, isPickingImage && styles.disabledButton]} 
+            onPress={handleImagePicker}
+            disabled={isPickingImage || isUploadingImage}
+          >
+            {isPickingImage ? (
+              <ActivityIndicator size={16} color="#64748B" />
+            ) : (
+              <Camera size={20} color="#64748B" strokeWidth={2} />
+            )}
           </TouchableOpacity>
           
           <TextInput
@@ -501,17 +609,23 @@ export default function BillChatScreen() {
             placeholderTextColor="#64748B"
             multiline
             maxLength={500}
+            editable={!isUploadingImage}
           />
           
           <TouchableOpacity 
             style={[
               styles.sendButton,
-              (messageText.trim() || selectedImage) && styles.sendButtonActive
+              (messageText.trim() || selectedImage) && styles.sendButtonActive,
+              isUploadingImage && styles.disabledButton
             ]}
             onPress={handleSendMessage}
-            disabled={!messageText.trim() && !selectedImage || isLoading}
+            disabled={(!messageText.trim() && !selectedImage) || isLoading || isUploadingImage}
           >
-            <Send size={18} color="#FFFFFF" strokeWidth={2} />
+            {isUploadingImage ? (
+              <ActivityIndicator size={16} color="#FFFFFF" />
+            ) : (
+              <Send size={18} color="#FFFFFF" strokeWidth={2} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -868,6 +982,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#334155',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   textInput: {
     flex: 1,
