@@ -8,80 +8,6 @@ import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
 import BoltBadge from '@/components/BoltBadge';
 
-// Mock data - in real app, this would come from API/database
-const mockFriends: Friend[] = [
-  {
-    id: 'friend1',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-10'),
-    status: 'active'
-  },
-  {
-    id: 'friend2',
-    name: 'Mike Johnson',
-    email: 'mike@example.com',
-    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-08'),
-    status: 'active'
-  },
-  {
-    id: 'friend3',
-    name: 'Sarah Wilson',
-    email: 'sarah@example.com',
-    avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-05'),
-    status: 'active'
-  },
-  {
-    id: 'friend4',
-    name: 'Alex Chen',
-    email: 'alex@example.com',
-    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-    addedAt: new Date('2024-01-03'),
-    status: 'active'
-  },
-];
-
-const mockFriendRequests: FriendRequest[] = [
-  {
-    id: 'req1',
-    fromUserId: 'user5',
-    toUserId: 'currentUser',
-    fromUser: {
-      id: 'user5',
-      name: 'Emma Davis',
-      email: 'emma@example.com',
-      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
-    },
-    toUser: {
-      id: 'currentUser',
-      name: 'You',
-      email: 'you@example.com'
-    },
-    status: 'pending',
-    createdAt: new Date('2024-01-16')
-  },
-  {
-    id: 'req2',
-    fromUserId: 'user6',
-    toUserId: 'currentUser',
-    fromUser: {
-      id: 'user6',
-      name: 'Tom Wilson',
-      email: 'tom@example.com',
-      avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
-    },
-    toUser: {
-      id: 'currentUser',
-      name: 'You',
-      email: 'you@example.com'
-    },
-    status: 'pending',
-    createdAt: new Date('2024-01-15')
-  },
-];
 
 export default function FriendsScreen() {
   const { user } = useAuth();
@@ -117,24 +43,6 @@ export default function FriendsScreen() {
       setUsernameResults(data);
     } else {
       setUsernameResults([]);
-          }
-  };
-
-  const handleSendFriendRequest = async () => {
-    if (!selectedUser) return;
-    setIsSending(true);
-    try {
-      await sendFriendRequest(selectedUser.username);
-      Alert.alert('Friend Request Sent', `A friend request has been sent to @${selectedUser.username}`);
-      setIsAddingFriend(false);
-      setUsernameSearch('');
-      setUsernameResults([]);
-      setSelectedUser(null);
-      refetch();
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to send friend request');
-    } finally {
-      setIsSending(false);
           }
   };
 
@@ -348,13 +256,6 @@ export default function FriendsScreen() {
                     <Text style={styles.friendDate}>
                       Added {new Date(friend.addedAt).toLocaleDateString()}
                     </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.friendStatus}>
-                  <View style={styles.activeStatus}>
-                    <View style={styles.activeIndicator} />
-                    <Text style={styles.activeText}>Active</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -647,25 +548,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
-  },
-  friendStatus: {
-    alignItems: 'flex-end',
-  },
-  activeStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  activeIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-  },
-  activeText: {
-    fontSize: 12,
-    color: '#10B981',
-    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
