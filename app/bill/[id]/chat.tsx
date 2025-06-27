@@ -109,6 +109,13 @@ export default function BillChatScreen() {
           upsert: true,
         });
 
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, arrayBuffer, {
+          contentType,
+          upsert: true,
+        });
+
       if (uploadError) {
         console.error('Upload error:', uploadError);
         throw new Error('Failed to upload image');
