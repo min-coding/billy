@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -19,23 +20,28 @@ interface NotificationState {
   isLoading: boolean;
   error: string | null;
   permissionStatus: 'granted' | 'denied' | 'undetermined';
+  unreadCount: number;
 }
 
 interface NotificationContextType extends NotificationState {
   registerForPushNotifications: () => Promise<void>;
   updatePushToken: (token: string) => Promise<void>;
   requestPermissions: () => Promise<boolean>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [notificationState, setNotificationState] = useState<NotificationState>({
     expoPushToken: null,
     isLoading: false,
     error: null,
     permissionStatus: 'undetermined',
+    unreadCount: 0,
   });
 
   // Register for push notifications
@@ -153,10 +159,101 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update local unread count
+      setNotificationState(prev => ({
+        ...prev,
+        unreadCount: Math.max(0, prev.unreadCount - 1)
+      }));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Fetch unread notification count
+  const fetchUnreadCount = async (): Promise<void> => {
+    if (!user) return;
+
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+
+      setNotificationState(prev => ({
+        ...prev,
+        unreadCount: count || 0
+      }));
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
+
+  // Handle notification received (app in foreground)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      const data = notification.request.content.data;
+      
+      // Handle bill finalization notifications
+      if (data?.action === 'finalize_bill') {
+        // Update unread count
+        setNotificationState(prev => ({
+          ...prev,
+          unreadCount: prev.unreadCount + 1
+        }));
+        
+        // You could show an in-app alert or toast here
+        console.log('Bill finalization notification received:', notification.request.content);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // Handle notification response (user tapped notification)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      
+      // Handle bill finalization notifications
+      if (data?.action === 'finalize_bill' && data?.bill_id) {
+        // Navigate to the bill screen
+        router.push(`/bill/${data.bill_id}`);
+        
+        // Mark notification as read if we have the notification ID
+        if (data?.notification_id) {
+          markNotificationAsRead(data.notification_id);
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
   // Auto-register when user logs in
   useEffect(() => {
     if (user && Platform.OS !== 'web') {
       registerForPushNotifications();
+      fetchUnreadCount();
     }
   }, [user]);
 
@@ -182,6 +279,32 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [user, notificationState.expoPushToken]);
 
+  // Listen for real-time notification updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Refresh unread count when new notifications arrive
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   return (
     <NotificationContext.Provider
       value={{
@@ -189,6 +312,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         registerForPushNotifications,
         updatePushToken,
         requestPermissions,
+        markNotificationAsRead,
+        fetchUnreadCount,
       }}
     >
       {children}

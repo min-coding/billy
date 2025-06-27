@@ -1,7 +1,21 @@
 import { Tabs } from 'expo-router';
-import { Receipt, Plus, User, Users, ChartBar as BarChart } from 'lucide-react-native';
+import { Receipt, Plus, User, Users, ChartBar as BarChart, Bell } from 'lucide-react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { useNotifications } from '@/contexts/NotificationContext';
+
+function TabBarBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
+    </View>
+  );
+}
 
 export default function TabLayout() {
+  const { unreadCount } = useNotifications();
+
   return (
     <Tabs
       screenOptions={{
@@ -27,7 +41,10 @@ export default function TabLayout() {
         options={{
           title: 'Bills',
           tabBarIcon: ({ size, color }) => (
-            <Receipt size={size} color={color} strokeWidth={2} />
+            <View style={styles.tabIconContainer}>
+              <Receipt size={size} color={color} strokeWidth={2} />
+              <TabBarBadge count={unreadCount} />
+            </View>
           ),
         }}
       />
@@ -52,3 +69,27 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIconContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#0F172A',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});
