@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,12 +19,25 @@ export default function FriendsScreen() {
   const [usernameResults, setUsernameResults] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Auto-refresh when screen comes into focus
+  // Auto-refresh when screen comes into focus - but only once per focus
   useFocusEffect(
-    React.useCallback(() => {
-      refetch();
-    }, [refetch])
+    useCallback(() => {
+      let isActive = true;
+      
+      const fetchData = async () => {
+        if (isActive) {
+          await refetch();
+        }
+      };
+      
+      fetchData();
+      
+      return () => {
+        isActive = false;
+      };
+    }, []) // Empty dependency array to prevent infinite loops
   );
 
   const filteredFriends = friends.filter(friend =>
@@ -32,25 +45,88 @@ export default function FriendsScreen() {
     friend.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Search for users by username
-  const handleUsernameSearch = async (text: string) => {
+  // Debounced search for users by username
+  const handleUsernameSearch = useCallback(async (text: string) => {
     setUsernameSearch(text);
     setSelectedUser(null);
+    
     if (text.length < 3) {
       setUsernameResults([]);
       return;
     }
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, username, name, avatar')
-      .ilike('username', `%${text}%`)
-      .neq('id', user?.id)
-      .limit(10);
-    if (!error && data) {
-      setUsernameResults(data);
-    } else {
+
+    if (isSearching) return; // Prevent multiple simultaneous searches
+    
+    setIsSearching(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, username, name, avatar')
+        .ilike('username', `%${text}%`)
+        .neq('id', user?.id)
+        .limit(10);
+        
+      if (!error && data) {
+        setUsernameResults(data);
+      } else {
+        setUsernameResults([]);
+      }
+    } catch (err) {
+      console.error('Search error:', err);
       setUsernameResults([]);
-          }
+    } finally {
+      setIsSearching(false);
+    }
+  }, [user?.id, isSearching]);
+
+  // Debounce the search function
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleUsernameSearch(usernameSearch);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [usernameSearch, handleUsernameSearch]);
+
+  const handleSendFriendRequest = async (username: string) => {
+    if (isSending) return;
+    
+    setIsSending(true);
+    try {
+      await sendFriendRequest(username);
+      Alert.alert('Friend Request Sent', `A friend request has been sent to @${username} ✅`);
+      setIsAddingFriend(false);
+      setUsernameSearch('');
+      setUsernameResults([]);
+      // Don't call refetch here as it will be handled by the hook's state updates
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to send friend request. Please retry ❗️');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      await acceptFriendRequest(requestId);
+      if (friendRequests.length === 1) {
+        setShowRequestsModal(false);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to accept friend request');
+    }
+  };
+
+  const handleDeclineRequest = async (requestId: string) => {
+    try {
+      await declineFriendRequest(requestId);
+      if (friendRequests.length === 1) {
+        setShowRequestsModal(false);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to decline friend request');
+    }
   };
 
   return (
@@ -132,7 +208,7 @@ export default function FriendsScreen() {
                       <TextInput
                         style={styles.emailInput}
                         value={usernameSearch}
-                        onChangeText={handleUsernameSearch}
+                        onChangeText={setUsernameSearch}
                         placeholder="Enter friend's username"
                         placeholderTextColor="#64748B"
                         autoCapitalize="none"
@@ -140,6 +216,7 @@ export default function FriendsScreen() {
                       />
                     </View>
                   </LinearGradient>
+                  
                   {/* Dropdown of matching usernames */}
                   {usernameResults.length > 0 && (
                     <LinearGradient
@@ -206,25 +283,13 @@ export default function FriendsScreen() {
                                       flexDirection: 'row',
                                       alignItems: 'center',
                                     }}
-                                    onPress={async () => {
-                                      setIsSending(true);
-                                      try {
-                                        await sendFriendRequest(item.username);
-                                        Alert.alert('Friend Request Sent', `A friend request has been sent to @${item.username} ✅`);
-                                        setIsAddingFriend(false);
-                                        setUsernameSearch('');
-                                        setUsernameResults([]);
-                                        refetch();
-                                      } catch (err: any) {
-                                        Alert.alert('Error', err.message || 'Failed to send friend request. Please retry ❗️');
-                                      } finally {
-                                        setIsSending(false);
-                                      }
-                                    }}
+                                    onPress={() => handleSendFriendRequest(item.username)}
                                     disabled={isSending}
                                   >
                                     <UserPlus size={16} color="#fff" strokeWidth={2} />
-                                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>Add Friend</Text>
+                                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>
+                                      {isSending ? 'Sending...' : 'Add Friend'}
+                                    </Text>
                                   </TouchableOpacity>
                                 </LinearGradient>
                               )}
@@ -234,8 +299,9 @@ export default function FriendsScreen() {
                       </View>
                     </LinearGradient>
                   )}
-                                {/* Show empty state when search has 3+ characters but no results */}
-                                {usernameSearch.length >= 3 && usernameResults.length === 0 && (
+                  
+                  {/* Show empty state when search has 3+ characters but no results */}
+                  {usernameSearch.length >= 3 && usernameResults.length === 0 && !isSearching && (
                     <LinearGradient
                       colors={['#1E293B', '#334155']}
                       start={{ x: 0, y: 0 }}
@@ -255,6 +321,7 @@ export default function FriendsScreen() {
                       </Text>
                     </LinearGradient>
                   )}
+                  
                   <View style={styles.addFriendButtons}>
                     <LinearGradient
                       colors={['#334155', '#475569']}
@@ -418,8 +485,6 @@ export default function FriendsScreen() {
               )}
             </View>
           </LinearGradient>
-
-        
         </ScrollView>
 
         {/* Friend Requests Modal */}
@@ -494,12 +559,7 @@ export default function FriendsScreen() {
                           >
                             <TouchableOpacity 
                               style={styles.acceptButton}
-                              onPress={() => {
-                                acceptFriendRequest(request.id);
-                                if (friendRequests.length === 1) {
-                                  setShowRequestsModal(false);
-                                }
-                              }}
+                              onPress={() => handleAcceptRequest(request.id)}
                             >
                               <Check size={16} color="#FFFFFF" strokeWidth={2} />
                             </TouchableOpacity>
@@ -512,12 +572,7 @@ export default function FriendsScreen() {
                           >
                             <TouchableOpacity 
                               style={styles.declineButton}
-                              onPress={() => {
-                                declineFriendRequest(request.id);
-                                if (friendRequests.length === 1) {
-                                  setShowRequestsModal(false);
-                                }
-                              }}
+                              onPress={() => handleDeclineRequest(request.id)}
                             >
                               <X size={16} color="#FFFFFF" strokeWidth={2} />
                             </TouchableOpacity>
