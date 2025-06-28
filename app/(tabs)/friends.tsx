@@ -182,6 +182,23 @@ export default function FriendsScreen() {
                   })}
                 </View>
               )}
+                            {/* Show empty state when search has 3+ characters but no results */}
+                            {usernameSearch.length >= 3 && usernameResults.length === 0 && (
+                <View style={{ 
+                  backgroundColor: '#1E293B', 
+                  borderRadius: 8, 
+                  marginTop: 8, 
+                  padding: 16,
+                  alignItems: 'center'
+                }}>
+                  <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>
+                    No users found with username "{usernameSearch}"
+                  </Text>
+                  <Text style={{ color: '#475569', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                    Make sure the username is correct and try again
+                  </Text>
+                </View>
+              )}
               <View style={styles.addFriendButtons}>
                 <TouchableOpacity 
                   style={styles.cancelButton} 
@@ -247,7 +264,6 @@ export default function FriendsScreen() {
               <TouchableOpacity 
                 key={friend.id} 
                 style={styles.friendCard}
-                onLongPress={() => removeFriend(friend.id)}
                 activeOpacity={0.8}
               >
                 <View style={styles.friendLeft}>
@@ -263,17 +279,36 @@ export default function FriendsScreen() {
                     </Text>
                   </View>
                 </View>
+                
+                {/* Unfriend Button */}
+                <TouchableOpacity
+                  style={styles.unfriendButton}
+                  onPress={() => {
+                    Alert.alert(
+                      'Unfriend User',
+                      `Are you sure you want to unfriend ${friend.name}?`,
+                      [
+                        {
+                          text: 'Cancel',
+                          style: 'cancel',
+                        },
+                        {
+                          text: 'Unfriend',
+                          style: 'destructive',
+                          onPress: () => removeFriend(friend.id),
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Text style={styles.unfriendButtonText}>Unfriend</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
             ))
           )}
         </View>
 
-        {/* Help Text */}
-        <View style={styles.helpSection}>
-          <Text style={styles.helpText}>
-            💡 Long press on a friend to remove them from your list
-          </Text>
-        </View>
+      
       </ScrollView>
 
       {/* Friend Requests Modal */}
@@ -734,5 +769,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  unfriendButton: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  unfriendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
 });
