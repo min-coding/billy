@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Tag, TestTube, Camera } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Tag, TestTube, Camera, ShoppingCart, Receipt } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
@@ -457,23 +457,47 @@ export default function CreateBillScreen() {
             </View>
           </View>
 
-          {items.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
-                  <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
-                </View>
+          {/* Items List or Empty State */}
+          {items.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <ShoppingCart size={32} color="#64748B" strokeWidth={2} />
               </View>
+              <Text style={styles.emptyTitle}>No items added yet</Text>
+              <Text style={styles.emptyDescription}>
+                Add items to your bill using the form above. Each item can have a name, price, and quantity.
+              </Text>
               <TouchableOpacity 
-                style={styles.removeButton} 
-                onPress={() => removeItem(item.id)}
+                style={styles.emptyButton} 
+                onPress={() => {
+                  // Focus on the first input field
+                  setNewItemName('Sample Item');
+                  setNewItemPrice('10.00');
+                }}
               >
-                <X size={16} color="#EF4444" strokeWidth={2} />
+                <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
+                <Text style={styles.emptyButtonText}>Add Your First Item</Text>
               </TouchableOpacity>
             </View>
-          ))}
+          ) : (
+            items.map((item) => (
+              <View key={item.id} style={styles.itemCard}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <View style={styles.itemDetails}>
+                    <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
+                    <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={styles.removeButton} 
+                  onPress={() => removeItem(item.id)}
+                >
+                  <X size={16} color="#EF4444" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
 
           {items.length > 0 && (
             <View style={styles.totalContainer}>
@@ -579,24 +603,45 @@ export default function CreateBillScreen() {
         {/* Receipt Images Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Receipt Images (up to 3, optional)</Text>
-          <View style={styles.receiptGrid}>
-            {receiptImageUris.map((uri, idx) => (
-              <View key={uri} style={styles.receiptCard}>
-                <Image source={{ uri }} style={styles.receiptImage} />
-                <TouchableOpacity
-                  style={styles.removeIcon}
-                  onPress={() => removeReceiptImage(idx)}
-                >
-                  <X size={18} color="#fff" />
-                </TouchableOpacity>
+          <Text style={styles.sectionSubtitle}>Add photos of receipts for reference</Text>
+          
+          {/* Receipt Images Grid or Empty State */}
+          {receiptImageUris.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Receipt size={32} color="#64748B" strokeWidth={2} />
               </View>
-            ))}
-            {receiptImageUris.length < 3 && (
-              <TouchableOpacity style={styles.receiptCard} onPress={pickReceiptImage}>
-                <Camera size={32} color="#64748B" />
+              <Text style={styles.emptyTitle}>No receipt images added</Text>
+              <Text style={styles.emptyDescription}>
+                Upload photos of receipts to help participants verify the bill items and amounts.
+              </Text>
+              <TouchableOpacity style={styles.emptyButton} onPress={pickReceiptImage}>
+                <Camera size={16} color="#F59E0B" strokeWidth={2} />
+                <Text style={styles.emptyButtonText}>Add Receipt Photo</Text>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.receiptGrid}>
+              {receiptImageUris.map((uri, idx) => (
+                <View key={uri} style={styles.receiptCard}>
+                  <Image source={{ uri }} style={styles.receiptImage} />
+                  <TouchableOpacity
+                    style={styles.removeIcon}
+                    onPress={() => removeReceiptImage(idx)}
+                  >
+                    <X size={18} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {receiptImageUris.length < 3 && (
+                <TouchableOpacity style={styles.addReceiptCard} onPress={pickReceiptImage}>
+                  <Camera size={32} color="#64748B" />
+                  <Text style={styles.addReceiptText}>Add Photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          
           {isUploadingReceipt && <ActivityIndicator size="small" color="#F59E0B" style={{ marginTop: 8 }} />}
         </View>
       </ScrollView>
@@ -861,6 +906,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderStyle: 'dashed',
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  emptyDescription: {
+    fontSize: 15,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+    fontWeight: '500',
+    paddingHorizontal: 20,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    gap: 8,
+  },
+  emptyButtonText: {
+    color: '#F59E0B',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   itemCard: {
     flexDirection: 'row',
@@ -1226,14 +1325,12 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#334155',
     marginBottom: 8,
     marginRight: 8,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#0F172A',
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -1244,6 +1341,24 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 12,
     resizeMode: 'cover',
+  },
+  addReceiptCard: {
+    width: 96,
+    height: 96,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderStyle: 'dashed',
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  addReceiptText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   removeIcon: {
     position: 'absolute',
