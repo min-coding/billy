@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, BellOff, Check, X, Loader } from 'lucide-react-native';
 import { useNotifications } from '@/contexts/NotificationContext';
 
@@ -95,92 +96,140 @@ export default function NotificationSettings() {
   const isDisabled = Platform.OS === 'web' || isLoading || isRequesting || permissionStatus === 'granted';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Bell size={24} color="#F59E0B" strokeWidth={2} />
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Push Notifications</Text>
-          <Text style={styles.subtitle}>
-            Get notified about bill updates, payments, and friend requests
-          </Text>
-        </View>
-      </View>
-
-      <TouchableOpacity 
-        style={[styles.statusCard, isDisabled && styles.disabledCard]} 
-        onPress={handleEnableNotifications}
-        disabled={isDisabled}
-        activeOpacity={0.8}
-      >
-        <View style={styles.statusContent}>
-          <View style={styles.statusLeft}>
-            {getStatusIcon()}
-            <Text style={[styles.statusText, { color: getStatusColor() }]}>
-              {getStatusText()}
+    <LinearGradient
+      colors={['#1E293B', '#334155']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.containerGradient}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <LinearGradient
+            colors={['#0F172A', '#1E293B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
+            <Bell size={24} color="#F59E0B" strokeWidth={2} />
+          </LinearGradient>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Push Notifications</Text>
+            <Text style={styles.subtitle}>
+              Get notified about bill updates, payments, and friend requests
             </Text>
           </View>
-          
-          {permissionStatus === 'undetermined' && Platform.OS !== 'web' && (
-            <View style={styles.enableButton}>
-              <Text style={styles.enableButtonText}>Enable</Text>
-            </View>
-          )}
         </View>
-      </TouchableOpacity>
 
-      {error && (
-        <View style={styles.errorContainer}>
-          <X size={16} color="#EF4444" strokeWidth={2} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
+        <TouchableOpacity 
+          style={[styles.statusCard, isDisabled && styles.disabledCard]} 
+          onPress={handleEnableNotifications}
+          disabled={isDisabled}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['#0F172A', '#1E293B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statusCardGradient}
+          >
+            <View style={styles.statusContent}>
+              <View style={styles.statusLeft}>
+                {getStatusIcon()}
+                <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                  {getStatusText()}
+                </Text>
+              </View>
+              
+              {permissionStatus === 'undetermined' && Platform.OS !== 'web' && (
+                <LinearGradient
+                  colors={['#F59E0B', '#EAB308']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.enableButton}
+                >
+                  <Text style={styles.enableButtonText}>Enable</Text>
+                </LinearGradient>
+              )}
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
 
-      {permissionStatus === 'granted' && expoPushToken && (
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>Notification Types</Text>
-          <View style={styles.notificationTypes}>
-            <View style={styles.notificationType}>
-              <Check size={16} color="#10B981" strokeWidth={2} />
-              <Text style={styles.notificationTypeText}>Bill ready to finalize</Text>
-            </View>
-            <View style={styles.notificationType}>
-              <Check size={16} color="#10B981" strokeWidth={2} />
-              <Text style={styles.notificationTypeText}>Payment confirmations</Text>
-            </View>
-            <View style={styles.notificationType}>
-              <Check size={16} color="#10B981" strokeWidth={2} />
-              <Text style={styles.notificationTypeText}>Friend requests</Text>
-            </View>
-            <View style={styles.notificationType}>
-              <Check size={16} color="#10B981" strokeWidth={2} />
-              <Text style={styles.notificationTypeText}>Bill status updates</Text>
-            </View>
-          </View>
-        </View>
-      )}
+        {error && (
+          <LinearGradient
+            colors={['#FEF2F2', '#FECACA']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.errorContainer}
+          >
+            <X size={16} color="#EF4444" strokeWidth={2} />
+            <Text style={styles.errorText}>{error}</Text>
+          </LinearGradient>
+        )}
 
-      {Platform.OS === 'web' && (
-        <View style={styles.webNotice}>
-          <Text style={styles.webNoticeText}>
-            💡 Push notifications are only available on mobile devices. 
-            Install the mobile app to receive notifications.
-          </Text>
-        </View>
-      )}
-    </View>
+        {permissionStatus === 'granted' && expoPushToken && (
+          <LinearGradient
+            colors={['#0F172A', '#1E293B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.infoContainer}
+          >
+            <Text style={styles.infoTitle}>Notification Types</Text>
+            <View style={styles.notificationTypes}>
+              <View style={styles.notificationType}>
+                <Check size={16} color="#10B981" strokeWidth={2} />
+                <Text style={styles.notificationTypeText}>Bill ready to finalize</Text>
+              </View>
+              <View style={styles.notificationType}>
+                <Check size={16} color="#10B981" strokeWidth={2} />
+                <Text style={styles.notificationTypeText}>Payment confirmations</Text>
+              </View>
+              <View style={styles.notificationType}>
+                <Check size={16} color="#10B981" strokeWidth={2} />
+                <Text style={styles.notificationTypeText}>Friend requests</Text>
+              </View>
+              <View style={styles.notificationType}>
+                <Check size={16} color="#10B981" strokeWidth={2} />
+                <Text style={styles.notificationTypeText}>Bill status updates</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        )}
+
+        {Platform.OS === 'web' && (
+          <LinearGradient
+            colors={['#FEF3C7', '#FDE68A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.webNotice}
+          >
+            <Text style={styles.webNoticeText}>
+              💡 Push notifications are only available on mobile devices. 
+              Install the mobile app to receive notifications.
+            </Text>
+          </LinearGradient>
+        )}
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#1E293B',
+  containerGradient: {
+    marginBottom: 12,
     borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  container: {
     padding: 20,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#334155',
+    borderRadius: 16,
   },
   header: {
     flexDirection: 'row',
@@ -191,7 +240,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -205,6 +253,9 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     marginBottom: 4,
     letterSpacing: -0.3,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   subtitle: {
     fontSize: 14,
@@ -213,12 +264,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   statusCard: {
-    backgroundColor: '#0F172A',
+    marginBottom: 16,
+  },
+  statusCardGradient: {
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: '#334155',
-    marginBottom: 16,
   },
   disabledCard: {
     opacity: 0.6,
@@ -240,26 +292,35 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   enableButton: {
-    backgroundColor: '#F59E0B',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+    shadowColor: '#F59E0B',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   enableButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   errorText: {
     color: '#DC2626',
@@ -268,7 +329,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoContainer: {
-    backgroundColor: '#0F172A',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -295,11 +355,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   webNotice: {
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
     borderRadius: 8,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   webNoticeText: {
     color: '#92400E',
