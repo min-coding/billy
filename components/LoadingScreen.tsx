@@ -1,23 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Receipt } from 'lucide-react-native';
 
 export default function LoadingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.logoContainer}>
-          <View style={styles.logo}>
-            <Receipt size={40} color="#FFFFFF" strokeWidth={2} />
-          </View>
+          <Image 
+            source={require('@/assets/images/billy-transparent.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         
         <Text style={styles.title}>Billy</Text>
         <Text style={styles.subtitle}>Split bills with friends</Text>
         
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color="#F59E0B" />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </View>
@@ -40,20 +41,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 25,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    width: 120,
+    height: 120,
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 12,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 20,
   },
   title: {
     fontSize: 36,

@@ -60,12 +60,12 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image 
-                source={require('@/assets/images/ios-light.png')} 
+                source={require('@/assets/images/billy-transparent.png')} 
                 style={styles.logo}
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.title}>Welcome</Text>
+            <Text style={styles.title}>Welcome to Billy</Text>
             <Text style={styles.subtitle}>Sign in to continue splitting bills with friends</Text>
           </View>
 
@@ -154,7 +154,7 @@ export default function LoginScreen() {
             {/* Sign Up Link */}
             <Link href="/(auth)/signup" asChild>
               <TouchableOpacity style={styles.signupButton} disabled={isLoading}>
-                <UserPlus size={18} color="#3B82F6" strokeWidth={2} />
+                <UserPlus size={18} color="#F59E0B" strokeWidth={2} />
                 <Text style={styles.signupButtonText}>Create New Account</Text>
               </TouchableOpacity>
             </Link>
@@ -195,9 +195,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
+    width: 100,
+    height: 100,
+    shadowColor: '#F59E0B',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
   },
   title: {
     fontSize: 28,
@@ -271,11 +278,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -317,11 +324,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#F59E0B',
     gap: 8,
   },
   signupButtonText: {
-    color: '#3B82F6',
+    color: '#F59E0B',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
