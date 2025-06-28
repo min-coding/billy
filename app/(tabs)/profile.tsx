@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink } from 'lucide-react-native';
+import { User, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
@@ -166,18 +166,6 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-    { 
-      icon: CreditCard, 
-      title: 'Payment Methods', 
-      subtitle: 'Manage cards and payment options',
-      onPress: () => {}
-    },
-    { 
-      icon: Settings, 
-      title: 'Settings', 
-      subtitle: 'App preferences and privacy',
-      onPress: () => {}
-    },
     { 
       icon: HelpCircle, 
       title: 'About Billy', 
