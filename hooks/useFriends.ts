@@ -248,23 +248,32 @@ export function useFriends() {
 
   const removeFriend = async (friendId: string) => {
     if (!user) return;
-
+  
     try {
       // Remove both directions of friendship
-      const { error } = await supabase
+      const { error: error1 } = await supabase
         .from('friends')
         .delete()
-        .or(`and(user_id.eq.${user.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${user.id})`);
-
-      if (error) throw error;
-
+        .eq('user_id', user.id)
+        .eq('friend_id', friendId);
+  
+      if (error1) throw error1;
+  
+      const { error: error2 } = await supabase
+        .from('friends')
+        .delete()
+        .eq('user_id', friendId)
+        .eq('friend_id', user.id);
+  
+      if (error2) throw error2;
+  
       // Refresh data
       await fetchFriends();
     } catch (err) {
       console.error('Error removing friend:', err);
       throw err;
     }
-  };
+  };;
 
   return {
     friends,
