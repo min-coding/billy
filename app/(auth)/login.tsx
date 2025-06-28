@@ -197,14 +197,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 16,
   },
   title: {
     fontSize: 28,

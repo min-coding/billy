@@ -43,14 +43,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 120,
     height: 120,
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 20,
   },
   title: {
     fontSize: 36,
