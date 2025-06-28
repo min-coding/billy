@@ -144,9 +144,9 @@ export default function BillChatScreen() {
     } catch (error) {
       console.error('Image upload failed:', error);
       if (Platform.OS === 'web') {
-        window.alert('Failed to upload image. Please try again.');
+        window.alert('Failed to upload image. Please try again. ❗️');
       } else {
-        Alert.alert('Error', 'Failed to upload image. Please try again.');
+        Alert.alert('Error', 'Failed to upload image. Please try again. ❗️');
       }
       return null;
     } finally {
@@ -192,9 +192,9 @@ export default function BillChatScreen() {
     } catch (error) {
       console.error('Send message error:', error);
       if (Platform.OS === 'web') {
-        window.alert('Failed to send message');
+        window.alert('Failed to send message. Please retry ❗️');
       } else {
-        Alert.alert('Error', 'Failed to send message');
+        Alert.alert('Error', 'Failed to send message. Please retry ❗️');
       }
     }
   };
@@ -207,9 +207,9 @@ export default function BillChatScreen() {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         if (Platform.OS === 'web') {
-          window.alert('Camera roll permission is needed to select images.');
+          window.alert('Camera roll permission is needed to select images. 📷');
         } else {
-          Alert.alert('Permission Required', 'Camera roll permission is needed to select images.');
+          Alert.alert('Permission Required', 'Camera roll permission is needed to select images. 📷');
         }
         return;
       }
@@ -230,9 +230,9 @@ export default function BillChatScreen() {
     } catch (error) {
       console.error('Error picking image:', error);
       if (Platform.OS === 'web') {
-        window.alert('Unable to select image. Please try again.');
+        window.alert('Unable to select image. Please try again. ❗️');
       } else {
-        Alert.alert('Error', 'Unable to select image. Please try again.');
+        Alert.alert('Error', 'Unable to select image. Please try again. ❗️');
       }
     } finally {
       setIsPickingImage(false);
@@ -242,13 +242,13 @@ export default function BillChatScreen() {
   const handleVerifyPayment = (messageId: string, status: 'verified' | 'rejected') => {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(
-        `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment?`
+        `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment? 📩`
       );
       if (confirmed) verifyPayment(messageId, status);
     } else {
       Alert.alert(
         status === 'verified' ? 'Verify Payment' : 'Reject Payment',
-        `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment?`,
+        `Are you sure you want to ${status === 'verified' ? 'verify' : 'reject'} this payment? 📩`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -335,15 +335,15 @@ export default function BillChatScreen() {
       // Optionally, send a system message to chat
       await sendMessage(bill.id, `${user.name || 'A member'} marked as paid (cash).`, 'text');
       if (Platform.OS === 'web') {
-        window.alert('Marked as paid (cash)');
+        window.alert('Marked as paid (cash) ✅');
       } else {
-        Alert.alert('Success', 'Marked as paid (cash)');
+        Alert.alert('Success', 'Marked as paid (cash) ✅');
       }
     } catch (err) {
       if (Platform.OS === 'web') {
-        window.alert('Failed to mark as paid (cash)');
+        window.alert('Failed to mark as paid (cash). Please retry ❗️');
       } else {
-        Alert.alert('Error', 'Failed to mark as paid (cash)');
+        Alert.alert('Error', 'Failed to mark as paid (cash). Please retry ❗️');
       }
     }
   };

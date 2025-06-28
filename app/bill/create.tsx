@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag, TestTube, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
-import { generateBillCode, formatCurrency } from '@/utils/billUtils';
+import { formatCurrency } from '@/utils/billUtils';
 import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -115,7 +115,7 @@ export default function CreateBillScreen() {
 
   const addItem = () => {
     if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
-      Alert.alert('Error', 'Please enter item name, price, and quantity');
+      Alert.alert('Error', 'Please enter item name, price, and quantity 🔍');
       return;
     }
 
@@ -123,12 +123,12 @@ export default function CreateBillScreen() {
     const quantity = parseInt(newItemQuantity);
     
     if (isNaN(price) || price <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
+      Alert.alert('Error', 'Please enter a valid price 🔍');
       return;
     }
 
     if (isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      Alert.alert('Error', 'Please enter a valid quantity 🔍');
       return;
     }
 
@@ -183,7 +183,7 @@ export default function CreateBillScreen() {
     setFriendSearchQuery('');
 
     if (newFriends.length > 0) {
-      Alert.alert('Friends Added', `${newFriends.length} friend${newFriends.length !== 1 ? 's' : ''} added to the bill`);
+      Alert.alert('Friends Added', `${newFriends.length} friend${newFriends.length !== 1 ? 's' : ''} added to the bill ✅`);
     }
   };
 
@@ -193,13 +193,13 @@ export default function CreateBillScreen() {
 
   const pickReceiptImage = async () => {
     if (receiptImageUris.length >= 3) {
-      Alert.alert('Limit Reached', 'You can only add up to 3 receipt images.');
+      Alert.alert('Limit Reached', 'You can only add up to 3 receipt images. 🔍');
       return;
     }
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera roll permission is needed.');
+        Alert.alert('Permission Required', 'Camera roll permission is needed. 📷');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -216,7 +216,7 @@ export default function CreateBillScreen() {
       setReceiptImageUris(prev => [...prev, manipResult.uri]);
     } catch (error) {
       console.error('Error picking receipt image:', error);
-      Alert.alert('Error', 'Unable to select receipt image.');
+      Alert.alert('Error', 'Unable to select receipt image. Please retry ❗️');
     }
   };
 
@@ -254,7 +254,7 @@ export default function CreateBillScreen() {
       return publicUrl;
     } catch (error) {
       console.error('Receipt upload failed:', error);
-      Alert.alert('Error', 'Failed to upload receipt image.');
+      Alert.alert('Error', 'Failed to upload receipt image. Please retry ❗️');
       return null;
     } finally {
       setIsUploadingReceipt(false);
@@ -263,23 +263,23 @@ export default function CreateBillScreen() {
 
   const createBill = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a bill title');
+      Alert.alert('Error', 'Please enter a bill title 🔍');
       return;
     }
     if (items.length === 0) {
-      Alert.alert('Error', 'Please add at least one item');
+      Alert.alert('Error', 'Please add at least one item 🔍');
       return;
     }
     if (dueDate && !validateDueDate(dueDate)) {
-      Alert.alert('Error', 'Due date must be today or in the future');
+      Alert.alert('Error', 'Due date must be today or in the future 🔍');
       return;
     }
     if (!bankDetails.bankName.trim() || !bankDetails.accountName.trim() || !bankDetails.accountNumber.trim()) {
-      Alert.alert('Error', 'Please fill in all bank details');
+      Alert.alert('Error', 'Please fill in all bank details 🔍');
       return;
     }
     if (!user) {
-      Alert.alert('Error', 'You must be logged in to create a bill');
+      Alert.alert('Error', 'You must be logged in to create a bill 🔍');
       return;
     }
     try {
@@ -332,11 +332,11 @@ export default function CreateBillScreen() {
           }
         }
       }
-      Alert.alert('Bill Created!', 'Your bill has been saved.');
+      Alert.alert('Bill Created!', 'Your bill has been saved. ✅');
       await refetch();
       router.replace('/(tabs)/' as any);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create bill');
+      Alert.alert('Error', err.message || 'Failed to create bill. Please retry ❗️');
     }
   };
 

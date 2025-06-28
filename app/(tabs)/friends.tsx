@@ -160,13 +160,13 @@ export default function FriendsScreen() {
                               setIsSending(true);
                               try {
                                 await sendFriendRequest(item.username);
-                                Alert.alert('Friend Request Sent', `A friend request has been sent to @${item.username}`);
+                                Alert.alert('Friend Request Sent', `A friend request has been sent to @${item.username} ✅`);
                                 setIsAddingFriend(false);
                                 setUsernameSearch('');
                                 setUsernameResults([]);
                                 refetch();
                               } catch (err: any) {
-                                Alert.alert('Error', err.message || 'Failed to send friend request');
+                                Alert.alert('Error', err.message || 'Failed to send friend request. Please retry ❗️');
                               } finally {
                                 setIsSending(false);
                               }
@@ -286,7 +286,7 @@ export default function FriendsScreen() {
                   onPress={() => {
                     Alert.alert(
                       'Unfriend User',
-                      `Are you sure you want to unfriend ${friend.name}?`,
+                      `Are you sure you want to unfriend ${friend.name} 🫂 ?`,
                       [
                         {
                           text: 'Cancel',

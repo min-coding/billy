@@ -30,7 +30,7 @@ export default function ProfileScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera roll permission is needed.');
+        Alert.alert('Permission Required', 'Camera roll permission is needed. 📷');
         return;
       }
 
@@ -52,7 +52,7 @@ export default function ProfileScreen() {
       setSelectedAvatarUri(manipResult.uri);
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Unable to select image.');
+      Alert.alert('Error', 'Unable to select image Please retry ❗️');
     }
   };
 
@@ -94,7 +94,7 @@ export default function ProfileScreen() {
       return publicUrl;
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Error', 'Failed to upload image.');
+      Alert.alert('Error', 'Failed to upload image. Please retry ❗️');
       return null;
     } finally {
       setIsUploadingImage(false);
@@ -114,10 +114,10 @@ export default function ProfileScreen() {
       const updateData = { name, email, avatar: avatarUrl };
       await updateProfile(updateData);
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully.');
+      Alert.alert('Success', 'Profile updated successfully ✅');
     } catch (error) {
       console.error('Profile update error:', error);
-      Alert.alert('Error', 'Failed to update profile.');
+      Alert.alert('Error', 'Failed to update profile. Please retry ❗️');
     }
   };
 

@@ -208,7 +208,7 @@ export default function BillDetailScreen() {
       return;
     }
     if (selectedItems.length === 0) {
-      Alert.alert('No Items Selected', 'Please select at least one item before submitting.');
+      Alert.alert('No Items Selected', 'Please select at least one item before submitting. 🔍');
       return;
     }
 
@@ -244,7 +244,7 @@ export default function BillDetailScreen() {
         if (Platform.OS === 'web') {
           alert('Your selections have been submitted!');
         } else {
-          Alert.alert('Success', 'Your selections have been submitted!');
+          Alert.alert('Success', 'Your selections have been submitted! ✅');
         }
         setSubmitting(false);
       } catch (err) {
@@ -252,7 +252,7 @@ export default function BillDetailScreen() {
         if (Platform.OS === 'web') {
           alert('Failed to submit selections. Please try again.');
         } else {
-          Alert.alert('Error', 'Failed to submit selections. Please try again.');
+          Alert.alert('Error', 'Failed to submit selections. Please try again ❗️');
         }
       }
     };
@@ -262,7 +262,7 @@ export default function BillDetailScreen() {
     } else {
       Alert.alert(
         'Submit Selections',
-        'Are you sure you want to submit your item selections? You can still edit them until the host finalizes the bill.',
+        '📩 Are you sure you want to submit your item selections? You can still edit them until the host finalizes the bill.',
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -281,7 +281,7 @@ export default function BillDetailScreen() {
       } else {
         Alert.alert(
           'Cannot Finalize',
-          'Not all members have submitted their selections yet. Please wait for all participants to make their choices.'
+          '❌ Not all members have submitted their selections yet. Please wait for all participants to make their choices.'
         );
       }
       return;
@@ -298,7 +298,7 @@ export default function BillDetailScreen() {
           .from('bills')
           .update({ status: 'pay' })
           .eq('id', bill.id);
-        window.alert('The bill has been finalized and participants can now make payments.');
+        window.alert('🧮 The bill has been finalized and participants can now make payments.');
         await fetchBill();
       } catch (err) {
         window.alert('Failed to finalize bill. Please try again.');
@@ -306,7 +306,7 @@ export default function BillDetailScreen() {
     } else {
       Alert.alert(
         'Finalize Bill',
-        'This will lock all selections and move the bill to payment phase. This action cannot be undone.',
+        '📌 This will lock all selections and move the bill to payment phase. This action cannot be undone.',
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -318,7 +318,7 @@ export default function BillDetailScreen() {
                   .from('bills')
                   .update({ status: 'pay' })
                   .eq('id', bill.id);
-                Alert.alert('Bill Finalized', 'The bill has been finalized and participants can now make payments.');
+                Alert.alert('Bill Finalized 🧮', 'The bill has been finalized and participants can now make payments.');
                 await fetchBill();
               } catch (err) {
                 Alert.alert('Error', 'Failed to finalize bill. Please try again.');
@@ -327,49 +327,6 @@ export default function BillDetailScreen() {
           }
         ]
       );
-    }
-  };
-
-  const editBill = () => {
-    Alert.alert(
-      'Edit Bill',
-      'Editing the bill will reset all member selections and submissions. All participants will need to reselect their items. Do you want to continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Continue',
-          style: 'destructive',
-          onPress: () => {
-            resetBillSelections();
-            Alert.alert(
-              'Bill Reset Complete',
-              'All member selections have been cleared. You can now edit the bill details. All participants will be notified to reselect their items.',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    Alert.alert('Coming Soon', 'Bill editing functionality will be available soon.');
-                  }
-                }
-              ]
-            );
-          }
-        }
-      ]
-    );
-  };
-
-  const resetBillSelections = async () => {
-    try {
-      await supabase
-        .from('bill_item_selections')
-        .delete()
-        .in('bill_item_id', bill.items.map((item: any) => item.id));
-      setSelectedItems([]);
-      setHasSubmitted(false);
-      Alert.alert('Bill selections reset for bill:', bill?.id);
-    } catch (err) {
-      Alert.alert('Error', 'Failed to reset selections.');
     }
   };
 
@@ -382,7 +339,7 @@ export default function BillDetailScreen() {
 
     if (Platform.OS !== 'web') {
       Alert.alert(
-        'Delete Bill',
+        'Delete Bill 🗑️',
         'Are you sure you want to delete this bill? This action cannot be undone and will remove the bill for all participants.',
         [
           { text: 'Cancel', style: 'cancel' },
@@ -392,7 +349,7 @@ export default function BillDetailScreen() {
             onPress: async () => {
               try {
                 await supabase.from('bills').delete().eq('id', bill.id);
-                Alert.alert('Bill Deleted', 'The bill has been deleted successfully.', [
+                Alert.alert('Bill Deleted', 'The bill has been deleted successfully ✅', [
                   {
                     text: 'OK',
                     onPress: () => router.back()
@@ -410,7 +367,7 @@ export default function BillDetailScreen() {
 
     try {
       await supabase.from('bills').delete().eq('id', bill.id);
-      window.alert('The bill has been deleted successfully.');
+      window.alert('The bill has been deleted successfully. ✅');
       router.back();
     } catch (err) {
       window.alert('Failed to delete bill. Please try again.');
@@ -491,21 +448,21 @@ export default function BillDetailScreen() {
           if (Platform.OS === 'web') {
             window.alert('Please send a payment slip in the chat for verification!');
           } else {
-            Alert.alert('Action Required', 'Please send a payment slip in the chat for verification!');
+            Alert.alert('Action Required', 'Please send a payment slip in the chat for verification! 📩');
           }
         }, 500); // Delay to ensure navigation
       } else {
         if (Platform.OS === 'web') {
-          window.alert(`Payment status updated to ${newStatus}`);
+          window.alert(`Payment status updated to ${newStatus} ✅`);
         } else {
-          Alert.alert('Success', `Payment status updated to ${newStatus}`);
+          Alert.alert('Success', `Payment status updated to ${newStatus} ✅`);
         }
       }
     } catch (err) {
       if (Platform.OS === 'web') {
         window.alert('Failed to update payment status');
       } else {
-        Alert.alert('Error', 'Failed to update payment status');
+        Alert.alert('Error', 'Failed to update payment status. Please retry ❗️');
       }
     }
   };
@@ -536,15 +493,15 @@ export default function BillDetailScreen() {
       await fetchBill();
 
       if (Platform.OS === 'web') {
-        window.alert(allVerified ? 'Payment verified! Bill is now closed.' : 'Payment verified!');
+        window.alert(allVerified ? 'Payment verified! Bill is now closed. ✅' : 'Payment verified! ✅');
       } else {
-        Alert.alert('Success', allVerified ? 'Payment verified! Bill is now closed.' : 'Payment verified!');
+        Alert.alert('Success', allVerified ? 'Payment verified! Bill is now closed. ✅' : 'Payment verified! ✅');
       }
     } catch (err) {
       if (Platform.OS === 'web') {
-        window.alert('Failed to verify payment');
+        window.alert('Failed to verify payment. Please retry ❗️');
       } else {
-        Alert.alert('Error', 'Failed to verify payment');
+        Alert.alert('Error', 'Failed to verify payment. Please retry ❗️');
       }
     }
   };
@@ -574,7 +531,7 @@ export default function BillDetailScreen() {
       const newFriends = friendsToAdd.filter(friend => !existingIds.includes(friend.id));
 
       if (newFriends.length === 0) {
-        Alert.alert('Info', 'All selected friends are already members of this bill');
+        Alert.alert('Info', 'All selected friends are already members of this bill 🔍');
         setSelectedFriends([]);
         setShowFriendsModal(false);
         setFriendSearchQuery('');
@@ -598,9 +555,9 @@ export default function BillDetailScreen() {
       setShowFriendsModal(false);
       setFriendSearchQuery('');
 
-      Alert.alert('Success', `${newFriends.length} friend${newFriends.length !== 1 ? 's' : ''} added to the bill`);
+      Alert.alert('Success', `${newFriends.length} friend${newFriends.length !== 1 ? 's' : ''} added to the bill ✅`);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to add friends to bill');
+      Alert.alert('Error', err.message || 'Failed to add friends to bill. Please retry ❗️');
     }
   };
 
@@ -624,9 +581,9 @@ export default function BillDetailScreen() {
                 .eq('user_id', participantId);
 
               await fetchBill();
-              Alert.alert('Success', 'Member removed from bill');
+              Alert.alert('Success', 'Member removed from bill ✅');
             } catch (err) {
-              Alert.alert('Error', 'Failed to remove member');
+              Alert.alert('Error', 'Failed to remove member. Please retry ❗️');
             }
           }
         }
@@ -650,9 +607,9 @@ export default function BillDetailScreen() {
 
       await fetchBill();
       setShowEditBillInfoModal(false);
-      Alert.alert('Success', 'Bill info updated successfully');
+      Alert.alert('Success', 'Bill info updated successfully ✅');
     } catch (err) {
-      Alert.alert('Error', 'Failed to update bill info');
+      Alert.alert('Error', 'Failed to update bill info. Please retry ❗️');
     }
   };
 
@@ -698,26 +655,26 @@ export default function BillDetailScreen() {
 
       await fetchBill();
       setShowEditMembersModal(false);
-      Alert.alert('Success', 'Members updated!');
+      Alert.alert('Success', 'Members updated! ✅');
     } catch (err) {
-      Alert.alert('Error', 'Failed to update members');
+      Alert.alert('Error', 'Failed to update members. Please retry ❗️');
     }
     setSavingMembers(false);
   };
 
   const handleAddEditItem = () => {
     if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
-      Alert.alert('Error', 'Please enter item name, price, and quantity');
+      Alert.alert('Error', 'Please enter item name, price, and quantity. 🔍');
       return;
     }
     const price = parseFloat(newItemPrice);
     const quantity = parseInt(newItemQuantity);
     if (isNaN(price) || price <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
+      Alert.alert('Error', 'Please enter a valid price. 🔍');
       return;
     }
     if (isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      Alert.alert('Error', 'Please enter a valid quantity. 🔍');
       return;
     }
     setEditItems([
@@ -788,9 +745,9 @@ export default function BillDetailScreen() {
         setShowEditItemsModal(false);
         
         if (Platform.OS === 'web') {
-          window.alert('Items updated and selections reset!');
+          window.alert('Items updated and selections reset! ✅');
         } else {
-          Alert.alert('Success', 'Items updated and selections reset!');
+          Alert.alert('Success', 'Items updated and selections reset! ✅');
         }
       } catch (err) {
         if (Platform.OS === 'web') {
@@ -809,7 +766,7 @@ export default function BillDetailScreen() {
       }
     } else {
       Alert.alert(
-        'Reset Selections?',
+        'Reset Selections? 🔁',
         'Editing items will reset all participants selections. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
