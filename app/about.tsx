@@ -2,22 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { 
-  ArrowLeft, 
-  Users, 
-  Calculator, 
-  MessageCircle, 
-  CreditCard, 
-  Bell, 
-  Shield, 
-  Smartphone, 
-  Globe, 
-  ExternalLink,
-  Receipt,
-  Camera,
-  UserPlus,
-  CheckCircle
-} from 'lucide-react-native';
+import { ArrowLeft, Users, Calculator, MessageCircle, CreditCard, Bell, Shield, Smartphone, Globe, ExternalLink, Receipt, Camera, UserPlus, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function AboutScreen() {
   const router = useRouter();
