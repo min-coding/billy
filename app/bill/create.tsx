@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Calendar, Tag, TestTube, Camera } from 'lucide-react-native';
+import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Tag, TestTube, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails, Friend } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
@@ -13,6 +13,7 @@ import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import DatePicker from '@/components/DatePicker';
 
 export default function CreateBillScreen() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function CreateBillScreen() {
   const { refetch } = useBills();
   const [receiptImageUris, setReceiptImageUris] = useState<string[]>([]);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const [dueDateError, setDueDateError] = useState('');
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
@@ -96,21 +98,22 @@ export default function CreateBillScreen() {
     Alert.alert('Test Data Loaded', 'Bill has been prefilled with test data for quick testing!');
   };
 
-  // Helper function to format date for input
-  const formatDateForInput = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    return date.toISOString().split('T')[0];
-  };
-
   // Helper function to validate due date
   const validateDueDate = (dateString: string) => {
-    if (!dateString) return false;
+    if (!dateString) return true; // Optional field
     const selectedDate = new Date(dateString);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return selectedDate >= today;
+  };
+
+  const handleDueDateChange = (date: string) => {
+    setDueDate(date);
+    if (date && !validateDueDate(date)) {
+      setDueDateError('Due date must be today or in the future');
+    } else {
+      setDueDateError('');
+    }
   };
 
   const addItem = () => {
@@ -409,23 +412,14 @@ export default function CreateBillScreen() {
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Due Date</Text>
-            <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
-            <View style={styles.inputWithIcon}>
-              <Calendar size={18} color="#64748B" strokeWidth={2} />
-              <TextInput
-                style={[styles.input, styles.inputWithIconText]}
-                value={dueDate}
-                onChangeText={setDueDate}
-                placeholder="YYYY-MM-DD (optional)"
-                placeholderTextColor="#64748B"
-              />
-            </View>
-            {dueDate && !validateDueDate(dueDate)? (
-              <Text style={styles.errorText}>Due date must be today or in the future</Text>
-            ):null}
-          </View>
+          <DatePicker
+            label="Due Date"
+            value={dueDate}
+            onDateChange={handleDueDateChange}
+            placeholder="Select due date (optional)"
+            minimumDate={new Date()}
+            error={dueDateError}
+          />
         </View>
 
         {/* Items */}
@@ -801,13 +795,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: -0.1,
   },
-  labelSubtext: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 8,
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
   input: {
     borderWidth: 1,
     borderColor: '#334155',
@@ -840,12 +827,6 @@ const styles = StyleSheet.create({
   textArea: {
     height: 80,
     textAlignVertical: 'top',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 4,
-    fontWeight: '500',
   },
   addItemContainer: {
     marginBottom: 20,
@@ -1232,22 +1213,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
-  },
-  receiptUploadBox: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  uploadBoxText: {
-    color: '#64748B',
-    marginTop: 8,
-    fontSize: 15,
   },
   receiptGrid: {
     flexDirection: 'row',
