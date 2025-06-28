@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/types/database';
@@ -40,7 +40,7 @@ export function useFriends() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -146,11 +146,13 @@ export function useFriends() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]); // Only depend on user.id
 
   useEffect(() => {
-    fetchFriends();
-  }, [user]);
+    if (user?.id) {
+      fetchFriends();
+    }
+  }, [user?.id, fetchFriends]);
 
   const sendFriendRequest = async (username: string) => {
     if (!user) throw new Error('User not authenticated');
@@ -204,6 +206,9 @@ export function useFriends() {
         });
 
       if (error) throw error;
+
+      // Refresh data after successful request
+      await fetchFriends();
 
       return targetUser.name;
     } catch (err) {
@@ -283,6 +288,12 @@ export function useFriends() {
     }
   };
 
+  // Memoize the refetch function to prevent infinite loops
+  const refetch = useCallback(() => {
+    if (user?.id) {
+      fetchFriends();
+    }
+  }, [fetchFriends, user?.id]);
 
   return {
     friends,
@@ -294,6 +305,6 @@ export function useFriends() {
     acceptFriendRequest,
     declineFriendRequest,
     removeFriend,
-    refetch: fetchFriends,
+    refetch,
   };
 }
