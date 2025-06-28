@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, UserPlus, Users, Mail, Check, X, Plus, Bell } from 'lucide-react-native';
-import { Friend, FriendRequest, User } from '@/types';
+import { useFocusEffect } from '@react-navigation/native';
+import { Search, UserPlus, Users, Check, X, Plus, Bell } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,13 @@ export default function FriendsScreen() {
   const [usernameResults, setUsernameResults] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
