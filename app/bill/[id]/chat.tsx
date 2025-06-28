@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Send, Camera, Image as ImageIcon, Check, X, Clock, Shield, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Send, Camera, Image as ImageIcon, Check, X, Clock, Shield, MessageCircle, Upload } from 'lucide-react-native';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/billUtils';
@@ -438,166 +438,136 @@ export default function BillChatScreen() {
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
       >
-        {messages.map((message, index) => {
-          const isOwnMessage = message?.senderId === user.id;
-          const showDate = index === 0 || 
-            formatDate(message?.timestamp ?? '') !== formatDate(messages[index - 1]?.timestamp ?? '');
+        {messages.length === 0 ? (
+          // Empty State
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Upload size={32} color="#F59E0B" strokeWidth={2} />
+            </View>
+            <Text style={styles.emptyTitle}>No messages yet</Text>
+            <Text style={styles.emptyDescription}>
+              Send your payment slip for the host to verify your payment here! 📩 💸
+            </Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={handleImagePicker}>
+              <Camera size={16} color="#F59E0B" strokeWidth={2} />
+              <Text style={styles.emptyButtonText}>Upload Payment Slip</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          messages.map((message, index) => {
+            const isOwnMessage = message?.senderId === user.id;
+            const showDate = index === 0 || 
+              formatDate(message?.timestamp ?? '') !== formatDate(messages[index - 1]?.timestamp ?? '');
 
-          return (
-            <View key={message.id}>
-              {/* Date Separator */}
-              {showDate && (
-                <View style={styles.dateSeparator}>
-                  <Text style={styles.dateText}>{formatDate(message?.timestamp ?? '')}</Text>
-                </View>
-              )}
-
-              {/* Message */}
-              <View style={[
-                styles.messageContainer,
-                isOwnMessage ? styles.ownMessage : styles.otherMessage
-              ]}>
-                {/* Avatar for other messages */}
-                {!isOwnMessage && (
-                  <View style={styles.avatarContainer}>
-                    {message?.senderAvatar ? (
-                      <Image source={{ uri: message.senderAvatar }} style={styles.avatar} />
-                    ) : (
-                      <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>
-                          {((message?.senderName || '?')[0]).toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
+            return (
+              <View key={message.id}>
+                {/* Date Separator */}
+                {showDate && (
+                  <View style={styles.dateSeparator}>
+                    <Text style={styles.dateText}>{formatDate(message?.timestamp ?? '')}</Text>
                   </View>
                 )}
 
+                {/* Message */}
                 <View style={[
-                  styles.messageBubble,
-                  isOwnMessage ? styles.ownBubble : styles.otherBubble,
-                  message?.type === 'system' && styles.systemBubble
+                  styles.messageContainer,
+                  isOwnMessage ? styles.ownMessage : styles.otherMessage
                 ]}>
-                  {/* Sender name for other messages */}
-                  {!isOwnMessage && message?.type !== 'system' && (
-                    <Text style={styles.senderName}>{message?.senderName}</Text>
-                  )}
-
-                  {/* System message */}
-                  {message?.type === 'system' && (
-                    <View style={styles.systemMessage}>
-                      <Shield size={14} color="#64748B" strokeWidth={2} />
-                      <Text style={styles.systemText}>{message?.content}</Text>
-                    </View>
-                  )}
-
-                  {/* Regular message */}
-                  {message?.type === 'text' && (
-                    <Text style={[
-                      styles.messageText,
-                      isOwnMessage ? styles.ownMessageText : styles.otherMessageText
-                    ]}>
-                      {message?.content}
-                    </Text>
-                  )}
-
-                  {/* Image/Payment slip message */}
-                  {(message?.type === 'image' || message?.type === 'payment_slip') && (
-                    <View style={styles.imageMessage}>
-                      {message?.content && message.content !== 'Image' && (
-                        <Text style={[
-                          styles.messageText,
-                          isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
-                          styles.imageMessageText
-                        ]}>
-                          {message?.content}
-                        </Text>
-                      )}
-                      
-                      <TouchableOpacity 
-                        style={styles.imageContainer}
-                        onPress={() => message?.imageUrl && openImageModal(message.imageUrl)}
-                      >
-                        <Image source={{ uri: message?.imageUrl }} style={styles.messageImage} />
-                        
-                        {/* Payment slip overlay */}
-                        {message?.isPaymentSlip && (
-                          <View style={styles.paymentOverlay}>
-                            <View style={styles.paymentInfo}>
-                              <Text style={styles.paymentLabel}>Payment Slip</Text>
-                              {message?.paymentAmount && (
-                                <Text style={styles.paymentAmount}>
-                                  {formatCurrency(message.paymentAmount)}
-                                </Text>
-                              )}
-                            </View>
-                            
-                            <View style={[
-                              styles.paymentStatus,
-                              { backgroundColor: getStatusColor(message.paymentStatus) }
-                            ]}>
-                              {getStatusIcon(message.paymentStatus)}
-                              <Text style={styles.paymentStatusText}>
-                                {message.paymentStatus?.charAt(0).toUpperCase() + 
-                                 message.paymentStatus?.slice(1) || 'Pending'}
-                              </Text>
-                            </View>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-
-                      {/* Host verification buttons */}
-                      {message?.isPaymentSlip && 
-                       message.paymentStatus === 'pending' && 
-                       isHost && 
-                       !isOwnMessage && (
-                        <View style={styles.verificationButtons}>
-                          <TouchableOpacity 
-                            style={styles.rejectButton}
-                            onPress={() => handleVerifyPayment(message.id, 'rejected')}
-                            disabled={isLoading}
-                          >
-                            <X size={16} color="#FFFFFF" strokeWidth={2} />
-                            <Text style={styles.rejectButtonText}>Reject</Text>
-                          </TouchableOpacity>
-                          
-                          <TouchableOpacity 
-                            style={styles.verifyButton}
-                            onPress={() => handleVerifyPayment(message.id, 'verified')}
-                            disabled={isLoading}
-                          >
-                            <Check size={16} color="#FFFFFF" strokeWidth={2} />
-                            <Text style={styles.verifyButtonText}>Verify</Text>
-                          </TouchableOpacity>
+                  {/* Avatar for other messages */}
+                  {!isOwnMessage && (
+                    <View style={styles.avatarContainer}>
+                      {message?.senderAvatar ? (
+                        <Image source={{ uri: message.senderAvatar }} style={styles.avatar} />
+                      ) : (
+                        <View style={styles.avatarPlaceholder}>
+                          <Text style={styles.avatarText}>
+                            {((message?.senderName || '?')[0]).toUpperCase()}
+                          </Text>
                         </View>
                       )}
                     </View>
                   )}
 
-                  {/* Timestamp */}
-                  {message?.type !== 'system' && (
-                    <Text style={[
-                      styles.timestamp,
-                      isOwnMessage ? styles.ownTimestamp : styles.otherTimestamp
-                    ]}>
-                      {formatTime(message?.timestamp ?? new Date())}
-                    </Text>
-                  )}
+                  <View style={[
+                    styles.messageBubble,
+                    isOwnMessage ? styles.ownBubble : styles.otherBubble,
+                    message?.type === 'system' && styles.systemBubble
+                  ]}>
+                    {/* Sender name for other messages */}
+                    {!isOwnMessage && message?.type !== 'system' && (
+                      <Text style={styles.senderName}>{message?.senderName}</Text>
+                    )}
 
-                  {/* Verify button for cash payment system message */}
-                  {message?.type === 'text' &&
-                   message?.content?.includes('marked as paid (cash)') &&
-                   isHost &&
-                   bill &&
-                   bill.participants && (() => {
-                      const paidParticipant = bill.participants.find(
-                        (p: any) =>
-                          p.payment_status === 'paid' &&
-                          message.content.toLowerCase().includes(p.name.toLowerCase())
-                      );
-                      if (paidParticipant && paidParticipant.user_id && paidParticipant.name) {
-                        return (
-                          <View style={[styles.verificationButtons, { marginTop: 12 }]}>
-                            <TouchableOpacity
+                    {/* System message */}
+                    {message?.type === 'system' && (
+                      <View style={styles.systemMessage}>
+                        <Shield size={14} color="#64748B" strokeWidth={2} />
+                        <Text style={styles.systemText}>{message?.content}</Text>
+                      </View>
+                    )}
+
+                    {/* Regular message */}
+                    {message?.type === 'text' && (
+                      <Text style={[
+                        styles.messageText,
+                        isOwnMessage ? styles.ownMessageText : styles.otherMessageText
+                      ]}>
+                        {message?.content}
+                      </Text>
+                    )}
+
+                    {/* Image/Payment slip message */}
+                    {(message?.type === 'image' || message?.type === 'payment_slip') && (
+                      <View style={styles.imageMessage}>
+                        {message?.content && message.content !== 'Image' && (
+                          <Text style={[
+                            styles.messageText,
+                            isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
+                            styles.imageMessageText
+                          ]}>
+                            {message?.content}
+                          </Text>
+                        )}
+                        
+                        <TouchableOpacity 
+                          style={styles.imageContainer}
+                          onPress={() => message?.imageUrl && openImageModal(message.imageUrl)}
+                        >
+                          <Image source={{ uri: message?.imageUrl }} style={styles.messageImage} />
+                          
+                          {/* Payment slip overlay */}
+                          {message?.isPaymentSlip && (
+                            <View style={styles.paymentOverlay}>
+                              <View style={styles.paymentInfo}>
+                                <Text style={styles.paymentLabel}>Payment Slip</Text>
+                                {message?.paymentAmount && (
+                                  <Text style={styles.paymentAmount}>
+                                    {formatCurrency(message.paymentAmount)}
+                                  </Text>
+                                )}
+                              </View>
+                              
+                              <View style={[
+                                styles.paymentStatus,
+                                { backgroundColor: getStatusColor(message.paymentStatus) }
+                              ]}>
+                                {getStatusIcon(message.paymentStatus)}
+                                <Text style={styles.paymentStatusText}>
+                                  {message.paymentStatus?.charAt(0).toUpperCase() + 
+                                   message.paymentStatus?.slice(1) || 'Pending'}
+                                </Text>
+                              </View>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+
+                        {/* Host verification buttons */}
+                        {message?.isPaymentSlip && 
+                         message.paymentStatus === 'pending' && 
+                         isHost && 
+                         !isOwnMessage && (
+                          <View style={styles.verificationButtons}>
+                            <TouchableOpacity 
                               style={styles.rejectButton}
                               onPress={() => handleVerifyPayment(message.id, 'rejected')}
                               disabled={isLoading}
@@ -605,7 +575,8 @@ export default function BillChatScreen() {
                               <X size={16} color="#FFFFFF" strokeWidth={2} />
                               <Text style={styles.rejectButtonText}>Reject</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
+                            
+                            <TouchableOpacity 
                               style={styles.verifyButton}
                               onPress={() => handleVerifyPayment(message.id, 'verified')}
                               disabled={isLoading}
@@ -614,15 +585,61 @@ export default function BillChatScreen() {
                               <Text style={styles.verifyButtonText}>Verify</Text>
                             </TouchableOpacity>
                           </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Timestamp */}
+                    {message?.type !== 'system' && (
+                      <Text style={[
+                        styles.timestamp,
+                        isOwnMessage ? styles.ownTimestamp : styles.otherTimestamp
+                      ]}>
+                        {formatTime(message?.timestamp ?? new Date())}
+                      </Text>
+                    )}
+
+                    {/* Verify button for cash payment system message */}
+                    {message?.type === 'text' &&
+                     message?.content?.includes('marked as paid (cash)') &&
+                     isHost &&
+                     bill &&
+                     bill.participants && (() => {
+                        const paidParticipant = bill.participants.find(
+                          (p: any) =>
+                            p.payment_status === 'paid' &&
+                            message.content.toLowerCase().includes(p.name.toLowerCase())
                         );
-                      }
-                      return null;
-                    })()}
+                        if (paidParticipant && paidParticipant.user_id && paidParticipant.name) {
+                          return (
+                            <View style={[styles.verificationButtons, { marginTop: 12 }]}>
+                              <TouchableOpacity
+                                style={styles.rejectButton}
+                                onPress={() => handleVerifyPayment(message.id, 'rejected')}
+                                disabled={isLoading}
+                              >
+                                <X size={16} color="#FFFFFF" strokeWidth={2} />
+                                <Text style={styles.rejectButtonText}>Reject</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.verifyButton}
+                                onPress={() => handleVerifyPayment(message.id, 'verified')}
+                                disabled={isLoading}
+                              >
+                                <Check size={16} color="#FFFFFF" strokeWidth={2} />
+                                <Text style={styles.verifyButtonText}>Verify</Text>
+                              </TouchableOpacity>
+                            </View>
+                          );
+                        }
+                        return null;
+                      })()}
+                  </View>
                 </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </ScrollView>
 
       {/* Image Preview */}
@@ -789,7 +806,59 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesContent: {
+    flexGrow: 1,
     paddingVertical: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 80,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#F8FAFC',
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  emptyDescription: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    gap: 8,
+  },
+  emptyButtonText: {
+    color: '#F59E0B',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   dateSeparator: {
     alignItems: 'center',
