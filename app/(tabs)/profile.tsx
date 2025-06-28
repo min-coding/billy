@@ -378,15 +378,6 @@ export default function ProfileScreen() {
                 <Text style={styles.statLabel}>Total Spent</Text>
               </LinearGradient>
               
-              <LinearGradient
-                colors={['#0F172A', '#1E293B']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.statCard}
-              >
-                <Text style={styles.statNumber}>{friendsLoading ? '-' : friends.length}</Text>
-                <Text style={styles.statLabel}>Friends</Text>
-              </LinearGradient>
             </View>
           </LinearGradient>
 
