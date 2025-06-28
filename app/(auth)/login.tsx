@@ -66,18 +66,11 @@ export default function LoginScreen() {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <LinearGradient
-                  colors={['#F59E0B', '#EAB308', '#F97316']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.logoGradient}
-                >
-                  <Image 
-                    source={require('@/assets/images/billy-transparent.png')} 
-                    style={styles.logo}
-                    resizeMode="contain"
-                  />
-                </LinearGradient>
+                <Image 
+                  source={require('@/assets/images/billy-transparent.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title}>Welcome to Billy</Text>
               <Text style={styles.subtitle}>Sign in to continue splitting bills with friends</Text>
@@ -254,24 +247,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     alignItems: 'center',
   },
-  logoGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 16,
-  },
   logo: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
   },
   title: {
     fontSize: 32,
