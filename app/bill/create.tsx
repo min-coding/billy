@@ -480,23 +480,25 @@ export default function CreateBillScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            items.map((item) => (
-              <View key={item.id} style={styles.itemCard}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <View style={styles.itemDetails}>
-                    <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
-                    <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
+            <View style={styles.itemsList}>
+              {items.map((item) => (
+                <View key={item.id} style={styles.itemCard}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <View style={styles.itemDetails}>
+                      <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
+                      <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
+                    </View>
                   </View>
+                  <TouchableOpacity 
+                    style={styles.removeButton} 
+                    onPress={() => removeItem(item.id)}
+                  >
+                    <X size={16} color="#EF4444" strokeWidth={2} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity 
-                  style={styles.removeButton} 
-                  onPress={() => removeItem(item.id)}
-                >
-                  <X size={16} color="#EF4444" strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-            ))
+              ))}
+            </View>
           )}
 
           {items.length > 0 && (
@@ -768,7 +770,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
     backgroundColor: '#0F172A',
   },
   backButton: {
@@ -960,6 +963,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
+  },
+  itemsList: {
+    // Container for items list to prevent overflow
   },
   itemCard: {
     flexDirection: 'row',
