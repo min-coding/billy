@@ -326,32 +326,66 @@ export default function BillChatScreen() {
 
   const handlePaidInCash = async () => {
     if (!user || !bill) return;
-    try {
-      await supabase
-        .from('bill_participants')
-        .update({ payment_status: 'paid' })
-        .eq('bill_id', bill.id)
-        .eq('user_id', user.id);
-      // Optionally, send a system message to chat
-      await sendMessage(bill.id, `${user.name || 'A member'} marked as paid (cash).`, 'text');
+
+    const confirmPaidInCash = () => {
       if (Platform.OS === 'web') {
-        window.alert('Marked as paid (cash) ✅');
+        const confirmed = window.confirm(
+          `Are you sure you want to mark your payment as "Paid in Cash"?\n\nThis will notify the bill host that you have paid your share in cash and they will need to verify this payment. 💰`
+        );
+        if (confirmed) {
+          processPaidInCash();
+        }
       } else {
-        Alert.alert('Success', 'Marked as paid (cash) ✅');
+        Alert.alert(
+          'Mark as Paid in Cash',
+          'Are you sure you want to mark your payment as "Paid in Cash"?\n\nThis will notify the bill host that you have paid your share in cash and they will need to verify this payment. 💰',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Confirm',
+              style: 'default',
+              onPress: processPaidInCash,
+            },
+          ]
+        );
       }
-    } catch (err) {
-      if (Platform.OS === 'web') {
-        window.alert('Failed to mark as paid (cash). Please retry ❗️');
-      } else {
-        Alert.alert('Error', 'Failed to mark as paid (cash). Please retry ❗️');
+    };
+
+    const processPaidInCash = async () => {
+      try {
+        await supabase
+          .from('bill_participants')
+          .update({ payment_status: 'paid' })
+          .eq('bill_id', bill.id)
+          .eq('user_id', user.id);
+        
+        // Send a system message to chat
+        await sendMessage(bill.id, `${user.name || 'A member'} marked as paid (cash).`, 'text');
+        
+        if (Platform.OS === 'web') {
+          window.alert('Marked as paid (cash) ✅');
+        } else {
+          Alert.alert('Success', 'Marked as paid (cash) ✅');
+        }
+      } catch (err) {
+        if (Platform.OS === 'web') {
+          window.alert('Failed to mark as paid (cash). Please retry ❗️');
+        } else {
+          Alert.alert('Error', 'Failed to mark as paid (cash). Please retry ❗️');
+        }
       }
-    }
+    };
+
+    confirmPaidInCash();
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color="#F59E0B" style={{ marginTop: 50 }} />
       </SafeAreaView>
     );
   }
@@ -369,7 +403,7 @@ export default function BillChatScreen() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <View style={styles.headerIcon}>
-            <MessageCircle size={20} color="#3B82F6" strokeWidth={2} />
+            <MessageCircle size={20} color="#F59E0B" strokeWidth={2} />
           </View>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>Bill Chat</Text>
@@ -794,7 +828,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -810,7 +844,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   ownBubble: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     borderBottomRightRadius: 4,
   },
   otherBubble: {
@@ -1042,7 +1076,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendButtonActive: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
   },
   imageModalOverlay: {
     flex: 1,
