@@ -104,17 +104,15 @@ export default function FriendsScreen() {
               </View>
               {/* Dropdown of matching usernames */}
               {usernameResults.length > 0 && (
-                <FlatList
-                  data={usernameResults}
-                  keyExtractor={item => item.id}
-                  style={{ maxHeight: 200, backgroundColor: '#1E293B', borderRadius: 8, marginTop: 8 }}
-                  renderItem={({ item }) => {
+                <View style={{ maxHeight: 200, backgroundColor: '#1E293B', borderRadius: 8, marginTop: 8 }}>
+                  {usernameResults.map((item) => {
                     const isFriend = friends.some(f => f.id === item.id);
                     const isRequested = outgoingRequests.some(
                       r => r.toUserId === item.id && r.status === 'pending'
                     );
                     return (
                       <View
+                        key={item.id}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
@@ -181,8 +179,8 @@ export default function FriendsScreen() {
                         )}
                       </View>
                     );
-                  }}
-                />
+                  })}
+                </View>
               )}
               <View style={styles.addFriendButtons}>
                 <TouchableOpacity 
