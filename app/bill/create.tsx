@@ -884,15 +884,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'flex-end',
+    flexShrink: 1,
   },
   itemNameInput: {
     flex: 3,
+    minWidth: 0,
   },
   itemPriceInput: {
     flex: 2,
+    minWidth: 0,
   },
   itemQuantityInput: {
     flex: 1,
+    minWidth: 0,
   },
   addButton: {
     backgroundColor: '#F59E0B',
