@@ -45,12 +45,6 @@ export default function LoginScreen() {
     }
   };
 
-  const fillDemoCredentials = () => {
-    setEmail('john@example.com');
-    setPassword('password123');
-    setErrors({});
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -72,11 +66,6 @@ export default function LoginScreen() {
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue splitting bills with friends</Text>
           </View>
-
-          {/* Demo Credentials */}
-          <TouchableOpacity style={styles.demoButton} onPress={fillDemoCredentials}>
-            <Text style={styles.demoButtonText}>Use Demo Credentials</Text>
-          </TouchableOpacity>
 
           {/* Form */}
           <View style={styles.form}>
@@ -230,22 +219,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500',
-  },
-  demoButton: {
-    backgroundColor: '#1E293B',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-  },
-  demoButtonText: {
-    color: '#F59E0B',
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: -0.1,
   },
   form: {
     flex: 1,
