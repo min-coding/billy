@@ -480,7 +480,7 @@ export default function CreateBillScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.itemsList}>
+            <View style={styles.itemsListContainer}>
               {items.map((item) => (
                 <View key={item.id} style={styles.itemCard}>
                   <View style={styles.itemInfo}>
@@ -964,8 +964,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.2,
   },
-  itemsList: {
-    // Container for items list to prevent overflow
+  itemsListContainer: {
+    // Proper container for items list to prevent overflow
+    width: '100%',
   },
   itemCard: {
     flexDirection: 'row',
@@ -977,9 +978,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    width: '100%', // Ensure full width
   },
   itemInfo: {
     flex: 1,
+    marginRight: 12, // Add margin to prevent overlap with remove button
   },
   itemName: {
     fontSize: 16,
@@ -989,14 +992,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   itemDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    marginBottom: 4,
   },
   itemPrice: {
     fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: '#10B981',
+    fontWeight: '600',
   },
   itemTotal: {
     fontSize: 14,
@@ -1007,6 +1008,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#1E293B',
+    flexShrink: 0, // Prevent shrinking
   },
   totalContainer: {
     backgroundColor: '#0F172A',
