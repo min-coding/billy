@@ -248,7 +248,7 @@ export function useFriends() {
 
   const removeFriend = async (friendId: string) => {
     if (!user) return;
-  
+
     try {
       // Remove both directions of friendship
       const { error: error1 } = await supabase
@@ -256,24 +256,33 @@ export function useFriends() {
         .delete()
         .eq('user_id', user.id)
         .eq('friend_id', friendId);
-  
+
       if (error1) throw error1;
-  
+
       const { error: error2 } = await supabase
         .from('friends')
         .delete()
         .eq('user_id', friendId)
         .eq('friend_id', user.id);
-  
+
       if (error2) throw error2;
-  
+
+      // Delete accepted friend request between these two users (both directions)
+      const { error: error3 } = await supabase
+        .from('friend_requests')
+        .delete()
+        .or(`and(from_user_id.eq.${user.id},to_user_id.eq.${friendId},status.eq.accepted),and(from_user_id.eq.${friendId},to_user_id.eq.${user.id},status.eq.accepted)`);
+
+      if (error3) throw error3;
+
       // Refresh data
       await fetchFriends();
     } catch (err) {
       console.error('Error removing friend:', err);
       throw err;
     }
-  };;
+  };
+
 
   return {
     friends,
