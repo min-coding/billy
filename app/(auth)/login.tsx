@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react-native';
@@ -59,11 +59,13 @@ export default function LoginScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <View style={styles.logo}>
-                <LogIn size={32} color="#FFFFFF" strokeWidth={2} />
-              </View>
+              <Image 
+                source={require('@/assets/images/ios-light.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.title}>Welcome</Text>
             <Text style={styles.subtitle}>Sign in to continue splitting bills with friends</Text>
           </View>
 
@@ -188,23 +190,14 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoContainer: {
+    marginTop: 24,
     marginBottom: 24,
+    alignItems: 'center',
   },
   logo: {
     width: 80,
     height: 80,
-    borderRadius: 20,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 16,
+    borderRadius: 16,
   },
   title: {
     fontSize: 28,
@@ -215,21 +208,20 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500',
   },
   form: {
-    flex: 1,
+    gap: 20,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FEE2E2',
     borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+    borderColor: '#FCA5A5',
+    borderRadius: 8,
+    padding: 12,
   },
   errorText: {
     color: '#DC2626',
@@ -238,14 +230,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputGroup: {
-    marginBottom: 20,
+    gap: 8,
   },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#CBD5E1',
-    marginBottom: 8,
-    letterSpacing: -0.1,
+    color: '#F8FAFC',
+    marginBottom: 4,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -253,14 +244,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: '#334155',
     gap: 12,
   },
   inputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#1E1B1B',
+    borderColor: '#FCA5A5',
   },
   input: {
     flex: 1,
@@ -272,20 +262,19 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   fieldError: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 6,
+    color: '#FCA5A5',
+    fontSize: 14,
     fontWeight: '500',
+    marginTop: 4,
   },
   loginButton: {
-    backgroundColor: '#3B82F6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
-    marginTop: 8,
     shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
@@ -296,21 +285,18 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   disabledButton: {
-    backgroundColor: '#475569',
-    shadowOpacity: 0,
-    elevation: 0,
+    opacity: 0.6,
   },
   loginButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 32,
-    gap: 16,
+    marginVertical: 8,
   },
   dividerLine: {
     flex: 1,
@@ -321,16 +307,17 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
+    marginHorizontal: 16,
   },
   signupButton: {
-    backgroundColor: '#1E293B',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#1E293B',
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: '#334155',
     gap: 8,
   },
   signupButtonText: {
@@ -341,15 +328,13 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 32,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
+    paddingHorizontal: 16,
   },
   footerText: {
-    fontSize: 12,
     color: '#64748B',
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
     fontWeight: '500',
   },
 });
