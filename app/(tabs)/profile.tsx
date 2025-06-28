@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { User, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -177,183 +178,283 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>Manage your account</Text>
-        </View>
-        {!isEditing && (
-          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-            <UserPen size={18} color="#F59E0B" strokeWidth={2} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatarWrapper}>
-              {selectedAvatarUri ? (
-                <Image source={{ uri: selectedAvatarUri }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatar}>
-                  <User size={32} color="#FFFFFF" strokeWidth={2} />
-                </View>
-              )}
-              
-              {/* Camera Button - only show when editing */}
-              {isEditing && (
-                <TouchableOpacity 
-                  style={styles.cameraButton} 
-                  onPress={pickImage}
-                  disabled={isUploadingImage}
-                >
-                  {isUploadingImage ? (
-                    <ActivityIndicator size={16} color="#FFFFFF" />
-                  ) : (
-                    <Camera size={16} color="#FFFFFF" strokeWidth={2} />
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
+    <LinearGradient
+      colors={['#0F172A', '#1E293B', '#334155']}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={styles.gradientContainer}
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Profile</Text>
+            <Text style={styles.subtitle}>Manage your account</Text>
           </View>
-
-          {isEditing ? (
-            <View style={styles.editForm}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Enter your name"
-                  placeholderTextColor="#64748B"
-                  editable={!isLoading && !isUploadingImage}
-                />
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#64748B"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!isLoading && !isUploadingImage}
-                />
-              </View>
-
-              <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  style={[styles.button, styles.cancelButton]} 
-                  onPress={handleCancel}
-                  disabled={isLoading || isUploadingImage}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.button, 
-                    styles.saveButton, 
-                    (isLoading || isUploadingImage) && styles.disabledButton
-                  ]} 
-                  onPress={handleSave}
-                  disabled={isLoading || isUploadingImage}
-                >
-                  {isLoading || isUploadingImage ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size={16} color="#FFFFFF" />
-                      <Text style={styles.saveButtonText}>
-                        {isUploadingImage ? 'Uploading...' : 'Saving...'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.saveButtonText}>Save</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user.name}</Text>
-              <Text style={styles.profileEmail}>{user.email}</Text>
-              <Text style={styles.joinDate}>
-                Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
-                  month: 'long', 
-                  year: 'numeric' 
-                })}
-              </Text>
-            </View>
+          {!isEditing && (
+            <LinearGradient
+              colors={['#1E293B', '#334155']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.editButtonGradient}
+            >
+              <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
+                <UserPen size={18} color="#F59E0B" strokeWidth={2} />
+              </TouchableOpacity>
+            </LinearGradient>
           )}
         </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{billsLoading ? '-' : bills.length}</Text>
-            <Text style={styles.statLabel}>Total Bills</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{billsLoading ? '-' : `$${totalSpent.toFixed(2)}`}</Text>
-            <Text style={styles.statLabel}>Total Spent</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{friendsLoading ? '-' : friends.length}</Text>
-            <Text style={styles.statLabel}>Friends</Text>
-          </View>
-        </View>
-
-        {/* Notification Settings */}
-        <NotificationSettings />
-
-        {/* Menu Section */}
-        <View style={styles.menuSection}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
-              <View style={styles.menuItemLeft}>
-                <View style={styles.menuIcon}>
-                  <item.icon size={18} color="#64748B" strokeWidth={2} />
-                </View>
-                <View style={styles.menuContent}>
-                  <Text style={styles.menuTitle}>{item.title}</Text>
-                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Profile Section */}
+          <LinearGradient
+            colors={['#1E293B', '#334155']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.profileSectionGradient}
+          >
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatarWrapper}>
+                  {selectedAvatarUri ? (
+                    <Image source={{ uri: selectedAvatarUri }} style={styles.avatarImage} />
+                  ) : (
+                    <LinearGradient
+                      colors={['#F59E0B', '#EAB308']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.avatar}
+                    >
+                      <User size={32} color="#FFFFFF" strokeWidth={2} />
+                    </LinearGradient>
+                  )}
+                  
+                  {/* Camera Button - only show when editing */}
+                  {isEditing && (
+                    <LinearGradient
+                      colors={['#10B981', '#059669']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.cameraButton}
+                    >
+                      <TouchableOpacity 
+                        style={styles.cameraButtonInner} 
+                        onPress={pickImage}
+                        disabled={isUploadingImage}
+                      >
+                        {isUploadingImage ? (
+                          <ActivityIndicator size={16} color="#FFFFFF" />
+                        ) : (
+                          <Camera size={16} color="#FFFFFF" strokeWidth={2} />
+                        )}
+                      </TouchableOpacity>
+                    </LinearGradient>
+                  )}
                 </View>
               </View>
-              <ExternalLink size={16} color="#64748B" strokeWidth={2} />
-            </TouchableOpacity>
-          ))}
-        </View>
 
-        {/* Logout Section */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <LogOut size={18} color="#EF4444" strokeWidth={2} />
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+              {isEditing ? (
+                <View style={styles.editForm}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Name</Text>
+                    <LinearGradient
+                      colors={['#0F172A', '#1E293B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.inputGradient}
+                    >
+                      <TextInput
+                        style={styles.input}
+                        value={name}
+                        onChangeText={setName}
+                        placeholder="Enter your name"
+                        placeholderTextColor="#64748B"
+                        editable={!isLoading && !isUploadingImage}
+                      />
+                    </LinearGradient>
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Email</Text>
+                    <LinearGradient
+                      colors={['#0F172A', '#1E293B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.inputGradient}
+                    >
+                      <TextInput
+                        style={styles.input}
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="Enter your email"
+                        placeholderTextColor="#64748B"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        editable={!isLoading && !isUploadingImage}
+                      />
+                    </LinearGradient>
+                  </View>
 
-        {/* App Version */}
-        <View style={styles.versionSection}>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
-        </View>
-      </ScrollView>
-      <BoltBadge />
-    </SafeAreaView>
+                  <View style={styles.buttonRow}>
+                    <LinearGradient
+                      colors={['#334155', '#475569']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.cancelButtonGradient}
+                    >
+                      <TouchableOpacity 
+                        style={styles.button} 
+                        onPress={handleCancel}
+                        disabled={isLoading || isUploadingImage}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </LinearGradient>
+                    
+                    <LinearGradient
+                      colors={(isLoading || isUploadingImage) ? ['#475569', '#64748B'] : ['#F59E0B', '#EAB308']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.saveButtonGradient}
+                    >
+                      <TouchableOpacity 
+                        style={styles.button} 
+                        onPress={handleSave}
+                        disabled={isLoading || isUploadingImage}
+                      >
+                        {isLoading || isUploadingImage ? (
+                          <View style={styles.loadingContainer}>
+                            <ActivityIndicator size={16} color="#FFFFFF" />
+                            <Text style={styles.saveButtonText}>
+                              {isUploadingImage ? 'Uploading...' : 'Saving...'}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        )}
+                      </TouchableOpacity>
+                    </LinearGradient>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>{user.name}</Text>
+                  <Text style={styles.profileEmail}>{user.email}</Text>
+                  <Text style={styles.joinDate}>
+                    Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </LinearGradient>
+
+          {/* Stats Section */}
+          <LinearGradient
+            colors={['#1E293B', '#334155']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statsSectionGradient}
+          >
+            <View style={styles.statsSection}>
+              <LinearGradient
+                colors={['#0F172A', '#1E293B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.statCard}
+              >
+                <Text style={styles.statNumber}>{billsLoading ? '-' : bills.length}</Text>
+                <Text style={styles.statLabel}>Total Bills</Text>
+              </LinearGradient>
+              
+              <LinearGradient
+                colors={['#0F172A', '#1E293B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.statCard}
+              >
+                <Text style={styles.statNumber}>{billsLoading ? '-' : `$${totalSpent.toFixed(2)}`}</Text>
+                <Text style={styles.statLabel}>Total Spent</Text>
+              </LinearGradient>
+              
+              <LinearGradient
+                colors={['#0F172A', '#1E293B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.statCard}
+              >
+                <Text style={styles.statNumber}>{friendsLoading ? '-' : friends.length}</Text>
+                <Text style={styles.statLabel}>Friends</Text>
+              </LinearGradient>
+            </View>
+          </LinearGradient>
+
+          {/* Notification Settings */}
+          <NotificationSettings />
+
+          {/* Menu Section */}
+          <LinearGradient
+            colors={['#1E293B', '#334155']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.menuSectionGradient}
+          >
+            <View style={styles.menuSection}>
+              {menuItems.map((item, index) => (
+                <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
+                  <View style={styles.menuItemLeft}>
+                    <LinearGradient
+                      colors={['#0F172A', '#1E293B']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.menuIcon}
+                    >
+                      <item.icon size={18} color="#64748B" strokeWidth={2} />
+                    </LinearGradient>
+                    <View style={styles.menuContent}>
+                      <Text style={styles.menuTitle}>{item.title}</Text>
+                      <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                    </View>
+                  </View>
+                  <ExternalLink size={16} color="#64748B" strokeWidth={2} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </LinearGradient>
+
+          {/* Logout Section */}
+          <LinearGradient
+            colors={['#1E293B', '#334155']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.logoutSectionGradient}
+          >
+            <View style={styles.logoutSection}>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <LogOut size={18} color="#EF4444" strokeWidth={2} />
+                <Text style={styles.logoutText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          {/* App Version */}
+          <View style={styles.versionSection}>
+            <Text style={styles.versionText}>Version 1.0.0</Text>
+          </View>
+        </ScrollView>
+        <BoltBadge />
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   header: {
     flexDirection: 'row',
@@ -361,7 +462,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingBottom: 16,
-    backgroundColor: '#0F172A',
     paddingTop: 20,
   },
   headerContent: {
@@ -373,31 +473,47 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     marginBottom: 4,
     letterSpacing: -0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 15,
-    color: '#64748B',
+    color: '#94A3B8',
     fontWeight: '500',
+  },
+  editButtonGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
   },
   editButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
   },
+  profileSectionGradient: {
+    marginTop: 12,
+    marginBottom: 12,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
   profileSection: {
-    backgroundColor: '#1E293B',
     paddingVertical: 32,
     alignItems: 'center',
-    marginBottom: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#334155',
+    borderRadius: 16,
   },
   avatarContainer: {
     marginBottom: 20,
@@ -409,17 +525,16 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 16,
   },
   avatarImage: {
     width: 80,
@@ -433,11 +548,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#1E293B',
+  },
+  cameraButtonInner: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   profileInfo: {
     alignItems: 'center',
@@ -448,6 +566,9 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     marginBottom: 6,
     letterSpacing: -0.4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   profileEmail: {
     fontSize: 16,
@@ -470,14 +591,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#CBD5E1',
+    color: '#F8FAFC',
     marginBottom: 8,
     letterSpacing: -0.1,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  inputGradient: {
+    borderRadius: 12,
+    padding: 1,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
+    borderRadius: 11,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
@@ -493,13 +619,11 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#334155',
-    borderWidth: 1,
-    borderColor: '#475569',
+  cancelButtonGradient: {
+    flex: 1,
+    borderRadius: 12,
   },
   cancelButtonText: {
     color: '#CBD5E1',
@@ -507,8 +631,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.2,
   },
-  saveButton: {
-    backgroundColor: '#F59E0B',
+  saveButtonGradient: {
+    flex: 1,
+    borderRadius: 12,
     shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
@@ -518,56 +643,79 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  disabledButton: {
-    backgroundColor: '#475569',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+  statsSectionGradient: {
+    marginBottom: 12,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
   statsSection: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    marginBottom: 12,
     paddingVertical: 24,
     paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#334155',
+    gap: 12,
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#F8FAFC',
     marginBottom: 6,
     letterSpacing: -0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
     fontWeight: '600',
     letterSpacing: -0.1,
   },
-  menuSection: {
-    backgroundColor: '#1E293B',
+  menuSectionGradient: {
     marginBottom: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#334155',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  menuSection: {
+    borderRadius: 16,
   },
   menuItem: {
     flexDirection: 'row',
@@ -575,8 +723,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -587,7 +733,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -607,12 +752,21 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '500',
   },
-  logoutSection: {
-    backgroundColor: '#1E293B',
+  logoutSectionGradient: {
     marginBottom: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#334155',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  logoutSection: {
+    borderRadius: 16,
   },
   logoutButton: {
     flexDirection: 'row',

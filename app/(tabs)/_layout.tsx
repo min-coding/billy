@@ -1,15 +1,21 @@
 import { Tabs } from 'expo-router';
 import { Receipt, Plus, User, Users, ChartBar as BarChart, Bell } from 'lucide-react-native';
 import { View, Text, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 function TabBarBadge({ count }: { count: number }) {
   if (count === 0) return null;
   
   return (
-    <View style={styles.badge}>
+    <LinearGradient
+      colors={['#EF4444', '#DC2626']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.badge}
+    >
       <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -20,16 +26,31 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#3B82F6',
+        tabBarActiveTintColor: '#F59E0B',
         tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
           backgroundColor: '#0F172A',
-          borderTopWidth: 1,
-          borderTopColor: '#1E293B',
+          borderTopWidth: 0,
           paddingBottom: 8,
           paddingTop: 8,
           height: 80,
+          shadowColor: '#000000',
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.3,
+          shadowRadius: 16,
+          elevation: 16,
         },
+        tabBarBackground: () => (
+          <LinearGradient
+            colors={['#0F172A', '#1E293B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ),
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -40,9 +61,20 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Bills',
-          tabBarIcon: ({ size, color }) => (
+          tabBarIcon: ({ size, color, focused }) => (
             <View style={styles.tabIconContainer}>
-              <Receipt size={size} color={color} strokeWidth={2} />
+              {focused ? (
+                <LinearGradient
+                  colors={['#F59E0B', '#EAB308']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.activeIconBackground}
+                >
+                  <Receipt size={size} color="#FFFFFF" strokeWidth={2} />
+                </LinearGradient>
+              ) : (
+                <Receipt size={size} color={color} strokeWidth={2} />
+              )}
               <TabBarBadge count={unreadCount} />
             </View>
           ),
@@ -52,8 +84,19 @@ export default function TabLayout() {
         name="friends"
         options={{
           title: 'Friends',
-          tabBarIcon: ({ size, color }) => (
-            <Users size={size} color={color} strokeWidth={2} />
+          tabBarIcon: ({ size, color, focused }) => (
+            focused ? (
+              <LinearGradient
+                colors={['#F59E0B', '#EAB308']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.activeIconBackground}
+              >
+                <Users size={size} color="#FFFFFF" strokeWidth={2} />
+              </LinearGradient>
+            ) : (
+              <Users size={size} color={color} strokeWidth={2} />
+            )
           ),
         }}
       />
@@ -61,8 +104,19 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} strokeWidth={2} />
+          tabBarIcon: ({ size, color, focused }) => (
+            focused ? (
+              <LinearGradient
+                colors={['#F59E0B', '#EAB308']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.activeIconBackground}
+              >
+                <User size={size} color="#FFFFFF" strokeWidth={2} />
+              </LinearGradient>
+            ) : (
+              <User size={size} color={color} strokeWidth={2} />
+            )
           ),
         }}
       />
@@ -74,11 +128,25 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     position: 'relative',
   },
+  activeIconBackground: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#F59E0B',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   badge: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#EF4444',
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -86,6 +154,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#0F172A',
+    shadowColor: '#EF4444',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   badgeText: {
     color: '#FFFFFF',

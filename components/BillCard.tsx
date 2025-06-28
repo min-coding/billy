@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Users, Calendar, DollarSign, User, Tag } from 'lucide-react-native';
 import { formatCurrency } from '@/utils/billUtils';
 import { useRouter } from 'expo-router';
@@ -27,12 +28,12 @@ interface BillCardProps {
 export default function BillCard({ bill, onPress }: BillCardProps) {
   const router = useRouter();
   
-  const getStatusColor = (status: string) => {
+  const getStatusColors = (status: string) => {
     switch (status) {
-      case 'select': return '#F59E0B';
-      case 'pay': return '#3B82F6';
-      case 'closed': return '#10B981';
-      default: return '#64748B';
+      case 'select': return ['#F59E0B', '#EAB308'];
+      case 'pay': return ['#3B82F6', '#2563EB'];
+      case 'closed': return ['#10B981', '#059669'];
+      default: return ['#64748B', '#475569'];
     }
   };
 
@@ -57,69 +58,93 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
-      <View style={styles.header}>
-        <View style={styles.titleSection}>
-          <Text style={styles.title} numberOfLines={1}>{bill.title}</Text>
-          {bill.tag && (
-            <View style={styles.tagContainer}>
-              <Tag size={12} color="#64748B" strokeWidth={2} />
-              <Text style={styles.tagText}>{bill.tag}</Text>
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+      <LinearGradient
+        colors={['#1E293B', '#334155']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardGradient}
+      >
+        <View style={styles.card}>
+          <View style={styles.header}>
+            <View style={styles.titleSection}>
+              <Text style={styles.title} numberOfLines={1}>{bill.title}</Text>
+              {bill.tag && (
+                <LinearGradient
+                  colors={['#0F172A', '#1E293B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.tagContainer}
+                >
+                  <Tag size={12} color="#64748B" strokeWidth={2} />
+                  <Text style={styles.tagText}>{bill.tag}</Text>
+                </LinearGradient>
+              )}
             </View>
-          )}
+            <LinearGradient
+              colors={getStatusColors(bill.status)}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.statusBadge}
+            >
+              <Text style={styles.statusText}>{getStatusText(bill.status)}</Text>
+            </LinearGradient>
+          </View>
+          
+          <LinearGradient
+            colors={['#0F172A', '#1E293B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hostSection}
+          >
+            <User size={14} color="#64748B" strokeWidth={2} />
+            <Text style={styles.hostText}>Hosted by {hostName}</Text>
+          </LinearGradient>
+          
+          <View style={styles.footer}>
+            <View style={styles.infoRow}>
+              <Users size={14} color="#64748B" strokeWidth={2} />
+              <Text style={styles.infoText}>{bill.participants.length} people</Text>
+            </View>
+            
+            <View style={styles.infoRow}>
+              <DollarSign size={14} color="#10B981" strokeWidth={2} />
+              <Text style={styles.infoText}>{formatCurrency(bill.total_amount)}</Text>
+            </View>
+            
+            <View style={styles.infoRow}>
+              <Calendar size={14} color="#64748B" strokeWidth={2} />
+              <Text style={styles.infoText}>
+                {bill.due_date 
+                  ? new Date(bill.due_date).toLocaleDateString()
+                  : new Date(bill.created_at).toLocaleDateString()
+                }
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(bill.status) }]}>
-          <Text style={styles.statusText}>{getStatusText(bill.status)}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.hostSection}>
-        <User size={14} color="#64748B" strokeWidth={2} />
-        <Text style={styles.hostText}>Hosted by {hostName}</Text>
-      </View>
-      
-      <View style={styles.footer}>
-        <View style={styles.infoRow}>
-          <Users size={14} color="#64748B" strokeWidth={2} />
-          <Text style={styles.infoText}>{bill.participants.length} people</Text>
-        </View>
-        
-        <View style={styles.infoRow}>
-          <DollarSign size={14} color="#10B981" strokeWidth={2} />
-          <Text style={styles.infoText}>{formatCurrency(bill.total_amount)}</Text>
-        </View>
-        
-        <View style={styles.infoRow}>
-          <Calendar size={14} color="#64748B" strokeWidth={2} />
-          <Text style={styles.infoText}>
-            {bill.due_date 
-              ? new Date(bill.due_date).toLocaleDateString()
-              : new Date(bill.created_at).toLocaleDateString()
-            }
-          </Text>
-        </View>
-      </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1E293B',
+  cardGradient: {
     borderRadius: 16,
-    padding: 20,
     marginHorizontal: 16,
     marginVertical: 6,
-    borderWidth: 1,
-    borderColor: '#334155',
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  card: {
+    padding: 20,
+    borderRadius: 16,
   },
   header: {
     flexDirection: 'row',
@@ -138,11 +163,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     letterSpacing: -0.3,
     marginBottom: 6,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   tagContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -164,6 +191,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     minWidth: 70,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   statusText: {
     color: '#FFFFFF',
@@ -171,6 +206,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   hostSection: {
     flexDirection: 'row',
@@ -179,7 +217,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#0F172A',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#334155',
