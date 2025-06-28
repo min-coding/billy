@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen, Camera } from 'lucide-react-native';
+import { User, Settings, Bell, CreditCard, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
@@ -12,9 +12,11 @@ import BoltBadge from '@/components/BoltBadge';
 import NotificationSettings from '@/components/NotificationSettings';
 import { useBills } from '@/hooks/useBills';
 import { useFriends } from '@/hooks/useFriends';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -164,9 +166,24 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-    { icon: CreditCard, title: 'Payment Methods', subtitle: 'Manage cards and payment options' },
-    { icon: Settings, title: 'Settings', subtitle: 'App preferences and privacy' },
-    { icon: HelpCircle, title: 'Help & Support', subtitle: 'Get help and contact support' },
+    { 
+      icon: CreditCard, 
+      title: 'Payment Methods', 
+      subtitle: 'Manage cards and payment options',
+      onPress: () => {}
+    },
+    { 
+      icon: Settings, 
+      title: 'Settings', 
+      subtitle: 'App preferences and privacy',
+      onPress: () => {}
+    },
+    { 
+      icon: HelpCircle, 
+      title: 'About Billy', 
+      subtitle: 'Learn more about the app',
+      onPress: () => router.push('/about')
+    },
   ];
 
   if (!user) return null;
@@ -180,7 +197,7 @@ export default function ProfileScreen() {
         </View>
         {!isEditing && (
           <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-            <UserPen size={18} color="#3B82F6" strokeWidth={2} />
+            <UserPen size={18} color="#F59E0B" strokeWidth={2} />
           </TouchableOpacity>
         )}
       </View>
@@ -312,7 +329,7 @@ export default function ProfileScreen() {
         {/* Menu Section */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuItem}>
+            <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
               <View style={styles.menuItemLeft}>
                 <View style={styles.menuIcon}>
                   <item.icon size={18} color="#64748B" strokeWidth={2} />
@@ -322,6 +339,7 @@ export default function ProfileScreen() {
                   <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
                 </View>
               </View>
+              <ExternalLink size={16} color="#64748B" strokeWidth={2} />
             </TouchableOpacity>
           ))}
         </View>
@@ -403,10 +421,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -502,8 +520,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   saveButton: {
-    backgroundColor: '#3B82F6',
-    shadowColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,

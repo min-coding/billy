@@ -490,7 +490,7 @@ export default function CreateBillScreen() {
               style={styles.addFromFriendsButton}
               onPress={() => setShowFriendsModal(true)}
             >
-              <Users size={16} color="#3B82F6" strokeWidth={2} />
+              <Users size={16} color="#F59E0B" strokeWidth={2} />
               <Text style={styles.addFromFriendsText}>Invite Members</Text>
             </TouchableOpacity>
           </View>
@@ -597,7 +597,7 @@ export default function CreateBillScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {isUploadingReceipt && <ActivityIndicator size="small" color="#3B82F6" style={{ marginTop: 8 }} />}
+          {isUploadingReceipt && <ActivityIndicator size="small" color="#F59E0B" style={{ marginTop: 8 }} />}
         </View>
       </ScrollView>
 
@@ -763,6 +763,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  
   section: {
     backgroundColor: '#1E293B',
     marginTop: 12,
@@ -846,13 +847,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     width: 48,
     height: 48,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -931,11 +932,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: '#F59E0B',
     gap: 6,
   },
   addFromFriendsText: {
-    color: '#3B82F6',
+    color: '#F59E0B',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.1,
@@ -1008,14 +1009,14 @@ const styles = StyleSheet.create({
     borderTopColor: '#334155',
   },
   createBillButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
     borderRadius: 12,
     gap: 8,
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -1125,7 +1126,7 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
   selectedFriendItem: {
-    borderColor: '#3B82F6',
+    borderColor: '#F59E0B',
     backgroundColor: '#1E293B',
   },
   disabledFriendItem: {
@@ -1185,8 +1186,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
   },
   checkedFriendBox: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
   },
   friendsModalFooter: {
     paddingHorizontal: 20,
@@ -1195,11 +1196,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#334155',
   },
   addSelectedButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,

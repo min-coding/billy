@@ -148,7 +148,7 @@ export default function FriendsScreen() {
                         ) : (
                           <TouchableOpacity
                             style={{
-                              backgroundColor: '#3B82F6',
+                              backgroundColor: '#F59E0B',
                               paddingHorizontal: 12,
                               paddingVertical: 6,
                               borderRadius: 8,
@@ -254,7 +254,7 @@ export default function FriendsScreen() {
                   style={styles.emptyButton} 
                   onPress={() => setIsAddingFriend(true)}
                 >
-                  <Plus size={16} color="#3B82F6" strokeWidth={2.5} />
+                  <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
                   <Text style={styles.emptyButtonText}>Add Friend</Text>
                 </TouchableOpacity>
               )}
@@ -455,13 +455,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   addButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     width: 44,
     height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -628,11 +628,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: '#F59E0B',
     gap: 8,
   },
   emptyButtonText: {
-    color: '#3B82F6',
+    color: '#F59E0B',
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,

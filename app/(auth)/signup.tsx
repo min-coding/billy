@@ -320,10 +320,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#10B981',
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   signupButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#F59E0B',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     marginTop: 8,
-    shadowColor: '#10B981',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginButtonText: {
-    color: '#3B82F6',
+    color: '#F59E0B',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,

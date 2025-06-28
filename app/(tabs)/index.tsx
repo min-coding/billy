@@ -8,6 +8,7 @@ import BillCard from '@/components/BillCard';
 import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
 import BoltBadge from '@/components/BoltBadge';
+import DateRangePicker from '@/components/DateRangePicker';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
 type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
@@ -157,7 +158,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color="#F59E0B" />
           <Text style={styles.loadingText}>Loading bills...</Text>
         </View>
       </SafeAreaView>
@@ -245,7 +246,7 @@ export default function HomeScreen() {
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
               {bills.length === 0 ? (
-                <Zap size={32} color="#3B82F6" strokeWidth={2} />
+                <Zap size={32} color="#F59E0B" strokeWidth={2} />
               ) : (
                 <Search size={32} color="#64748B" strokeWidth={2} />
               )}
@@ -261,12 +262,12 @@ export default function HomeScreen() {
             </Text>
             {bills.length === 0 ? (
               <TouchableOpacity style={styles.emptyButton} onPress={handleCreateBill}>
-                <Plus size={16} color="#3B82F6" strokeWidth={2.5} />
+                <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
                 <Text style={styles.emptyButtonText}>Create Bill</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.emptyButton} onPress={clearFilters}>
-                <X size={16} color="#3B82F6" strokeWidth={2.5} />
+                <X size={16} color="#F59E0B" strokeWidth={2.5} />
                 <Text style={styles.emptyButtonText}>Clear Filters</Text>
               </TouchableOpacity>
             )}
@@ -328,7 +329,7 @@ export default function HomeScreen() {
                           {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
                         </Text>
                       </View>
-                      {isSelected && <Check size={16} color="#3B82F6" strokeWidth={2} />}
+                      {isSelected && <Check size={16} color="#F59E0B" strokeWidth={2} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -352,7 +353,7 @@ export default function HomeScreen() {
                           {role === 'all' ? 'All Roles' : role === 'host' ? 'Bills I Created' : 'Bills I Joined'}
                         </Text>
                       </View>
-                      {isSelected && <Check size={16} color="#3B82F6" strokeWidth={2} />}
+                      {isSelected && <Check size={16} color="#F59E0B" strokeWidth={2} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -360,30 +361,13 @@ export default function HomeScreen() {
 
               {/* Date Range Filter */}
               <View style={styles.filterGroup}>
-                <Text style={styles.filterGroupTitle}>Due Date Range</Text>
-                <View style={styles.dateRangeContainer}>
-                  <View style={styles.dateInputContainer}>
-                    <Calendar size={16} color="#64748B" strokeWidth={2} />
-                    <TextInput
-                      style={styles.dateInput}
-                      value={dateRange.start}
-                      onChangeText={(text) => setDateRange(prev => ({ ...prev, start: text }))}
-                      placeholder="Start date (YYYY-MM-DD)"
-                      placeholderTextColor="#64748B"
-                    />
-                  </View>
-                  <Text style={styles.dateRangeSeparator}>to</Text>
-                  <View style={styles.dateInputContainer}>
-                    <Calendar size={16} color="#64748B" strokeWidth={2} />
-                    <TextInput
-                      style={styles.dateInput}
-                      value={dateRange.end}
-                      onChangeText={(text) => setDateRange(prev => ({ ...prev, end: text }))}
-                      placeholder="End date (YYYY-MM-DD)"
-                      placeholderTextColor="#64748B"
-                    />
-                  </View>
-                </View>
+                <DateRangePicker
+                  startDate={dateRange.start}
+                  endDate={dateRange.end}
+                  onStartDateChange={(date) => setDateRange(prev => ({ ...prev, start: date }))}
+                  onEndDateChange={(date) => setDateRange(prev => ({ ...prev, end: date }))}
+                  label="Due Date Range"
+                />
               </View>
             </ScrollView>
 
@@ -438,7 +422,7 @@ export default function HomeScreen() {
                   <Text style={[styles.sortOptionText, isSelected && styles.selectedSortOptionText]}>
                     {getSortLabel(option)}
                   </Text>
-                  {isSelected && <Check size={16} color="#3B82F6" strokeWidth={2} />}
+                  {isSelected && <Check size={16} color="#F59E0B" strokeWidth={2} />}
                 </TouchableOpacity>
               );
             })}
@@ -479,7 +463,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -515,13 +499,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   createButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     width: 44,
     height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -568,8 +552,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   activeIconButton: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
   },
   activeDot: {
     position: 'absolute',
@@ -642,7 +626,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyButtonText: {
-    color: '#3B82F6',
+    color: '#F59E0B',
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -711,7 +695,7 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
   selectedFilterOption: {
-    borderColor: '#3B82F6',
+    borderColor: '#F59E0B',
     backgroundColor: '#1E293B',
   },
   filterOptionLeft: {
@@ -725,33 +709,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedFilterOptionText: {
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  dateRangeContainer: {
-    gap: 12,
-  },
-  dateInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 12,
-  },
-  dateInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#F8FAFC',
-    fontWeight: '500',
-  },
-  dateRangeSeparator: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
+    color: '#F59E0B',
     fontWeight: '600',
   },
   modalFooter: {
@@ -779,11 +737,11 @@ const styles = StyleSheet.create({
   },
   applyButton: {
     flex: 1,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -848,7 +806,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedSortOptionText: {
-    color: '#3B82F6',
+    color: '#F59E0B',
     fontWeight: '600',
   },
 });

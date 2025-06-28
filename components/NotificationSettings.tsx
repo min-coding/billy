@@ -98,7 +98,7 @@ export default function NotificationSettings() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.iconContainer}>
-          <Bell size={24} color="#3B82F6" strokeWidth={2} />
+          <Bell size={24} color="#F59E0B" strokeWidth={2} />
         </View>
         <View style={styles.headerText}>
           <Text style={styles.title}>Push Notifications</Text>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   enableButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F59E0B',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
