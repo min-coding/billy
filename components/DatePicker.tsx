@@ -77,7 +77,7 @@ export default function DatePicker({
     <View style={styles.container}>
       <Text style={styles.label}>
         {label}
-        {required && <Text style={styles.required}> *</Text>}
+        {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       
       <TouchableOpacity 
@@ -90,7 +90,7 @@ export default function DatePicker({
         </Text>
       </TouchableOpacity>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {showPicker && Platform.OS !== 'web' && (
         <DateTimePicker
