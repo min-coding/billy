@@ -47,18 +47,12 @@ export default function FriendsScreen() {
 
   // Debounced search for users by username
   const handleUsernameSearch = useCallback(async (text: string) => {
-    setUsernameSearch(text);
-    setSelectedUser(null);
-    
     if (text.length < 3) {
       setUsernameResults([]);
       return;
     }
-
-    if (isSearching) return; // Prevent multiple simultaneous searches
-    
+    if (isSearching) return;
     setIsSearching(true);
-    
     try {
       const { data, error } = await supabase
         .from('users')
@@ -66,7 +60,6 @@ export default function FriendsScreen() {
         .ilike('username', `%${text}%`)
         .neq('id', user?.id)
         .limit(10);
-        
       if (!error && data) {
         setUsernameResults(data);
       } else {
@@ -79,6 +72,12 @@ export default function FriendsScreen() {
       setIsSearching(false);
     }
   }, [user?.id, isSearching]);
+
+  // Handler for input change, stable reference
+  const onUsernameInputChange = useCallback((text: string) => {
+    setUsernameSearch(text);
+    setSelectedUser(null);
+  }, []);
 
   // Debounce the search function
   React.useEffect(() => {
@@ -208,7 +207,7 @@ export default function FriendsScreen() {
                       <TextInput
                         style={styles.emailInput}
                         value={usernameSearch}
-                        onChangeText={setUsernameSearch}
+                        onChangeText={onUsernameInputChange}
                         placeholder="Enter friend's username"
                         placeholderTextColor="#64748B"
                         autoCapitalize="none"
