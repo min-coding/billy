@@ -1583,6 +1583,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F8FAFC',
     letterSpacing: -0.3,
+    paddingBottom: 16,
   },
   costCard: {
     backgroundColor: '#0F172A',
