@@ -34,10 +34,9 @@ export default function DatePicker({
   );
 
   const handleDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowPicker(false);
-    }
-    
+    // Always hide the picker after a selection (for both iOS and Android)
+    setShowPicker(false);
+
     if (date) {
       setSelectedDate(date);
       // Format date as YYYY-MM-DD for consistency with existing code

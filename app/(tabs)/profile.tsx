@@ -392,7 +392,7 @@ export default function ProfileScreen() {
                 {/* Bell icon for show */}
                 <User size={24} color="#F59E0B" strokeWidth={2} />
                 <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: '600' }}>
-                  Push Notifications
+                  Notifications
                 </Text>
               </View>
               <LinearGradient
