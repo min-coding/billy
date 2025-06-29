@@ -2,26 +2,8 @@ import { Tabs } from 'expo-router';
 import { Receipt, Plus, User, Users, ChartBar as BarChart, Bell } from 'lucide-react-native';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNotifications } from '@/contexts/NotificationContext';
-
-function TabBarBadge({ count }: { count: number }) {
-  if (count === 0) return null;
-  
-  return (
-    <LinearGradient
-      colors={['#EF4444', '#DC2626']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.badge}
-    >
-      <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
-    </LinearGradient>
-  );
-}
 
 export default function TabLayout() {
-  const { unreadCount } = useNotifications();
-
   return (
     <Tabs
       screenOptions={{
@@ -75,7 +57,6 @@ export default function TabLayout() {
               ) : (
                 <Receipt size={size} color={color} strokeWidth={2} />
               )}
-              <TabBarBadge count={unreadCount} />
             </View>
           ),
         }}

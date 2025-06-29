@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ChatProvider } from '@/contexts/ChatContext';
-import { NotificationProvider } from '@/contexts/NotificationContext';
 import { useRouter, useSegments } from 'expo-router';
 import LoadingScreen from '@/components/LoadingScreen';
 
@@ -47,12 +46,10 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <ChatProvider>
-          <RootLayoutNav />
-          <StatusBar style="light" />
-        </ChatProvider>
-      </NotificationProvider>
+      <ChatProvider>
+        <RootLayoutNav />
+        <StatusBar style="light" />
+      </ChatProvider>
     </AuthProvider>
   );
 }

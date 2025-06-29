@@ -10,7 +10,6 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import BoltBadge from '@/components/BoltBadge';
-import NotificationSettings from '@/components/NotificationSettings';
 import { useBills } from '@/hooks/useBills';
 import { useFriends } from '@/hooks/useFriends';
 import { useRouter } from 'expo-router';
@@ -382,7 +381,33 @@ export default function ProfileScreen() {
           </LinearGradient>
 
           {/* Notification Settings */}
-          <NotificationSettings />
+          <LinearGradient
+            colors={['#0F172A', '#1E293B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ borderRadius: 12, margin: 20, padding: 20 }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {/* Bell icon for show */}
+                <User size={24} color="#F59E0B" strokeWidth={2} />
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: '600' }}>
+                  Push Notifications
+                </Text>
+              </View>
+              <LinearGradient
+                colors={['#F59E0B', '#EAB308']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Coming Soon ⏰</Text>
+              </LinearGradient>
+            </View>
+            <Text style={{ color: '#94A3B8', fontSize: 14, marginTop: 12 }}>
+              Get notified about bill updates, payments, and friend requests (coming soon)
+            </Text>
+          </LinearGradient>
 
           {/* Menu Section */}
           <LinearGradient
