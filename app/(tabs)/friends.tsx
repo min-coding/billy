@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +20,7 @@ export default function FriendsScreen() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Auto-refresh when screen comes into focus - but only once per focus
   useFocusEffect(
@@ -128,6 +129,15 @@ export default function FriendsScreen() {
     }
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
   return (
     <LinearGradient
       colors={['#0F172A', '#1E293B', '#334155']}
@@ -136,215 +146,70 @@ export default function FriendsScreen() {
       style={styles.gradientContainer}
     >
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Text style={styles.title}>Friends</Text>
-            <Text style={styles.subtitle}>Manage your friends list</Text>
-          </View>
-          <View style={styles.headerActions}>
-            {/* Friend Requests Button */}
-            {friendRequests.length > 0 && (
-              <LinearGradient
-                colors={['#1E293B', '#334155']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.requestsButtonGradient}
-              >
-                <TouchableOpacity 
-                  style={styles.requestsButton} 
-                  onPress={() => setShowRequestsModal(true)}
-                >
-                  <Bell size={18} color="#F59E0B" strokeWidth={2} />
-                  <LinearGradient
-                    colors={['#F59E0B', '#EAB308']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.notificationBadge}
-                  >
-                    <Text style={styles.notificationText}>{friendRequests.length}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </LinearGradient>
-            )}
-            
-            {/* Add Friend Button */}
+      <View style={styles.header}>
+      <View style={styles.headerContent}>
+        <Text style={styles.title}>Friends</Text>
+        <Text style={styles.subtitle}>Manage your friends list</Text>
+      </View>
+      <View style={styles.headerActions}>
+        {/* Friend Requests Button */}
+        <View style={styles.badgeWrapper}>
+          <LinearGradient
+            colors={['#1E293B', '#334155']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.requestsButtonGradient}
+          >
+            <TouchableOpacity 
+              style={styles.requestsButton} 
+              onPress={() => setShowRequestsModal(true)}
+            >
+              <Bell size={18} color="#F59E0B" strokeWidth={2} />
+            </TouchableOpacity>
+          </LinearGradient>
+          {friendRequests.length > 0 && (
             <LinearGradient
               colors={['#F59E0B', '#EAB308']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.addButtonGradient}
+              style={styles.notificationBadge}
             >
-              <TouchableOpacity 
-                style={styles.addButton} 
-                onPress={() => setIsAddingFriend(true)}
-              >
-                <UserPlus size={18} color="#FFFFFF" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </LinearGradient>
-          </View>
-        </View>
-
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Add Friend Section */}
-          {isAddingFriend && (
-            <LinearGradient
-              colors={['#1E293B', '#334155']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.sectionGradient}
-            >
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Add Friend by Username</Text>
-                <View style={styles.addFriendContainer}>
-                  <LinearGradient
-                    colors={['#0F172A', '#1E293B']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.inputContainerGradient}
-                  >
-                    <View style={styles.inputContainer}>
-                      <Search size={18} color="#64748B" strokeWidth={2} />
-                      <TextInput
-                        style={styles.emailInput}
-                        value={usernameSearch}
-                        onChangeText={onUsernameInputChange}
-                        placeholder="Enter friend's username"
-                        placeholderTextColor="#64748B"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                    </View>
-                  </LinearGradient>
-                  
-                  {/* Dropdown of matching usernames */}
-                  {usernameResults.length > 0 && (
-                    <LinearGradient
-                      colors={['#1E293B', '#334155']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.resultsContainer}
-                    >
-                      <View style={{ maxHeight: 200, borderRadius: 8, marginTop: 8 }}>
-                        {usernameResults.map((item) => {
-                          const isFriend = friends.some(f => f.id === item.id);
-                          const isRequested = outgoingRequests.some(
-                            r => r.toUserId === item.id && r.status === 'pending'
-                          );
-                          return (
-                            <View
-                              key={item.id}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                padding: 12,
-                                borderBottomWidth: 1,
-                                borderBottomColor: '#334155',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Image
-                                  source={{
-                                    uri:
-                                      item.avatar ||
-                                      'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
-                                  }}
-                                  style={{ width: 32, height: 32, borderRadius: 16, marginRight: 12 }}
-                                />
-                                <View>
-                                  <Text style={{ color: '#F8FAFC', fontWeight: '600' }}>@{item.username}</Text>
-                                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>{item.name}</Text>
-                                </View>
-                              </View>
-                              {isFriend ? (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
-                                  <Check size={18} color="#10B981" strokeWidth={2} />
-                                  <Text style={{ color: '#10B981', fontWeight: '600', marginLeft: 4 }}>Friends</Text>
-                                </View>
-                              ) : isRequested ? (
-                                <View style={{ marginLeft: 12 }}>
-                                  <Text style={{ color: '#F59E0B', fontWeight: '600' }}>Requested</Text>
-                                </View>
-                              ) : (
-                                <LinearGradient
-                                  colors={['#F59E0B', '#EAB308']}
-                                  start={{ x: 0, y: 0 }}
-                                  end={{ x: 1, y: 1 }}
-                                  style={{
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 6,
-                                    borderRadius: 8,
-                                    marginLeft: 12,
-                                  }}
-                                >
-                                  <TouchableOpacity
-                                    style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                    }}
-                                    onPress={() => handleSendFriendRequest(item.username)}
-                                    disabled={isSending}
-                                  >
-                                    <UserPlus size={16} color="#fff" strokeWidth={2} />
-                                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>
-                                      {isSending ? 'Sending...' : 'Add Friend'}
-                                    </Text>
-                                  </TouchableOpacity>
-                                </LinearGradient>
-                              )}
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </LinearGradient>
-                  )}
-                  
-                  {/* Show empty state when search has 3+ characters but no results */}
-                  {usernameSearch.length >= 3 && usernameResults.length === 0 && !isSearching && (
-                    <LinearGradient
-                      colors={['#1E293B', '#334155']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{ 
-                        borderRadius: 8, 
-                        marginTop: 8, 
-                        padding: 16,
-                        alignItems: 'center'
-                      }}
-                    >
-                      <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>
-                        No users found with username "{usernameSearch}"
-                      </Text>
-                      <Text style={{ color: '#475569', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-                        Make sure the username is correct and try again
-                      </Text>
-                    </LinearGradient>
-                  )}
-                  
-                  <View style={styles.addFriendButtons}>
-                    <LinearGradient
-                      colors={['#334155', '#475569']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.cancelButtonGradient}
-                    >
-                      <TouchableOpacity 
-                        style={styles.cancelButton} 
-                        onPress={() => {
-                          setIsAddingFriend(false);
-                          setUsernameSearch('');
-                          setUsernameResults([]);
-                        }}
-                      >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  </View>
-                </View>
-              </View>
+              <Text style={styles.notificationText}>{friendRequests.length}</Text>
             </LinearGradient>
           )}
+        </View>
 
+        {/* Add Friend Button */}
+        <LinearGradient
+          colors={['#F59E0B', '#EAB308']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.addButtonGradient}
+        >
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={() => setIsAddingFriend(true)}
+          >
+            <UserPlus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+    </View>
+  
+
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#F59E0B"
+              colors={["#F59E0B"]}
+              progressBackgroundColor="#1E293B"
+            />
+          }
+        >
           {/* Search Section */}
           <LinearGradient
             colors={['#1E293B', '#334155']}
@@ -485,6 +350,173 @@ export default function FriendsScreen() {
             </View>
           </LinearGradient>
         </ScrollView>
+
+        {/* Add Friend Modal - Outside ScrollView to avoid VirtualizedList warning */}
+        {isAddingFriend && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15,23,42,0.95)',
+            zIndex: 100,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+            <LinearGradient
+              colors={['#1E293B', '#334155']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 16, width: '90%', maxWidth: 400, padding: 20 }}
+            >
+              {/* Modal Header with Close Button */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={styles.sectionTitle}>Add Friend by Username</Text>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setIsAddingFriend(false);
+                    setUsernameSearch('');
+                    setUsernameResults([]);
+                  }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    backgroundColor: '#0F172A',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <X size={18} color="#64748B" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+              
+              <LinearGradient
+                colors={['#0F172A', '#1E293B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.inputContainerGradient}
+              >
+                <View style={styles.inputContainer}>
+                  <Search size={18} color="#64748B" strokeWidth={2} />
+                  <TextInput
+                    style={styles.emailInput}
+                    value={usernameSearch}
+                    onChangeText={onUsernameInputChange}
+                    placeholder="Enter friend's username"
+                    placeholderTextColor="#64748B"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              </LinearGradient>
+              
+              {/* Dropdown of matching usernames */}
+              <View style={{ maxHeight: 300, marginTop: 12 }}>
+                <FlatList
+                  data={usernameResults}
+                  keyExtractor={item => item.id}
+                  renderItem={({ item }) => {
+                    const isFriend = friends.some(f => f.id === item.id);
+                    const isRequested = outgoingRequests.some(
+                      r => r.toUserId === item.id && r.status === 'pending'
+                    );
+                    return (
+                      <View
+                        key={item.id}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          padding: 12,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#334155',
+                        }}
+                      >
+                        {/* Left: Avatar and Info */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                          <Image
+                            source={{
+                              uri:
+                                item.avatar ||
+                                'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+                            }}
+                            style={{ width: 32, height: 32, borderRadius: 16, marginRight: 12 }}
+                          />
+                          <View style={{ minWidth: 0 }}>
+                            <Text style={{ color: '#F8FAFC', fontWeight: '600' }} numberOfLines={1} ellipsizeMode="tail">@{item.username}</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 13 }} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+                          </View>
+                        </View>
+                        {/* Right: Button/Status */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', minWidth: 100 }}>
+                          {isFriend ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <Check size={18} color="#10B981" strokeWidth={2} />
+                              <Text style={{ color: '#10B981', fontWeight: '600', marginLeft: 4 }}>Friends</Text>
+                            </View>
+                          ) : isRequested ? (
+                            <View>
+                              <Text style={{ color: '#F59E0B', fontWeight: '600' }}>Requested</Text>
+                            </View>
+                          ) : (
+                            <LinearGradient
+                              colors={['#F59E0B', '#EAB308']}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                              }}
+                            >
+                              <TouchableOpacity
+                                style={{ flexDirection: 'row', alignItems: 'center' }}
+                                onPress={() => handleSendFriendRequest(item.username)}
+                                disabled={isSending}
+                              >
+                                <UserPlus size={16} color="#fff" strokeWidth={2} />
+                                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>
+                                  {isSending ? 'Sending...' : 'Add Friend'}
+                                </Text>
+                              </TouchableOpacity>
+                            </LinearGradient>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  }}
+                  keyboardShouldPersistTaps="handled"
+                  style={{ borderRadius: 8 }}
+                />
+              </View>
+              
+              {/* Show empty state when search has 3+ characters but no results */}
+              {usernameSearch.length >= 3 && usernameResults.length === 0 && !isSearching && (
+                <LinearGradient
+                  colors={['#1E293B', '#334155']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ 
+                    borderRadius: 8, 
+                    marginTop: 8, 
+                    padding: 16,
+                    alignItems: 'center'
+                  }}
+                >
+                  <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '500' }}>
+                    No users found with username "{usernameSearch}"
+                  </Text>
+                  <Text style={{ color: '#475569', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                    Make sure the username is correct and try again
+                  </Text>
+                </LinearGradient>
+              )}
+              
+             
+            </LinearGradient>
+          </View>
+        )}
 
         {/* Friend Requests Modal */}
         <Modal
@@ -629,6 +661,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  badgeWrapper: {
+    position: 'relative',
+    width: 44,
+    height: 44,
+  },
   requestsButtonGradient: {
     width: 44,
     height: 44,
@@ -637,7 +674,6 @@ const styles = StyleSheet.create({
     borderColor: '#F59E0B',
   },
   requestsButton: {
-    position: 'relative',
     width: 44,
     height: 44,
     alignItems: 'center',
@@ -645,19 +681,22 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    borderRadius: 10,
+    top: -4,
+    right: -4,
+    borderRadius: 12,
     minWidth: 20,
     height: 20,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F59E0B',
     borderWidth: 2,
     borderColor: '#0F172A',
+    zIndex: 20,
   },
   notificationText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
   },
   addButtonGradient: {

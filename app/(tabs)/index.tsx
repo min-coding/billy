@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { bills, loading, error, refetch } = useBills();
+  const [refreshing, setRefreshing] = useState(false);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,6 +141,15 @@ export default function HomeScreen() {
     }
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
   React.useEffect(() => {
     if (Platform.OS === 'web') {
       refetch();
@@ -241,7 +251,19 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#F59E0B"
+            colors={["#F59E0B"]}
+            progressBackgroundColor="#1E293B"
+          />
+        }
+      >
         {filteredAndSortedBills.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>

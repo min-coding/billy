@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(profileError.message);
       }
   
-      alert('Account created! You are now signed in.');
+      alert('Account created!');
       router.replace('/'); // or to your authenticated homepage
     } catch (error) {
       console.error('Signup error:', error);

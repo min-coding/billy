@@ -196,14 +196,35 @@ export function useFriends() {
       }
 
       // Send friend request
-      const { error } = await supabase
+      const { data: newRequest, error } = await supabase
         .from('friend_requests')
         .insert({
           from_user_id: user.id,
           to_user_id: targetUser.id,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Immediately update local state to show "Requested" status
+      if (newRequest) {
+        const newOutgoingRequest = {
+          id: newRequest.id,
+          fromUserId: newRequest.from_user_id,
+          toUserId: newRequest.to_user_id,
+          toUser: {
+            id: targetUser.id,
+            name: targetUser.name,
+            email: targetUser.email,
+            avatar: targetUser.avatar,
+          },
+          status: 'pending' as const,
+          createdAt: new Date(newRequest.created_at),
+        };
+        
+        setOutgoingRequests(prev => [...prev, newOutgoingRequest]);
+      }
 
       return targetUser.name;
     } catch (err) {

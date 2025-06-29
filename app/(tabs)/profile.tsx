@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { User, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink } from 'lucide-react-native';
@@ -22,8 +22,9 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState(user?.email || '');
   const [selectedAvatarUri, setSelectedAvatarUri] = useState(user?.avatar || null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const { bills, loading: billsLoading } = useBills();
-  const { friends, loading: friendsLoading } = useFriends();
+  const { bills, loading: billsLoading, refetch: refetchBills } = useBills();
+  const { friends, refetch: refetchFriends } = useFriends();
+  const [refreshing, setRefreshing] = useState(false);
 
   // Calculate total spent (sum of totalAmount for all bills where user is a participant)
   const totalSpent = bills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
@@ -174,6 +175,15 @@ export default function ProfileScreen() {
     },
   ];
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchBills(), refetchFriends()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchBills, refetchFriends]);
+
   if (!user) return null;
 
   return (
@@ -203,7 +213,19 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#F59E0B"
+              colors={["#F59E0B"]}
+              progressBackgroundColor="#1E293B"
+            />
+          }
+        >
           {/* Profile Section */}
           <LinearGradient
             colors={['#1E293B', '#334155']}
