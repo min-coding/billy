@@ -106,6 +106,7 @@ export default function DatePicker({
           onChange={handleDateChange}
           minimumDate={minimumDate}
           style={styles.picker}
+          locale="en"
         />
       )}
     </View>
