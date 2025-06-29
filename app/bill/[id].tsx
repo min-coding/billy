@@ -10,6 +10,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { useFriends } from '@/hooks/useFriends';
 import { supabase } from '@/lib/supabase';
 import * as Clipboard from 'expo-clipboard';
+import { Copy } from 'lucide-react-native';
 
 export default function BillDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -956,17 +957,21 @@ export default function BillDetailScreen() {
               <Text style={styles.bankTitle}>Send payment to:</Text>
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Clipboard.setStringAsync(bill.bankDetails.accountNumber);
-                  Alert.alert('Copied!', 'Bank account number copied to clipboard.');
-                }}
-                activeOpacity={0.7}
-              >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={styles.accountNumber}>
-                  Account: {bill.bankDetails.accountNumber} <Text style={{color: '#3B82F6'}}>(Tap to copy)</Text>
+                  Account: {bill.bankDetails.accountNumber}
                 </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    Clipboard.setStringAsync(bill.bankDetails.accountNumber);
+                    Alert.alert('Copied!', 'Bank account number copied to clipboard.');
+                  }}
+                  activeOpacity={0.7}
+                  style={{ marginLeft: 8 }}
+                >
+                  <Copy size={18} color="#3B82F6" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -1745,7 +1750,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#3B82F6',
     fontWeight: '600',
-    letterSpacing: 1,
+
   },
   footer: {
     backgroundColor: '#1E293B',
