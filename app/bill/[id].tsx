@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { useFriends } from '@/hooks/useFriends';
 import { supabase } from '@/lib/supabase';
+import * as Clipboard from 'expo-clipboard';
 
 export default function BillDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -955,7 +956,17 @@ export default function BillDetailScreen() {
               <Text style={styles.bankTitle}>Send payment to:</Text>
               <Text style={styles.bankName}>{bill.bankDetails.bankName}</Text>
               <Text style={styles.accountName}>{bill.bankDetails.accountName}</Text>
-              <Text style={styles.accountNumber}>Account: {bill.bankDetails.accountNumber}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Clipboard.setStringAsync(bill.bankDetails.accountNumber);
+                  Alert.alert('Copied!', 'Bank account number copied to clipboard.');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.accountNumber}>
+                  Account: {bill.bankDetails.accountNumber} <Text style={{color: '#3B82F6'}}>(Tap to copy)</Text>
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
