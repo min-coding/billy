@@ -13,6 +13,12 @@ interface DatePickerProps {
   required?: boolean;
 }
 
+// Utility to parse YYYY-MM-DD as local date
+function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export default function DatePicker({
   label,
   value,
@@ -24,7 +30,7 @@ export default function DatePicker({
 }: DatePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(
-    value ? new Date(value) : new Date()
+    value ? parseLocalDate(value) : new Date()
   );
 
   const handleDateChange = (event: any, date?: Date) => {
@@ -42,7 +48,7 @@ export default function DatePicker({
 
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',

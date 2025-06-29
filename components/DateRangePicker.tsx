@@ -11,6 +11,12 @@ interface DateRangePickerProps {
   label?: string;
 }
 
+// Utility to parse YYYY-MM-DD as local date
+function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export default function DateRangePicker({
   startDate,
   endDate,
@@ -21,10 +27,10 @@ export default function DateRangePicker({
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [selectedStartDate, setSelectedStartDate] = useState<Date>(
-    startDate ? new Date(startDate) : new Date()
+    startDate ? parseLocalDate(startDate) : new Date()
   );
   const [selectedEndDate, setSelectedEndDate] = useState<Date>(
-    endDate ? new Date(endDate) : new Date()
+    endDate ? parseLocalDate(endDate) : new Date()
   );
 
   const handleStartDateChange = (event: any, date?: Date) => {
@@ -53,7 +59,7 @@ export default function DateRangePicker({
 
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
