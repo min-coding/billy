@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AuthUser, AuthState, LoginCredentials, SignupCredentials } from '@/types/auth';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
+import { router } from 'expo-router';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -136,14 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.user) {
         throw new Error('Failed to create user account');
       }
-      // Sign in the user to set auth.uid()
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password,
-      });
-      if (signInError) {
-        throw new Error(signInError.message);
-      }
       // Now insert the user profile
       const { error: profileError } = await supabase
         .from('users')
@@ -157,7 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError) {
         throw new Error(profileError.message); // Show the real error
       }
-      // Auth state will be updated by the listener
+      // Redirect to login page after successful signup
+      alert('Account created! Please sign in.');
+      router.replace('/(auth)/login');
+      return;
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
