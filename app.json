@@ -7,12 +7,14 @@
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.billy",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Billy uses your camera to let you take photos of receipts and payment slips for bill verification.",
+        "NSPhotoLibraryUsageDescription": "Billy needs access to your photo library so you can upload receipts, payment slips, and profile pictures."
       },
       "icon": {
         "light": "./assets/images/ios-light.png",
@@ -31,7 +33,7 @@
       "expo-web-browser"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     },
     "android": {
       "package": "com.anonymous.billy",
@@ -51,6 +53,7 @@
     "updates": {
       "url": "https://u.expo.dev/da9ab0ea-9a14-4e1c-9e5c-58465f70540b"
     },
-    "owner": "mindot20"
+    "owner": "mindot20",
+    "jsEngine": "jsc"
   }
 }
