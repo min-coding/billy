@@ -1,9 +1,11 @@
 // components/BoltBadge.tsx
 import React, { useRef, useEffect } from "react";
 import { View, Animated, Pressable, Image, StyleSheet, Linking, Platform } from "react-native";
+import badgeImg from "../assets/images/bolt-badge.png"
 
 const BADGE_URL = "https://bolt.new/?rid=os72mi";
-const BADGE_IMG = "https://storage.bolt.army/white_circle_360x360.png";
+const BADGE_IMG = badgeImg;
+
 
 export default function BoltBadge() {
   const introAnim = useRef(new Animated.Value(0)).current;
@@ -72,7 +74,7 @@ export default function BoltBadge() {
         style={styles.link}
       >
         <Animated.Image
-          source={{ uri: BADGE_IMG }}
+          source={BADGE_IMG}
           accessibilityLabel="Built with Bolt.new badge"
           style={[
             styles.badge,
