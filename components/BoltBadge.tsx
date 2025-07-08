@@ -1,11 +1,8 @@
 // components/BoltBadge.tsx
 import React, { useRef, useEffect } from "react";
 import { View, Animated, Pressable, Image, StyleSheet, Linking, Platform } from "react-native";
-import badgeImg from "../assets/images/bolt-badge.png"
 
 const BADGE_URL = "https://bolt.new/?rid=os72mi";
-const BADGE_IMG = badgeImg;
-
 
 export default function BoltBadge() {
   const introAnim = useRef(new Animated.Value(0)).current;
@@ -19,6 +16,15 @@ export default function BoltBadge() {
       delay: 1000,
       useNativeDriver: true,
     }).start();
+
+    // Add listeners to prevent warning
+    const scaleListener = scaleAnim.addListener(() => {});
+    const rotateListener = rotateAnim.addListener(() => {});
+
+    return () => {
+      scaleAnim.removeListener(scaleListener);
+      rotateAnim.removeListener(rotateListener);
+    };
   }, []);
 
   const handlePressIn = () => {
@@ -74,7 +80,7 @@ export default function BoltBadge() {
         style={styles.link}
       >
         <Animated.Image
-          source={BADGE_IMG}
+          source={require("@/assets/images/bolt-badge.png")}
           accessibilityLabel="Built with Bolt.new badge"
           style={[
             styles.badge,
