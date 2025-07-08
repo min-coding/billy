@@ -86,7 +86,7 @@ export default function AboutScreen() {
         <View style={styles.heroSection}>
           <View style={styles.logoContainer}>
             <Image 
-              source={require('@/assets/images/ios-light.png')} 
+              source={require('../../assets/images/ios-light.png')} 
               style={styles.logo}
               resizeMode="contain"
             />

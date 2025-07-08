@@ -80,7 +80,7 @@ export default function BoltBadge() {
         style={styles.link}
       >
         <Animated.Image
-          source={require("@/assets/images/bolt-badge.png")}
+          source={require("../../assets/images/bolt-badge.png")}
           accessibilityLabel="Built with Bolt.new badge"
           style={[
             styles.badge,
@@ -115,9 +115,6 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "red",
-    borderColor: "lime",
-    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
