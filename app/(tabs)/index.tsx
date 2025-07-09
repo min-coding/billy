@@ -9,7 +9,6 @@ import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
 import BoltBadge from '@/components/BoltBadge';
 import DateRangePicker from '@/components/DateRangePicker';
-import NotificationBell from '@/components/NotificationBell';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
 type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
@@ -181,12 +180,9 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <View style={styles.headerActions}>
-            <NotificationBell />
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateBill}>
-              <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.retryButton} onPress={() => window.location.reload()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -511,11 +507,6 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
   },
   title: {
     fontSize: 28,
