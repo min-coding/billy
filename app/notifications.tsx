@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, A
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Bell, Calendar, Clock, CheckCircle, Trash2, MarkAsRead } from 'lucide-react-native';
+import { ArrowLeft, Bell, Calendar, Clock, CircleCheck as CheckCircle, Trash2, BookMarked as MarkAsRead } from 'lucide-react-native';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
