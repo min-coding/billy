@@ -13,6 +13,7 @@ import BoltBadge from '@/components/BoltBadge';
 import { useBills } from '@/hooks/useBills';
 import { useFriends } from '@/hooks/useFriends';
 import { useRouter } from 'expo-router';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
@@ -200,16 +201,19 @@ export default function ProfileScreen() {
             <Text style={styles.subtitle}>Manage your account</Text>
           </View>
           {!isEditing && (
-            <LinearGradient
-              colors={['#1E293B', '#334155']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.editButtonGradient}
-            >
-              <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-                <UserPen size={18} color="#F59E0B" strokeWidth={2} />
-              </TouchableOpacity>
-            </LinearGradient>
+            <View style={styles.headerActions}>
+              <NotificationBell />
+              <LinearGradient
+                colors={['#1E293B', '#334155']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.editButtonGradient}
+              >
+                <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
+                  <UserPen size={18} color="#F59E0B" strokeWidth={2} />
+                </TouchableOpacity>
+              </LinearGradient>
+            </View>
           )}
         </View>
 
@@ -519,6 +523,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#94A3B8',
     fontWeight: '500',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   editButtonGradient: {
     width: 40,
