@@ -80,7 +80,7 @@ export default function BoltBadge() {
         style={styles.link}
       >
         <Animated.Image
-          source={require("../../assets/images/bolt-badge.png")}
+          source={require("../assets/images/bolt-badge.png")}
           accessibilityLabel="Built with Bolt.new badge"
           style={[
             styles.badge,
