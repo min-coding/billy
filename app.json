@@ -20,6 +20,9 @@
         "light": "./assets/images/ios-light.png",
         "dark": "./assets/images/ios-light.png",
         "tinted": "./assets/images/ios-light.png"
+      },
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "web": {
@@ -30,7 +33,13 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/billy-transparent.png"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
