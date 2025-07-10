@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform, RefreshControl } from 'react-native';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,10 @@ import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
 import BoltBadge from '@/components/BoltBadge';
 import DateRangePicker from '@/components/DateRangePicker';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import * as Clipboard from 'expo-clipboard';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
 type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
@@ -18,6 +22,15 @@ interface DateRange {
   start: string;
   end: string;
 }
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -164,6 +177,30 @@ export default function HomeScreen() {
     );
   }
 
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync()
+      .then(token => setExpoPushToken(token ?? ''))
+      .catch((error) => setExpoPushToken(`${error}`));
+
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      setNotification(notification);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log(response);
+    });
+
+    return () => {
+      if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
+      if (responseListener.current) Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -190,6 +227,32 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Display Expo Push Token for easy copy-paste */}
+      {expoPushToken ? (
+        <View style={{ backgroundColor: '#222', padding: 10, margin: 10, borderRadius: 8 }}>
+          <Text selectable style={{ color: '#fff', fontSize: 12 }}>
+            Expo Push Token:
+          </Text>
+          <Text selectable style={{ color: '#fff', fontSize: 12 }}>
+            {expoPushToken}
+          </Text>
+          <TouchableOpacity
+            style={{
+              marginTop: 6,
+              backgroundColor: '#F59E0B',
+              padding: 6,
+              borderRadius: 6,
+              alignSelf: 'flex-start',
+            }}
+            onPress={() => {
+              Clipboard.setStringAsync(expoPushToken);
+              Alert.alert('Copied!', 'Push token copied to clipboard.');
+            }}
+          >
+            <Text style={{ color: '#222', fontWeight: 'bold' }}>Copy Token</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <View style={{ flex: 1, position: 'relative' }}>
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -453,6 +516,49 @@ export default function HomeScreen() {
       </Modal>
     </SafeAreaView>
   );
+}
+
+async function registerForPushNotificationsAsync() {
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      alert('Permission not granted to get push token for push notification!');
+      return;
+    }
+    const projectId =
+      Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    if (!projectId) {
+      alert('Project ID not found');
+      return;
+    }
+    try {
+      const pushTokenString = (
+        await Notifications.getExpoPushTokenAsync({
+          projectId,
+        })
+      ).data;
+      console.log(pushTokenString);
+      return pushTokenString;
+    } catch (e) {
+      alert(`${e}`);
+    }
+  } else {
+    alert('Must use physical device for push notifications');
+  }
 }
 
 const styles = StyleSheet.create({
