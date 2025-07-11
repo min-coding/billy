@@ -13,6 +13,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import * as Clipboard from 'expo-clipboard';
+import { supabase } from '@/lib/supabase';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
 type StatusFilter = 'all' | 'select' | 'pay' | 'closed';
@@ -184,7 +185,35 @@ export default function HomeScreen() {
 
   useEffect(() => {
     registerForPushNotificationsAsync()
-      .then(token => setExpoPushToken(token ?? ''))
+      .then(async (token) => {
+        if (token && user?.id) {
+          setExpoPushToken(token);
+          
+          // Save push token to database
+          try {
+            const { error } = await supabase
+              .from('user_push_tokens')
+              .upsert({
+                user_id: user.id,
+                token: token,
+                platform: Platform.OS,
+                device_id: Constants.deviceId || 'unknown'
+              }, {
+                onConflict: 'user_id,token'
+              });
+            
+            if (error) {
+              console.error('Failed to save push token:', error);
+            } else {
+              console.log('Push token saved successfully:', token);
+            }
+          } catch (error) {
+            console.error('Error saving push token:', error);
+          }
+        } else {
+          setExpoPushToken(token ?? '');
+        }
+      })
       .catch((error) => setExpoPushToken(`${error}`));
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
@@ -199,7 +228,7 @@ export default function HomeScreen() {
       if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
       if (responseListener.current) Notifications.removeNotificationSubscription(responseListener.current);
     };
-  }, []);
+  }, [user?.id]);
 
   if (loading) {
     return (
