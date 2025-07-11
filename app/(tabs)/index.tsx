@@ -191,19 +191,24 @@ export default function HomeScreen() {
           
           // Save push token to database
           try {
+            console.log('Attempting to save push token for user:', user.id);
+            console.log('Token to save:', token);
+            
             const { error } = await supabase
               .from('user_push_tokens')
               .upsert({
                 user_id: user.id,
-                token: token,
-                platform: Platform.OS,
-                device_id: Constants.deviceId || 'unknown'
+                token: token
               }, {
-                onConflict: 'user_id,token'
+                onConflict: 'token'
               });
             
             if (error) {
               console.error('Failed to save push token:', error);
+              console.error('User ID:', user.id);
+              console.error('Auth session check...');
+              const { data: { session } } = await supabase.auth.getSession();
+              console.error('Current session:', session?.user?.id);
             } else {
               console.log('Push token saved successfully:', token);
             }
