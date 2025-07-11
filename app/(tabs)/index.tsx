@@ -186,34 +186,37 @@ export default function HomeScreen() {
   useEffect(() => {
     registerForPushNotificationsAsync()
       .then(async (token) => {
-        if (token && user?.id) {
-          setExpoPushToken(token);
-          
-          // Save push token to database
-          try {
-            console.log('Attempting to save push token for user:', user.id);
-            console.log('Token to save:', token);
-            
-            const { error } = await supabase
-              .from('user_push_tokens')
-              .upsert({
-                user_id: user.id,
-                token: token
-              }, {
-                onConflict: 'token'
-              });
-            
-            if (error) {
-              console.error('Failed to save push token:', error);
-              console.error('User ID:', user.id);
-              console.error('Auth session check...');
-              const { data: { session } } = await supabase.auth.getSession();
-              console.error('Current session:', session?.user?.id);
-            } else {
-              console.log('Push token saved successfully:', token);
+        if (token) {
+          // Always get the authenticated user's ID from Supabase Auth
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser?.id) {
+            setExpoPushToken(token);
+            // Save push token to database
+            try {
+              console.log('Attempting to save push token for user:', authUser.id);
+              console.log('Token to save:', token);
+              const { error } = await supabase
+                .from('user_push_tokens')
+                .upsert({
+                  user_id: authUser.id,
+                  token: token
+                }, {
+                  onConflict: 'token'
+                });
+              if (error) {
+                console.error('Failed to save push token:', error);
+                console.error('User ID:', authUser.id);
+                console.error('Auth session check...');
+                const { data: { session } } = await supabase.auth.getSession();
+                console.error('Current session:', session?.user?.id);
+              } else {
+                console.log('Push token saved successfully:', token);
+              }
+            } catch (error) {
+              console.error('Error saving push token:', error);
             }
-          } catch (error) {
-            console.error('Error saving push token:', error);
+          } else {
+            setExpoPushToken(token ?? '');
           }
         } else {
           setExpoPushToken(token ?? '');
