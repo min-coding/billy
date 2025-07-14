@@ -228,13 +228,11 @@ export default function HomeScreen() {
       setNotification(notification);
     });
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log(response);
-    });
+    // Removed responseListener for notification taps; now handled globally
 
     return () => {
       if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
-      if (responseListener.current) Notifications.removeNotificationSubscription(responseListener.current);
+      // Removed responseListener cleanup
     };
   }, [user?.id]);
 
@@ -291,122 +289,122 @@ export default function HomeScreen() {
         </View>
       ) : null}
       <View style={{ flex: 1, position: 'relative' }}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.titleSection}>
-              <Text style={styles.title}>Bills</Text>
-              <Text style={styles.subtitle}>
-                {filteredAndSortedBills.length} of {bills.length} bills
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateBill}>
-              <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Bills</Text>
+            <Text style={styles.subtitle}>
+              {filteredAndSortedBills.length} of {bills.length} bills
+            </Text>
           </View>
+          <TouchableOpacity style={styles.createButton} onPress={handleCreateBill}>
+            <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Compact Search and Filter Bar */}
-        <View style={styles.searchFilterSection}>
-          <View style={styles.searchFilterRow}>
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <Search size={16} color="#64748B" strokeWidth={2} />
-              <TextInput
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search bills..."
-                placeholderTextColor="#64748B"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <X size={16} color="#64748B" strokeWidth={2} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Filter Button */}
-            <TouchableOpacity 
-              style={[styles.iconButton, hasActiveFilters && styles.activeIconButton]} 
-              onPress={() => setShowFilterModal(true)}
-            >
-              <Filter size={16} color={hasActiveFilters ? "#FFFFFF" : "#64748B"} strokeWidth={2} />
-              {hasActiveFilters && <View style={styles.activeDot} />}
-            </TouchableOpacity>
-
-            {/* Sort Button */}
-            <TouchableOpacity 
-              style={styles.iconButton} 
-              onPress={() => setShowSortModal(true)}
-            >
-              <ArrowUpDown size={16} color="#64748B" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Clear Filters - Only show when filters are active */}
-          {hasActiveFilters && (
-            <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-              <X size={12} color="#EF4444" strokeWidth={2} />
-              <Text style={styles.clearFiltersText}>Clear filters</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <ScrollView 
-          style={styles.scrollView} 
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#F59E0B"
-              colors={["#F59E0B"]}
-              progressBackgroundColor="#1E293B"
+      {/* Compact Search and Filter Bar */}
+      <View style={styles.searchFilterSection}>
+        <View style={styles.searchFilterRow}>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Search size={16} color="#64748B" strokeWidth={2} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search bills..."
+              placeholderTextColor="#64748B"
             />
-          }
-        >
-          {filteredAndSortedBills.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                {bills.length === 0 ? (
-                  <Zap size={32} color="#F59E0B" strokeWidth={2} />
-                ) : (
-                  <Search size={32} color="#64748B" strokeWidth={2} />
-                )}
-              </View>
-              <Text style={styles.emptyTitle}>
-                {bills.length === 0 ? 'No bills yet' : 'No bills found'}
-              </Text>
-              <Text style={styles.emptyDescription}>
-                {bills.length === 0 
-                  ? 'Create your first bill to start splitting expenses with friends'
-                  : 'Try adjusting your search or filters'
-                }
-              </Text>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={16} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Filter Button */}
+          <TouchableOpacity 
+            style={[styles.iconButton, hasActiveFilters && styles.activeIconButton]} 
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Filter size={16} color={hasActiveFilters ? "#FFFFFF" : "#64748B"} strokeWidth={2} />
+            {hasActiveFilters && <View style={styles.activeDot} />}
+          </TouchableOpacity>
+
+          {/* Sort Button */}
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            onPress={() => setShowSortModal(true)}
+          >
+            <ArrowUpDown size={16} color="#64748B" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Clear Filters - Only show when filters are active */}
+        {hasActiveFilters && (
+          <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+            <X size={12} color="#EF4444" strokeWidth={2} />
+            <Text style={styles.clearFiltersText}>Clear filters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#F59E0B"
+            colors={["#F59E0B"]}
+            progressBackgroundColor="#1E293B"
+          />
+        }
+      >
+        {filteredAndSortedBills.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
               {bills.length === 0 ? (
-                <TouchableOpacity style={styles.emptyButton} onPress={handleCreateBill}>
-                  <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
-                  <Text style={styles.emptyButtonText}>Create Bill</Text>
-                </TouchableOpacity>
+                <Zap size={32} color="#F59E0B" strokeWidth={2} />
               ) : (
-                <TouchableOpacity style={styles.emptyButton} onPress={clearFilters}>
-                  <X size={16} color="#F59E0B" strokeWidth={2.5} />
-                  <Text style={styles.emptyButtonText}>Clear Filters</Text>
-                </TouchableOpacity>
+                <Search size={32} color="#64748B" strokeWidth={2} />
               )}
             </View>
+            <Text style={styles.emptyTitle}>
+              {bills.length === 0 ? 'No bills yet' : 'No bills found'}
+            </Text>
+            <Text style={styles.emptyDescription}>
+              {bills.length === 0 
+                ? 'Create your first bill to start splitting expenses with friends'
+                : 'Try adjusting your search or filters'
+              }
+            </Text>
+            {bills.length === 0 ? (
+              <TouchableOpacity style={styles.emptyButton} onPress={handleCreateBill}>
+                <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
+                <Text style={styles.emptyButtonText}>Create Bill</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.emptyButton} onPress={clearFilters}>
+                <X size={16} color="#F59E0B" strokeWidth={2.5} />
+                <Text style={styles.emptyButtonText}>Clear Filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           ) :
-            filteredAndSortedBills.map((bill) => (
-              <BillCard key={bill.id} bill={{
-                ...bill,
-                description: bill.description ?? undefined,
-                due_date: bill.due_date ?? undefined,
-                tag: bill.tag ?? undefined
-              }} />
-            ))
+          filteredAndSortedBills.map((bill) => (
+            <BillCard key={bill.id} bill={{
+              ...bill,
+              description: bill.description ?? undefined,
+              due_date: bill.due_date ?? undefined,
+              tag: bill.tag ?? undefined
+            }} />
+          ))
           }
-        </ScrollView>
-        <BoltBadge />
+      </ScrollView>
+      <BoltBadge />
       </View>
       {/* Filter Modal */}
       <Modal

@@ -14,6 +14,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -40,14 +42,19 @@ function RootLayoutNav() {
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      
-      // Check if it's a bill-related notification with bill_id
-      if (data?.bill_id) {
-        console.log('Navigating to bill:', data.bill_id);
+      // Centralized handler: use 'target' or 'route' field for navigation
+      if (typeof data?.route === 'string' && data.route) {
+        router.push(data.route);
+      } else if (typeof data?.target === 'string' && data.target) {
+        router.push(data.target);
+      } else if (typeof data?.bill_id === 'string' && data.bill_id) {
+        // Fallback for legacy notifications
         router.push(`/bill/${data.bill_id}`);
+      } else {
+        // Optionally handle other types or log
+        console.log('Notification tapped, no navigation target:', data);
       }
     });
-
     return () => subscription.remove();
   }, [router]);
 
