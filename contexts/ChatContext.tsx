@@ -190,7 +190,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (messageData?.sender_id && messageData?.bill_id) {
         await supabase
           .from('bill_participants')
-          .update({ payment_status: status })
+          .update({ payment_status: status === 'verified'?'verified':'unpaid'})
           .eq('bill_id', messageData.bill_id)
           .eq('user_id', messageData.sender_id);
       }
