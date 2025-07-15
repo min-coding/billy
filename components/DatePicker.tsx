@@ -90,9 +90,7 @@ export default function DatePicker({
         onPress={openPicker}
       >
         <Calendar size={18} color="#64748B" strokeWidth={2} />
-        <Text style={[styles.dateText, !value && styles.placeholderText]}>
-          {value ? formatDisplayDate(value) : placeholder}
-        </Text>
+          <Text style={{ color: '#F8FAFC' }}>{value ? formatDisplayDate(value) : placeholder}</Text>
       </TouchableOpacity>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -139,12 +137,6 @@ const styles = StyleSheet.create({
   },
   dateButtonError: {
     borderColor: '#EF4444',
-  },
-  dateText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#F8FAFC',
-    fontWeight: '500',
   },
   placeholderText: {
     color: '#64748B',

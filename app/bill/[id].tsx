@@ -11,6 +11,7 @@ import { useFriends } from '@/hooks/useFriends';
 import { supabase } from '@/lib/supabase';
 import * as Clipboard from 'expo-clipboard';
 import { Copy } from 'lucide-react-native';
+import DatePicker from '@/components/DatePicker';
 
 export default function BillDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -102,9 +103,10 @@ export default function BillDetailScreen() {
         .eq('bill_id', billId)
         .limit(3);
       setReceiptImages(receiptsData || []);
+      
       setBill({ 
         ...billData, 
-        dueDate: billData.due_date,
+        dueDate: billData.due_date ? billData.due_date.slice(0, 10) : '',
         totalAmount: typeof billData.total_amount === 'number' && !isNaN(billData.total_amount) ? billData.total_amount : 0,
         items, 
         participants,
@@ -114,6 +116,7 @@ export default function BillDetailScreen() {
           accountNumber: billData.account_number,
         }
       });
+      console.log(`setBill due date ${billData.due_date}`)
       // Update hasSubmitted for the current user
       const currentUserParticipant = participants.find(p => p.id === user?.id);
       setHasSubmitted(!!currentUserParticipant?.hasSubmitted);
@@ -130,7 +133,7 @@ export default function BillDetailScreen() {
       setEditTitle(bill.title || '');
       setEditDescription(bill.description || '');
       setEditTag(bill.tag || '');
-      setEditDueDate(bill.dueDate ? String(bill.dueDate).slice(0, 10) : '');
+      setEditDueDate(bill.dueDate || '');
     }
   }, [showEditBillInfoModal, bill]);
 
@@ -321,6 +324,7 @@ export default function BillDetailScreen() {
                   .update({ status: 'pay' })
                   .eq('id', bill.id);
                 Alert.alert('Bill Finalized 🧮', 'The bill has been finalized and participants can now make payments.');
+                
                 await fetchBill();
               } catch (err) {
                 Alert.alert('Error', 'Failed to finalize bill. Please try again.');
@@ -603,7 +607,7 @@ export default function BillDetailScreen() {
           title: editTitle,
           description: editDescription,
           tag: editTag,
-          due_date: editDueDate,
+          due_date: editDueDate || null,
         })
         .eq('id', bill.id);
 
@@ -812,7 +816,8 @@ export default function BillDetailScreen() {
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Bill Info</Text>
             {isHost && bill.status === 'select' && (
-              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditBillInfoModal(true)}>
+              <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditBillInfoModal(true)}   disabled={!bill}
+>
                 <Text style={styles.addFromFriendsText}>Edit info</Text>
               </TouchableOpacity>
             )}
@@ -1274,17 +1279,16 @@ export default function BillDetailScreen() {
                 </View>
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Due Date</Text>
+                <Text style={styles.label}>Due Datezzz</Text>
                 <Text style={styles.labelSubtext}>When should participants complete their selections and payments?</Text>
                 <View style={styles.inputWithIcon}>
-                  <Calendar size={18} color="#64748B" strokeWidth={2} />
-                  <TextInput
-                    style={[styles.input, styles.inputWithIconText]}
-                    value={editDueDate}
-                    onChangeText={setEditDueDate}
-                    placeholder="YYYY-MM-DD (optional)"
-                    placeholderTextColor="#64748B"
-                  />
+                  <DatePicker
+            label="Due Date"
+            value={editDueDate}
+            onDateChange={setEditDueDate}
+            placeholder="Select due date (optional)"
+            minimumDate={new Date()}
+          />
                 </View>
               </View>
             </ScrollView>

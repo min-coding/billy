@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, Share2, ArrowLeft, DollarSign, CreditCard, Building2, Check, Search, Tag, TestTube, Camera, ShoppingCart, Receipt } from 'lucide-react-native';
+import { Plus, X, Users, ArrowLeft, CreditCard, Building2, Check, Search, Tag, TestTube, Camera, ShoppingCart, Receipt } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { BillItem, User, BankDetails, Friend } from '@/types';
+import { BillItem, User, BankDetails } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
 import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
