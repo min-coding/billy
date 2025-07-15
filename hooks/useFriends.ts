@@ -59,14 +59,17 @@ export function useFriends() {
 
       if (friendsError) throw friendsError;
 
-      const friendsList = friendsData.map(friendship => ({
-        id: friendship.users.id,
-        name: friendship.users.name,
-        email: friendship.users.email,
-        avatar: friendship.users.avatar,
-        addedAt: new Date(friendship.created_at),
-        status: 'active' as const,
-      }));
+      const friendsList = Array.isArray(friendsData) ? friendsData.map(friendship => {
+        const userObj = Array.isArray(friendship.users) ? friendship.users[0] : friendship.users;
+        return {
+          id: userObj?.id ?? '',
+          name: userObj?.name ?? '',
+          email: userObj?.email ?? '',
+          avatar: userObj?.avatar ?? undefined,
+          addedAt: new Date(friendship.created_at),
+          status: 'active' as const,
+        };
+      }) : [];
 
       setFriends(friendsList);
 
@@ -87,25 +90,29 @@ export function useFriends() {
 
       if (requestsError) throw requestsError;
 
-      const requestsList = requestsData.map(request => ({
-        id: request.id,
-        fromUserId: request.from_user_id,
-        toUserId: request.to_user_id,
-        fromUser: {
-          id: request.from_user.id,
-          name: request.from_user.name,
-          email: request.from_user.email,
-          avatar: request.from_user.avatar,
-        },
-        toUser: {
-          id: request.to_user.id,
-          name: request.to_user.name,
-          email: request.to_user.email,
-          avatar: request.to_user.avatar,
-        },
-        status: request.status as 'pending',
-        createdAt: new Date(request.created_at),
-      }));
+      const requestsList = Array.isArray(requestsData) ? requestsData.map(request => {
+        const fromUserObj = Array.isArray(request.from_user) ? request.from_user[0] : request.from_user;
+        const toUserObj = Array.isArray(request.to_user) ? request.to_user[0] : request.to_user;
+        return {
+          id: request.id,
+          fromUserId: request.from_user_id,
+          toUserId: request.to_user_id,
+          fromUser: {
+            id: fromUserObj?.id ?? '',
+            name: fromUserObj?.name ?? '',
+            email: fromUserObj?.email ?? '',
+            avatar: fromUserObj?.avatar ?? undefined,
+          },
+          toUser: {
+            id: toUserObj?.id ?? '',
+            name: toUserObj?.name ?? '',
+            email: toUserObj?.email ?? '',
+            avatar: toUserObj?.avatar ?? undefined,
+          },
+          status: request.status as 'pending',
+          createdAt: new Date(request.created_at),
+        };
+      }) : [];
 
       setFriendRequests(requestsList);
 
@@ -125,19 +132,28 @@ export function useFriends() {
 
       if (outgoingError) throw outgoingError;
 
-      const outgoingList = outgoingData.map(request => ({
-        id: request.id,
-        fromUserId: request.from_user_id,
-        toUserId: request.to_user_id,
-        toUser: {
-          id: request.to_user.id,
-          name: request.to_user.name,
-          email: request.to_user.email,
-          avatar: request.to_user.avatar,
-        },
-        status: request.status as 'pending',
-        createdAt: new Date(request.created_at),
-      }));
+      const outgoingList = Array.isArray(outgoingData) ? outgoingData.map(request => {
+        const toUserObj = Array.isArray(request.to_user) ? request.to_user[0] : request.to_user;
+        return {
+          id: request.id,
+          fromUserId: request.from_user_id,
+          toUserId: request.to_user_id,
+          fromUser: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+          },
+          toUser: {
+            id: toUserObj?.id ?? '',
+            name: toUserObj?.name ?? '',
+            email: toUserObj?.email ?? '',
+            avatar: toUserObj?.avatar ?? undefined,
+          },
+          status: request.status as 'pending',
+          createdAt: new Date(request.created_at),
+        };
+      }) : [];
 
       setOutgoingRequests(outgoingList);
     } catch (err) {
@@ -186,24 +202,41 @@ export function useFriends() {
       // Check if request already exists
       const { data: existingRequest } = await supabase
         .from('friend_requests')
-        .select('id')
+        .select('id, status')
         .eq('from_user_id', user.id)
         .eq('to_user_id', targetUser.id)
         .single();
 
-      if (existingRequest) {
-        throw new Error('Friend request already sent');
-      }
+      let newRequest = null;
+      let error = null;
 
-      // Send friend request
-      const { data: newRequest, error } = await supabase
-        .from('friend_requests')
-        .insert({
-          from_user_id: user.id,
-          to_user_id: targetUser.id,
-        })
-        .select()
-        .single();
+      if (existingRequest) {
+        if (existingRequest.status === 'declined') {
+          // Update declined request back to pending
+          const { data: updatedRequest, error: updateError } = await supabase
+            .from('friend_requests')
+            .update({ status: 'pending', updated_at: new Date().toISOString() })
+            .eq('id', existingRequest.id)
+            .select()
+            .single();
+          newRequest = updatedRequest;
+          error = updateError;
+        } else {
+          throw new Error('Friend request already sent');
+        }
+      } else {
+        // Send friend request
+        const { data: insertedRequest, error: insertError } = await supabase
+          .from('friend_requests')
+          .insert({
+            from_user_id: user.id,
+            to_user_id: targetUser.id,
+          })
+          .select()
+          .single();
+        newRequest = insertedRequest;
+        error = insertError;
+      }
 
       if (error) throw error;
 
@@ -213,6 +246,12 @@ export function useFriends() {
           id: newRequest.id,
           fromUserId: newRequest.from_user_id,
           toUserId: newRequest.to_user_id,
+          fromUser: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+          },
           toUser: {
             id: targetUser.id,
             name: targetUser.name,
@@ -222,8 +261,7 @@ export function useFriends() {
           status: 'pending' as const,
           createdAt: new Date(newRequest.created_at),
         };
-        
-        setOutgoingRequests(prev => [...prev, newOutgoingRequest]);
+        setOutgoingRequests(prev => [...prev.filter(r => r.toUserId !== targetUser.id), newOutgoingRequest]);
       }
 
       return targetUser.name;
