@@ -38,3 +38,6 @@ yarn-error.*
 /ios
 /android
 /CLAUDE.md
+
+# Ignore build IPA files
+build-*.ipa

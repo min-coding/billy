@@ -39,8 +39,6 @@ serve(async (req) => {
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString().split('T')[0]
 
-    console.log(`[START] Processing due date reminders for ${todayStr}`);
-
     // Fetch bills that are not closed and have due dates
     const { data: bills, error: billsError } = await supabaseClient
       .from('bills')
@@ -55,19 +53,15 @@ serve(async (req) => {
     }
 
     if (!bills || bills.length === 0) {
-      console.log('[INFO] No bills found with upcoming or overdue dates');
       return new Response(JSON.stringify({ message: 'No bills to process' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`[INFO] Found ${bills.length} bills to process`);
     let totalNotificationsSent = 0;
 
     for (const bill of bills) {
-      console.log(`Processing bill: ${bill.title} (${bill.id}) - Status: ${bill.status}, Due: ${bill.due_date}`)
-
       // Determine reminder stage based on due date
       let reminderStage: string;
       let reminderTitle: string | undefined;
@@ -105,7 +99,6 @@ if (billDueDateStr === tomorrowStr) {
         continue
       }
 
-      console.log(`[INFO] Found ${participants.length} participants for bill ${bill.id}`);
 
       // Determine which users need reminders based on bill status
       let usersToNotify: BillParticipant[] = []
@@ -113,21 +106,19 @@ if (billDueDateStr === tomorrowStr) {
       if (bill.status === 'select') {
         // For 'select' status: notify users who haven't submitted
         usersToNotify = participants.filter(p => !p.has_submitted)
-        reminderTitle = "🧾 Bill Reminder: Submit Your Selections!"
-        reminderBodyTemplate = "⏰ Hey {username}! Your selections for '{bill_title}' are due {timing}. Please submit them!"
+        reminderTitle = "Submit Your Selections! ⏰ "
+        reminderBodyTemplate = "Hey {username}! Your selections for '{bill_title}' are due {timing}. Please submit them! 🧾"
       } else if (bill.status === 'pay') {
         // For 'pay' status: notify users with unpaid status
         usersToNotify = participants.filter(p => p.payment_status === 'unpaid')
-        reminderTitle = "💰 Bill Reminder: Payment Due!"
-        reminderBodyTemplate = "⏰ Hey {username}! Your payment for '{bill_title}' is due {timing}. Please make your payment!"
+        reminderTitle = "Payment Due! ⏰"
+        reminderBodyTemplate = "Hey {username}! Your payment for '{bill_title}' is due {timing}. Please make your payment! 💰"
       }
 
       if (usersToNotify.length === 0) {
         console.log(`[INFO] No users need reminders for bill ${bill.id}`);
         continue;
       }
-
-      console.log(`[INFO] ${usersToNotify.length} users to notify for bill ${bill.id}`);
 
       // Determine timing text
       let timingText: string
@@ -142,7 +133,6 @@ if (billDueDateStr === tomorrowStr) {
       }
 
       for (const participant of usersToNotify) {
-        console.log(`[CHECK] Checking for existing notification for user ${participant.user_id} and bill ${bill.id}`);
         const { data: existingNotification } = await supabaseClient
           .from('notifications')
           .select('id')
@@ -161,7 +151,6 @@ if (billDueDateStr === tomorrowStr) {
           .replace('{bill_title}', bill.title)
           .replace('{timing}', timingText)
 
-        console.log(`[INSERT] Inserting notification for user ${participant.user_id} for bill ${bill.id}`);
         const { error: notificationError } = await supabaseClient
           .from('notifications')
           .insert({
@@ -174,7 +163,8 @@ if (billDueDateStr === tomorrowStr) {
               bill_title: bill.title,
               reminder_stage: reminderStage,
               bill_status: bill.status,
-              due_date: bill.due_date
+              due_date: bill.due_date,
+              target: `/bill/${bill.id}` 
             }
           })
 
@@ -186,8 +176,6 @@ if (billDueDateStr === tomorrowStr) {
         }
       }
     }
-
-    console.log(`[END] Due date reminder processing complete. Total notifications sent: ${totalNotificationsSent}`);
 
     return new Response(JSON.stringify({ 
       success: true,
