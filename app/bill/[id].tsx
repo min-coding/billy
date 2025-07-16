@@ -47,7 +47,7 @@ export default function BillDetailScreen() {
 
   const [editItems, setEditItems] = useState<any[]>([]);
   const [newItemName, setNewItemName] = useState('');
-  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemTotalPrice, setNewItemTotalPrice] = useState(''); 
   const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [savingItems, setSavingItems] = useState(false);
 
@@ -63,7 +63,7 @@ export default function BillDetailScreen() {
     friend.email.toLowerCase().includes(friendSearchQuery.toLowerCase())
   );
 
-  const fetchBill = async () => {
+  const fetchBill = async (id: string) => {
     setLoading(true);
     setError(null);
     const billId: string = id as string;
@@ -125,7 +125,7 @@ export default function BillDetailScreen() {
   };
 
   useEffect(() => {
-    if (id) fetchBill();
+    if (id) fetchBill(id);
   }, [id]);
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function BillDetailScreen() {
     if (showEditItemsModal && bill) {
       setEditItems(bill.items.map((item: any) => ({ ...item })));
       setNewItemName('');
-      setNewItemPrice('');
+      setNewItemTotalPrice('');
       setNewItemQuantity('1');
     }
   }, [showEditItemsModal, bill]);
@@ -244,7 +244,7 @@ export default function BillDetailScreen() {
           .eq('user_id', user.id);
 
         // 4. Refetch bill data to update UI
-        await fetchBill();
+        await fetchBill(id);
 
         if (Platform.OS === 'web') {
           alert('Your selections have been submitted!');
@@ -304,7 +304,7 @@ export default function BillDetailScreen() {
           .update({ status: 'pay' })
           .eq('id', bill.id);
         window.alert('🧮 The bill has been finalized and participants can now make payments.');
-        await fetchBill();
+        await fetchBill(id);
       } catch (err) {
         window.alert('Failed to finalize bill. Please try again.');
       }
@@ -325,7 +325,7 @@ export default function BillDetailScreen() {
                   .eq('id', bill.id);
                 Alert.alert('Bill Finalized 🧮', 'The bill has been finalized and participants can now make payments.');
                 
-                await fetchBill();
+                await fetchBill(id);
               } catch (err) {
                 Alert.alert('Error', 'Failed to finalize bill. Please try again.');
               }
@@ -444,7 +444,7 @@ export default function BillDetailScreen() {
         .eq('bill_id', bill.id)
         .eq('user_id', participantId);
 
-      await fetchBill();
+      await fetchBill(id);
 
       if (newStatus === 'paid') {
         // Redirect to chat first
@@ -496,7 +496,7 @@ export default function BillDetailScreen() {
           .eq('id', bill.id);
       }
 
-      await fetchBill();
+      await fetchBill(id);
 
       if (Platform.OS === 'web') {
         window.alert(allVerified ? 'Payment verified! Bill is now closed. ✅' : 'Payment verified! ✅');
@@ -555,7 +555,7 @@ export default function BillDetailScreen() {
 
       if (addError) throw addError;
 
-      await fetchBill();
+      await fetchBill(id);
 
       setSelectedFriends([]);
       setShowFriendsModal(false);
@@ -586,7 +586,7 @@ export default function BillDetailScreen() {
                 .eq('bill_id', bill.id)
                 .eq('user_id', participantId);
 
-              await fetchBill();
+              await fetchBill(id);
               Alert.alert('Success', 'Member removed from bill ✅');
             } catch (err) {
               Alert.alert('Error', 'Failed to remove member. Please retry ❗️');
@@ -611,7 +611,7 @@ export default function BillDetailScreen() {
         })
         .eq('id', bill.id);
 
-      await fetchBill();
+      await fetchBill(id);
       setShowEditBillInfoModal(false);
       Alert.alert('Success', 'Bill info updated successfully ✅');
     } catch (err) {
@@ -659,7 +659,7 @@ export default function BillDetailScreen() {
         }
       }
 
-      await fetchBill();
+      await fetchBill(id);
       setShowEditMembersModal(false);
       Alert.alert('Success', 'Members updated! ✅');
     } catch (err) {
@@ -669,41 +669,41 @@ export default function BillDetailScreen() {
   };
 
   const handleAddEditItem = () => {
-    if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
-      Alert.alert('Error', 'Please enter item name, price, and quantity. 🔍');
+    if (!newItemName.trim() || !newItemTotalPrice.trim() || !newItemQuantity.trim()) {
+      Alert.alert('Error', 'Please enter item name, total price, and quantity. 🔍');
       return;
     }
-    const price = parseFloat(newItemPrice);
+    const totalPrice = parseFloat(newItemTotalPrice);
     const quantity = parseInt(newItemQuantity);
-    if (isNaN(price) || price <= 0) {
-      Alert.alert('Error', 'Please enter a valid price. 🔍');
+    if (isNaN(totalPrice) || totalPrice <= 0) {
+      Alert.alert('Error', 'Please enter a valid total price. 🔍');
       return;
     }
     if (isNaN(quantity) || quantity <= 0) {
       Alert.alert('Error', 'Please enter a valid quantity. 🔍');
       return;
     }
-    setEditItems([
-      ...editItems,
-      {
-        id: `new-${Date.now()}`,
-        name: newItemName.trim(),
-        price,
-        quantity,
-      }
-    ]);
+    const pricePerItem = totalPrice / quantity;
+    const newItem = {
+      id: `new-${Date.now()}`,
+      name: newItemName.trim(),
+      price: pricePerItem,
+      quantity,
+    };
+
+    setEditItems([...editItems, newItem]);
     setNewItemName('');
-    setNewItemPrice('');
+    setNewItemTotalPrice('');
     setNewItemQuantity('1');
-  };
+};
 
-  const handleRemoveEditItem = (itemId: string) => {
-    setEditItems(editItems.filter(item => item.id !== itemId));
-  };
+const handleRemoveEditItem = (id: string) => {
+    setEditItems(editItems.filter(item => item.id !== id));
+};
 
-  const handleSaveEditItems = async () => {
+const handleSaveEditItems = async () => {
     if (!bill) return;
-    
+
     const performSave = async () => {
       setSavingItems(true);
       try {
@@ -711,11 +711,21 @@ export default function BillDetailScreen() {
         const newIds = editItems.filter(item => !item.id.startsWith('new-')).map(item => item.id);
         const toDelete = currentIds.filter(id => !newIds.includes(id));
         if (toDelete.length > 0) {
-          await supabase.from('bill_items').delete().in('id', toDelete);
+          const { error: deleteError } = await supabase
+            .from('bill_items')
+            .delete()
+            .in('id', toDelete);
+
+          if (deleteError) {
+            console.error('Error deleting bill items:', deleteError);
+          }
         }
+
         const toAdd = editItems.filter(item => item.id.startsWith('new-'));
+        console.log('Items to add:', toAdd);
+
         if (toAdd.length > 0) {
-          await supabase.from('bill_items').insert(
+          const { data: insertedItems, error: insertError } = await supabase.from('bill_items').insert(
             toAdd.map(item => ({
               bill_id: bill.id,
               name: item.name,
@@ -723,39 +733,67 @@ export default function BillDetailScreen() {
               quantity: item.quantity,
             }))
           );
+
+          if (insertError) {
+            console.error('Error inserting new bill items:', insertError);
+          } else {
+            console.log('Successfully inserted items:', insertedItems);
+          }
         }
-        const { data: participants } = await supabase
+
+        const { data: participants, error: participantsError } = await supabase
           .from('bill_participants')
           .select('user_id')
           .eq('bill_id', bill.id);
-        if (participants) {
+
+        if (participantsError) {
+          console.error('Error fetching participants:', participantsError);
+        } else if (participants) {
+          console.log('Participants fetched:', participants);
           for (const p of participants) {
-            await supabase
+            const { error: updateParticipantError } = await supabase
               .from('bill_participants')
               .update({ has_submitted: false })
               .eq('bill_id', bill.id)
               .eq('user_id', p.user_id);
+
+            if (updateParticipantError) {
+              console.error(`Error updating participant ${p.user_id}:`, updateParticipantError);
+            }
           }
         }
-        const { data: allItems } = await supabase
+
+        const { data: allItems, error: allItemsError } = await supabase
           .from('bill_items')
           .select('id')
           .eq('bill_id', bill.id);
-        if (allItems && allItems.length > 0) {
-          await supabase
+
+        if (allItemsError) {
+          console.error('Error fetching all bill items:', allItemsError);
+        } else if (allItems && allItems.length > 0) {
+          console.log('All bill items:', allItems);
+
+          const { error: deleteSelectionsError } = await supabase
             .from('bill_item_selections')
             .delete()
             .in('bill_item_id', allItems.map((item: any) => item.id));
+
+          if (deleteSelectionsError) {
+            console.error('Error deleting item selections:', deleteSelectionsError);
+          }
         }
-        await fetchBill();
+
+        await fetchBill(id);
         setShowEditItemsModal(false);
-        
+
         if (Platform.OS === 'web') {
           window.alert('Items updated and selections reset! ✅');
         } else {
           Alert.alert('Success', 'Items updated and selections reset! ✅');
         }
       } catch (err) {
+        console.error('Unexpected error during performSave:', err);
+
         if (Platform.OS === 'web') {
           window.alert('Failed to update items');
         } else {
@@ -784,7 +822,7 @@ export default function BillDetailScreen() {
         ]
       );
     }
-  };
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1421,9 +1459,9 @@ export default function BillDetailScreen() {
                 />
                 <TextInput
                   style={[styles.input, { flex: 2, minWidth: 0 }]}
-                  value={newItemPrice}
-                  onChangeText={setNewItemPrice}
-                  placeholder="$0.00"
+                  value={newItemTotalPrice}
+                  onChangeText={setNewItemTotalPrice}
+                  placeholder="Total price"
                   placeholderTextColor="#64748B"
                   keyboardType="decimal-pad"
                 />
@@ -1439,6 +1477,12 @@ export default function BillDetailScreen() {
                   <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
                 </TouchableOpacity>
               </View>
+              {/* Show calculated price per item for reference */}
+              {newItemTotalPrice && newItemQuantity && parseFloat(newItemQuantity) > 0 && (
+                <Text style={{ color: '#10B981', marginTop: 4, marginLeft: 4 }}>
+                  Per item: {formatCurrency(parseFloat(newItemTotalPrice) / parseInt(newItemQuantity))}
+                </Text>
+              )}
               {/* Item list */}
               {editItems.map((item) => (
                 <View key={item.id} style={[styles.itemCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>

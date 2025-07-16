@@ -41,3 +41,5 @@ yarn-error.*
 
 # Ignore build IPA files
 build-*.ipa
+
+supabase/.temp/

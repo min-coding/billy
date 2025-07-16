@@ -25,7 +25,7 @@ export default function CreateBillScreen() {
   const [tag, setTag] = useState('');
   const [items, setItems] = useState<BillItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
-  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemTotalPrice, setNewItemTotalPrice] = useState(''); // NEW: total price for all quantities
   const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [participants, setParticipants] = useState<User[]>([]);
   const [bankDetails, setBankDetails] = useState<BankDetails>({
@@ -117,35 +117,31 @@ export default function CreateBillScreen() {
   };
 
   const addItem = () => {
-    if (!newItemName.trim() || !newItemPrice.trim() || !newItemQuantity.trim()) {
-      Alert.alert('Error', 'Please enter item name, price, and quantity 🔍');
+    if (!newItemName.trim() || !newItemTotalPrice.trim() || !newItemQuantity.trim()) {
+      Alert.alert('Error', 'Please enter item name, total price, and quantity 🔍');
       return;
     }
-
-    const price = parseFloat(newItemPrice);
+    const totalPrice = parseFloat(newItemTotalPrice);
     const quantity = parseInt(newItemQuantity);
-    
-    if (isNaN(price) || price <= 0) {
-      Alert.alert('Error', 'Please enter a valid price 🔍');
+    if (isNaN(totalPrice) || totalPrice <= 0) {
+      Alert.alert('Error', 'Please enter a valid total price 🔍');
       return;
     }
-
     if (isNaN(quantity) || quantity <= 0) {
       Alert.alert('Error', 'Please enter a valid quantity 🔍');
       return;
     }
-
+    const pricePerItem = totalPrice / quantity;
     const newItem: BillItem = {
       id: Date.now().toString(),
       name: newItemName.trim(),
-      price: price,
+      price: pricePerItem, // Save per-item price in DB
       quantity: quantity,
       selectedBy: [],
     };
-
     setItems([...items, newItem]);
     setNewItemName('');
-    setNewItemPrice('');
+    setNewItemTotalPrice('');
     setNewItemQuantity('1');
   };
 
@@ -437,9 +433,9 @@ export default function CreateBillScreen() {
               />
               <TextInput
                 style={[styles.input, styles.itemPriceInput]}
-                value={newItemPrice}
-                onChangeText={setNewItemPrice}
-                placeholder="$0.00"
+                value={newItemTotalPrice}
+                onChangeText={setNewItemTotalPrice}
+                placeholder="Total price"
                 placeholderTextColor="#64748B"
                 keyboardType="decimal-pad"
               />
@@ -455,6 +451,12 @@ export default function CreateBillScreen() {
                 <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
+            {/* Show calculated price per item for reference */}
+            {newItemTotalPrice && newItemQuantity && parseFloat(newItemQuantity) > 0 && (
+              <Text style={{ color: '#10B981', marginTop: 4, marginLeft: 4 }}>
+                Per item: {formatCurrency(parseFloat(newItemTotalPrice) / parseInt(newItemQuantity))}
+              </Text>
+            )}
           </View>
 
           {/* Items List or Empty State */}
@@ -472,7 +474,7 @@ export default function CreateBillScreen() {
                 onPress={() => {
                   // Focus on the first input field
                   setNewItemName('Sample Item');
-                  setNewItemPrice('10.00');
+                  setNewItemTotalPrice('10.00');
                 }}
               >
                 <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
