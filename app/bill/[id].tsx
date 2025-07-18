@@ -28,9 +28,7 @@ export default function BillDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   
   // Friends modal state
-  const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
   // Edit modals state
   const [showEditBillInfoModal, setShowEditBillInfoModal] = useState(false);
@@ -116,7 +114,7 @@ export default function BillDetailScreen() {
           accountNumber: billData.account_number,
         }
       });
-      console.log(`setBill due date ${billData.due_date}`)
+      
       // Update hasSubmitted for the current user
       const currentUserParticipant = participants.find(p => p.id === user?.id);
       setHasSubmitted(!!currentUserParticipant?.hasSubmitted);
@@ -512,91 +510,6 @@ export default function BillDetailScreen() {
     }
   };
 
-  const toggleFriendSelection = (friendId: string) => {
-    setSelectedFriends(prev => 
-      prev.includes(friendId) 
-        ? prev.filter(id => id !== friendId)
-        : [...prev, friendId]
-    );
-  };
-
-  const addSelectedFriends = async () => {
-    if (!bill || selectedFriends.length === 0) return;
-
-    try {
-      const friendsToAdd = friends
-        .filter(friend => selectedFriends.includes(friend.id))
-        .map(friend => ({
-          id: friend.id,
-          name: friend.name,
-          email: friend.email,
-          avatar: friend.avatar
-        }));
-
-      const existingIds = bill.participants.map((p: any) => p.id);
-      const newFriends = friendsToAdd.filter(friend => !existingIds.includes(friend.id));
-
-      if (newFriends.length === 0) {
-        Alert.alert('Info', 'All selected friends are already members of this bill 🔍');
-        setSelectedFriends([]);
-        setShowFriendsModal(false);
-        setFriendSearchQuery('');
-        return;
-      }
-
-      const { error: addError } = await supabase
-        .from('bill_participants')
-        .insert(
-          newFriends.map(friend => ({
-            bill_id: bill.id,
-            user_id: friend.id,
-          }))
-        );
-
-      if (addError) throw addError;
-
-      await fetchBill(id);
-
-      setSelectedFriends([]);
-      setShowFriendsModal(false);
-      setFriendSearchQuery('');
-
-      Alert.alert('Success', `${newFriends.length} friend${newFriends.length !== 1 ? 's' : ''} added to the bill ✅`);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to add friends to bill. Please retry ❗️');
-    }
-  };
-
-  const removeParticipant = async (participantId: string) => {
-    if (!bill || participantId === bill.created_by) return;
-
-    Alert.alert(
-      'Remove Member',
-      'Are you sure you want to remove this member from the bill?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await supabase
-                .from('bill_participants')
-                .delete()
-                .eq('bill_id', bill.id)
-                .eq('user_id', participantId);
-
-              await fetchBill(id);
-              Alert.alert('Success', 'Member removed from bill ✅');
-            } catch (err) {
-              Alert.alert('Error', 'Failed to remove member. Please retry ❗️');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const handleSaveBillInfo = async () => {
     if (!bill) return;
 
@@ -639,6 +552,22 @@ export default function BillDetailScreen() {
         await supabase.from('bill_participants').insert(
           toAdd.map(user_id => ({ bill_id: bill.id, user_id }))
         );
+        let billOwnerName = bill.ownerName || bill.owner || bill.created_by_name || (user && user.name) || 'Someone';
+        for (const user_id of toAdd) {
+          await supabase.from('notifications').insert({
+            user_id,
+            type: 'bill_invite',
+            title: `You receive an invitation 🎉`,
+            body: `${billOwnerName} invites you to ${bill.title} bill`,
+            data: {
+              bill_id: bill.id,
+              bill_title: bill.title,
+              inviter_id: bill.created_by,
+              target: `/bill/${bill.id}`
+            },
+            is_read: false
+          });
+        }
       }
 
       for (const user_id of toRemove) {
@@ -1165,102 +1094,6 @@ const handleSaveEditItems = async () => {
         </View>
       )}
 
-      {/* Friends Modal */}
-      <Modal
-        visible={showFriendsModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowFriendsModal(false)}
-      >
-        <View style={styles.friendsModalOverlay}>
-          <View style={styles.friendsModal}>
-            <View style={styles.friendsModalHeader}>
-              <Text style={styles.friendsModalTitle}>Add Members</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setShowFriendsModal(false)}
-              >
-                <X size={20} color="#64748B" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.friendsSearchContainer}>
-              <Search size={18} color="#64748B" strokeWidth={2} />
-              <TextInput
-                style={styles.friendsSearchInput}
-                value={friendSearchQuery}
-                onChangeText={setFriendSearchQuery}
-                placeholder="Search friends..."
-                placeholderTextColor="#64748B"
-              />
-            </View>
-            
-            <ScrollView style={styles.friendsModalContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-              {filteredFriends.length === 0 ? (
-                <View style={styles.noFriendsContainer}>
-                  <Text style={styles.noFriendsText}>
-                    {friendSearchQuery ? 'No friends found' : 'No friends available'}
-                  </Text>
-                  <Text style={styles.noFriendsSubtext}>
-                    {friendSearchQuery ? 'Try adjusting your search' : 'Add friends from the Friends tab first'}
-                  </Text>
-                </View>
-              ) : (
-                filteredFriends.map((friend) => {
-                  const isSelected = selectedFriends.includes(friend.id);
-                  const isAlreadyAdded = bill.participants.some((p: any) => p.id === friend.id);
-                  
-                  return (
-                    <TouchableOpacity
-                      key={friend.id}
-                      style={[
-                        styles.friendItem,
-                        isSelected && styles.selectedFriendItem,
-                        isAlreadyAdded && styles.disabledFriendItem
-                      ]}
-                      onPress={() => !isAlreadyAdded && toggleFriendSelection(friend.id)}
-                      disabled={isAlreadyAdded}
-                    >
-                      <View style={styles.friendItemLeft}>
-                        <Image 
-                          source={{ uri: friend.avatar }} 
-                          style={[styles.friendItemAvatar, isAlreadyAdded && styles.disabledAvatar]}
-                        />
-                        <View style={styles.friendItemInfo}>
-                          <Text style={[styles.friendItemName, isAlreadyAdded && styles.disabledText]}>
-                            {friend.name}
-                          </Text>
-                          <Text style={[styles.friendItemEmail, isAlreadyAdded && styles.disabledText]}>
-                            {friend.email}
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      {isAlreadyAdded ? (
-                        <Text style={styles.addedText}>Added</Text>
-                      ) : (
-                        <View style={[styles.friendCheckbox, isSelected && styles.checkedFriendBox]}>
-                          {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={2.5} />}
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </ScrollView>
-            
-            {selectedFriends.length > 0 && (
-              <View style={styles.friendsModalFooter}>
-                <TouchableOpacity style={styles.addSelectedButton} onPress={addSelectedFriends}>
-                  <Text style={styles.addSelectedText}>
-                    Add {selectedFriends.length} Member{selectedFriends.length !== 1 ? 's' : ''}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
 
       {/* Edit Bill Info Modal */}
       <Modal
@@ -1458,20 +1291,20 @@ const handleSaveEditItems = async () => {
                   placeholderTextColor="#64748B"
                 />
                 <TextInput
-                  style={[styles.input, { flex: 2, minWidth: 0 }]}
-                  value={newItemTotalPrice}
-                  onChangeText={setNewItemTotalPrice}
-                  placeholder="Total price"
-                  placeholderTextColor="#64748B"
-                  keyboardType="decimal-pad"
-                />
-                <TextInput
                   style={[styles.input, { flex: 1, minWidth: 0 }]}
                   value={newItemQuantity}
                   onChangeText={setNewItemQuantity}
                   placeholder="Qty"
                   placeholderTextColor="#64748B"
                   keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.input, { flex: 3, minWidth: 0 }]}
+                  value={newItemTotalPrice}
+                  onChangeText={setNewItemTotalPrice}
+                  placeholder="Total price"
+                  placeholderTextColor="#64748B"
+                  keyboardType="decimal-pad"
                 />
                 <TouchableOpacity style={styles.addButton} onPress={handleAddEditItem}>
                   <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />

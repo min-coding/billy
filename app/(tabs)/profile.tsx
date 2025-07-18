@@ -395,7 +395,7 @@ export default function ProfileScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.statCard}
               >
-                <Text style={styles.statNumber}>{billsLoading ? '-' : `$${totalSpent.toFixed(2)}`}</Text>
+                <Text style={styles.statNumber}>{billsLoading ? '-' : `${totalSpent.toFixed(2)}`}</Text>
                 <Text style={styles.statLabel}>Total Spent</Text>
               </LinearGradient>
               

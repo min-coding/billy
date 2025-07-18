@@ -310,6 +310,25 @@ export default function CreateBillScreen() {
           }))
         );
       if (participantsError) throw participantsError;
+      // --- Add this block: Send invite notification to each invited user (except creator) ---
+      for (const participant of participants) {
+        if (participant.id !== user.id) {
+          await supabase.from('notifications').insert({
+            user_id: participant.id,
+            type: 'bill_invite',
+            title: `You receive an invitation 🎉`,
+            body: `${user.name} invites you to ${bill.title} bill`,
+            data: {
+              bill_id: bill.id,
+              bill_title: bill.title,
+              inviter_id: user.id,
+              target: `/bill/${bill.id}`
+            },
+            is_read: false
+          });
+        }
+      }
+      // --- End block ---
       // 3. Insert items
       const { data: itemsData, error: itemsError } = await supabase
         .from('bill_items')
@@ -431,6 +450,14 @@ export default function CreateBillScreen() {
                 placeholder="Item name"
                 placeholderTextColor="#64748B"
               />
+               <TextInput
+                style={[styles.input, styles.itemQuantityInput]}
+                value={newItemQuantity}
+                onChangeText={setNewItemQuantity}
+                placeholder="Qty"
+                placeholderTextColor="#64748B"
+                keyboardType="numeric"
+              />
               <TextInput
                 style={[styles.input, styles.itemPriceInput]}
                 value={newItemTotalPrice}
@@ -438,14 +465,6 @@ export default function CreateBillScreen() {
                 placeholder="Total price"
                 placeholderTextColor="#64748B"
                 keyboardType="decimal-pad"
-              />
-              <TextInput
-                style={[styles.input, styles.itemQuantityInput]}
-                value={newItemQuantity}
-                onChangeText={setNewItemQuantity}
-                placeholder="Qty"
-                placeholderTextColor="#64748B"
-                keyboardType="numeric"
               />
               <TouchableOpacity style={styles.addButton} onPress={addItem}>
                 <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
@@ -487,11 +506,9 @@ export default function CreateBillScreen() {
                 <View key={item.id} style={styles.itemCard}>
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <View style={styles.itemDetails}>
-                      <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
-                      <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
-                    </View>
+                    <Text style={styles.itemPrice}>{formatCurrency(item.price)} × {item.quantity}</Text>
                   </View>
+                  <Text style={styles.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
                   <TouchableOpacity 
                     style={styles.removeButton} 
                     onPress={() => removeItem(item.id)}
@@ -893,7 +910,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   itemPriceInput: {
-    flex: 2,
+    flex: 3,
     minWidth: 0,
   },
   itemQuantityInput: {
