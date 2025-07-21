@@ -295,32 +295,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Display Expo Push Token for easy copy-paste */}
-      {expoPushToken ? (
-        <View style={{ backgroundColor: '#222', padding: 10, margin: 10, borderRadius: 8 }}>
-          <Text selectable style={{ color: '#fff', fontSize: 12 }}>
-            Expo Push Token:
-          </Text>
-          <Text selectable style={{ color: '#fff', fontSize: 12 }}>
-            {expoPushToken}
-          </Text>
-          <TouchableOpacity
-            style={{
-              marginTop: 6,
-              backgroundColor: '#F59E0B',
-              padding: 6,
-              borderRadius: 6,
-              alignSelf: 'flex-start',
-            }}
-            onPress={() => {
-              Clipboard.setStringAsync(expoPushToken);
-              Alert.alert('Copied!', 'Push token copied to clipboard.');
-            }}
-          >
-            <Text style={{ color: '#222', fontWeight: 'bold' }}>Copy Token</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
       <View style={{ flex: 1, position: 'relative' }}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -381,10 +355,8 @@ export default function HomeScreen() {
             <Text style={styles.clearFiltersText}>Clear filters</Text>
           </TouchableOpacity>
         )}
-      </View>
 
-      {/* Tag Filter Chips */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12, gap: 8 }}>
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12, gap: 8 }}>
         {uniqueTags.map(tag => (
           <TouchableOpacity
             key={tag}
@@ -405,10 +377,12 @@ export default function HomeScreen() {
         ))}
       </View>
       {tagFilter && (
-        <Text style={{ fontSize: 16, fontWeight: '600', color: '#222B45', marginBottom: 8 }}>
+        <Text style={{ fontSize: 16, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
           Total for "{tagFilter}": ${tagTotal?.toFixed(2)}
         </Text>
       )}
+      </View>
+
 
       <ScrollView 
         style={styles.scrollView} 
