@@ -7,7 +7,6 @@ import { useFocusEffect } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
-import BoltBadge from '@/components/BoltBadge';
 import DateRangePicker from '@/components/DateRangePicker';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
@@ -33,6 +32,19 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Tag color palette and hash function
+const tagColors = [
+  '#FFD500', '#4C6FFF', '#FF7A59', '#10B981', '#F59E0B', '#A259FF', '#FF5C8A', '#00C2FF',
+];
+function getTagColor(tag: string) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % tagColors.length;
+  return tagColors[index];
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -50,7 +62,16 @@ export default function HomeScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
 
-  // Filtered and sorted bills
+  // Add state for tag filter
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+
+  // Get unique tags from bills
+  const uniqueTags = useMemo(() => {
+    const tags = bills.map(b => b.tag).filter((t): t is string => Boolean(t));
+    return Array.from(new Set(tags));
+  }, [bills]);
+
+  // Filtered and sorted bills, now also filtered by tag
   const filteredAndSortedBills = useMemo(() => {
     let filtered = bills;
 
@@ -88,6 +109,11 @@ export default function HomeScreen() {
       });
     }
 
+    // Tag filter
+    if (tagFilter) {
+      filtered = filtered.filter(bill => bill.tag === tagFilter);
+    }
+
     // Sort
     const sorted = [...filtered].sort((a, b) => {
       switch (sortOption) {
@@ -110,7 +136,13 @@ export default function HomeScreen() {
     });
 
     return sorted;
-  }, [bills, searchQuery, statusFilter, roleFilter, sortOption, dateRange, user?.id]);
+  }, [bills, searchQuery, statusFilter, roleFilter, sortOption, dateRange, user?.id, tagFilter]);
+
+  // Calculate total for current tag group
+  const tagTotal = useMemo(() => {
+    if (!tagFilter) return null;
+    return filteredAndSortedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+  }, [filteredAndSortedBills, tagFilter]);
 
   const handleCreateBill = () => {
     router.push('/bill/create');
@@ -122,9 +154,10 @@ export default function HomeScreen() {
     setRoleFilter('all');
     setDateRange({ start: '', end: '' });
     setSortOption('newest');
+    setTagFilter(null); // Clear tag filter
   };
 
-  const hasActiveFilters = searchQuery.trim() || statusFilter !== 'all' || roleFilter !== 'all' || dateRange.start || dateRange.end || sortOption !== 'newest';
+  const hasActiveFilters = searchQuery.trim() || statusFilter !== 'all' || roleFilter !== 'all' || dateRange.start || dateRange.end || sortOption !== 'newest' || tagFilter;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -350,6 +383,33 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* Tag Filter Chips */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12, gap: 8 }}>
+        {uniqueTags.map(tag => (
+          <TouchableOpacity
+            key={tag}
+            style={{
+              backgroundColor: getTagColor(tag),
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              marginRight: 8,
+              opacity: tag === tagFilter ? 1 : 0.6,
+              borderWidth: tag === tagFilter ? 2 : 0,
+              borderColor: tag === tagFilter ? '#222B45' : 'transparent',
+            }}
+            onPress={() => setTagFilter(tag === tagFilter ? null : tag)}
+          >
+            <Text style={{ color: '#222B45', fontWeight: '600' }}>{tag}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {tagFilter && (
+        <Text style={{ fontSize: 16, fontWeight: '600', color: '#222B45', marginBottom: 8 }}>
+          Total for "{tagFilter}": ${tagTotal?.toFixed(2)}
+        </Text>
+      )}
+
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
@@ -404,7 +464,6 @@ export default function HomeScreen() {
           ))
           }
       </ScrollView>
-      <BoltBadge />
       </View>
       {/* Filter Modal */}
       <Modal
@@ -498,6 +557,7 @@ export default function HomeScreen() {
                   setStatusFilter('all');
                   setRoleFilter('all');
                   setDateRange({ start: '', end: '' });
+                  setTagFilter(null); // Clear tag filter
                 }}
               >
                 <Text style={styles.clearButtonText}>Clear</Text>

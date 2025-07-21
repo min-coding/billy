@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Users, Calendar, DollarSign, User, Tag } from 'lucide-react-native';
 import { formatCurrency } from '@/utils/billUtils';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface BillCardProps {
   bill: {
@@ -25,18 +25,25 @@ interface BillCardProps {
   onPress?: () => void;
 }
 
+// Tag color palette and hash function
+const tagColors = [
+  '#FFD500', '#4C6FFF', '#FF7A59', '#10B981', '#F59E0B', '#A259FF', '#FF5C8A', '#00C2FF',
+];
+function getTagColor(tag: string) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % tagColors.length;
+  return tagColors[index];
+}
+
+// Add status color function
+
+
 export default function BillCard({ bill, onPress }: BillCardProps) {
   const router = useRouter();
   
-  const getStatusColors = (status: string) => {
-    switch (status) {
-      case 'select': return ['#F59E0B', '#EAB308'];
-      case 'pay': return ['#3B82F6', '#2563EB'];
-      case 'closed': return ['#10B981', '#059669'];
-      default: return ['#64748B', '#475569'];
-    }
-  };
-
   const getStatusText = (status: string) => {
     switch (status) {
       case 'select': return 'Select';
@@ -45,6 +52,15 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
       default: return 'Unknown';
     }
   };
+
+  function getStatusColor(status: string) {
+    switch (status) {
+      case 'select': return '#F59E0B'; // yellow
+      case 'pay': return '#4C6FFF';    // blue
+      case 'closed': return '#10B981'; // green
+      default: return '#E0E0E0';       // neutral
+    }
+  }
 
   // Get host name from participants
   const hostName = bill.participants.find(p => p.id === bill.created_by)?.name || 'Unknown Host';
@@ -70,36 +86,31 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
             <View style={styles.titleSection}>
               <Text style={styles.title} numberOfLines={1}>{bill.title}</Text>
               {bill.tag && (
-                <LinearGradient
-                  colors={['#0F172A', '#1E293B']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.tagContainer}
-                >
-                  <Tag size={12} color="#64748B" strokeWidth={2} />
-                  <Text style={styles.tagText}>{bill.tag}</Text>
-                </LinearGradient>
+                <View style={[
+                  styles.tag,
+                  { backgroundColor: getTagColor(bill.tag) }
+                ]}>
+                  <Tag size={14} color="#fff" />
+                  <Text style={[styles.tagText, { color: '#fff' }]}>{bill.tag}</Text>
+                </View>
               )}
             </View>
-            <LinearGradient
-              colors={getStatusColors(bill.status)}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.statusBadge}
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusColor(bill.status) }
+              ]}
             >
-              <Text style={styles.statusText}>{getStatusText(bill.status)}</Text>
-            </LinearGradient>
+              <Text style={styles.statusText}>{bill.status.toUpperCase()}</Text>
+            </View>
           </View>
           
-          <LinearGradient
-            colors={['#0F172A', '#1E293B']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          <View
             style={styles.hostSection}
           >
             <User size={14} color="#64748B" strokeWidth={2} />
             <Text style={styles.hostText}>Hosted by {hostName}</Text>
-          </LinearGradient>
+          </View>
           
           <View style={styles.footer}>
             <View style={styles.infoRow}>
@@ -167,23 +178,21 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  tagContainer: {
+  tag: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 2,
+    marginTop: 4,
     alignSelf: 'flex-start',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#334155',
+    marginBottom: 2,
+    opacity: 1,
   },
   tagText: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 4,
     fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   statusBadge: {
     paddingHorizontal: 10,

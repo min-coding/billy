@@ -9,7 +9,6 @@ import { supabase } from '@/lib/supabase';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
-import BoltBadge from '@/components/BoltBadge';
 import { useBills } from '@/hooks/useBills';
 import { useFriends } from '@/hooks/useFriends';
 import { useRouter } from 'expo-router';
@@ -481,7 +480,6 @@ export default function ProfileScreen() {
             <Text style={styles.versionText}>Version 1.0.0</Text>
           </View>
         </ScrollView>
-        <BoltBadge />
       </SafeAreaView>
     </LinearGradient>
   );
