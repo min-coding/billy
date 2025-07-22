@@ -44,15 +44,6 @@ function getTagColor(tag: string) {
 export default function BillCard({ bill, onPress }: BillCardProps) {
   const router = useRouter();
   
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'select': return 'Select';
-      case 'pay': return 'Pay';
-      case 'closed': return 'Closed';
-      default: return 'Unknown';
-    }
-  };
-
   function getStatusColor(status: string) {
     switch (status) {
       case 'select': return '#F59E0B'; // yellow

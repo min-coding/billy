@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Zap, Search, Filter, ArrowUpDown, X, Calendar, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Plus, Zap, Search, Filter, ArrowUpDown, X, Check, Clock, CircleCheck as CheckCircle, User, Users as UsersIcon, Tag } from 'lucide-react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import BillCard from '@/components/BillCard';
 import { useBills } from '@/hooks/useBills';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,6 @@ import DateRangePicker from '@/components/DateRangePicker';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import * as Clipboard from 'expo-clipboard';
 import { supabase } from '@/lib/supabase';
 
 type SortOption = 'newest' | 'oldest' | 'amount_high' | 'amount_low' | 'due_date';
@@ -32,9 +31,16 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Tag color palette and hash function
+// Enhanced tag color palette with gradients
 const tagColors = [
-  '#FFD500', '#4C6FFF', '#FF7A59', '#10B981', '#F59E0B', '#A259FF', '#FF5C8A', '#00C2FF',
+  { bg: '#FFD500', secondary: '#FFA500' }, // Gold to Orange
+  { bg: '#4C6FFF', secondary: '#6366F1' }, // Blue to Indigo  
+  { bg: '#FF7A59', secondary: '#EF4444' }, // Coral to Red
+  { bg: '#10B981', secondary: '#059669' }, // Emerald to Green
+  { bg: '#F59E0B', secondary: '#D97706' }, // Amber to Orange
+  { bg: '#A259FF', secondary: '#7C3AED' }, // Purple to Violet
+  { bg: '#FF5C8A', secondary: '#EC4899' }, // Pink to Rose
+  { bg: '#00C2FF', secondary: '#0EA5E9' }, // Cyan to Sky
 ];
 function getTagColor(tag: string) {
   let hash = 0;
@@ -42,7 +48,7 @@ function getTagColor(tag: string) {
     hash = tag.charCodeAt(i) + ((hash << 5) - hash);
   }
   const index = Math.abs(hash) % tagColors.length;
-  return tagColors[index];
+  return tagColors[index].bg; // Return the background color string
 }
 
 export default function HomeScreen() {
@@ -201,20 +207,18 @@ export default function HomeScreen() {
     if (Platform.OS === 'web') {
       refetch();
     }
-  }, []);
+  }, [refetch]);
 
-  if (Platform.OS !== 'web') {
-    useFocusEffect(
-      React.useCallback(() => {
+  useFocusEffect(
+    React.useCallback(() => {
+      if (Platform.OS !== 'web') {
         refetch();
-      }, [refetch])
-    );
-  }
+      }
+    }, [refetch])
+  );
 
   const [expoPushToken, setExpoPushToken] = useState('');
-  const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
   const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
     registerForPushNotificationsAsync()
@@ -257,15 +261,14 @@ export default function HomeScreen() {
       })
       .catch((error) => setExpoPushToken(`${error}`));
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      setNotification(notification);
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+      // Handle notification received
     });
 
     // Removed responseListener for notification taps; now handled globally
 
     return () => {
       if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
-      // Removed responseListener cleanup
     };
   }, [user?.id]);
 
@@ -304,8 +307,15 @@ export default function HomeScreen() {
               {filteredAndSortedBills.length} of {bills.length} bills
             </Text>
           </View>
-          <TouchableOpacity style={styles.createButton} onPress={handleCreateBill}>
-            <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          <TouchableOpacity onPress={handleCreateBill}>
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.createButton}
+            >
+              <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -315,7 +325,7 @@ export default function HomeScreen() {
         <View style={styles.searchFilterRow}>
           {/* Search Bar */}
           <View style={styles.searchContainer}>
-            <Search size={16} color="#64748B" strokeWidth={2} />
+            <Search size={18} color="#94A3B8" strokeWidth={2} />
             <TextInput
               style={styles.searchInput}
               value={searchQuery}
@@ -325,61 +335,80 @@ export default function HomeScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <X size={16} color="#64748B" strokeWidth={2} />
+                <X size={16} color="#94A3B8" strokeWidth={2} />
               </TouchableOpacity>
             )}
           </View>
 
           {/* Filter Button */}
-          <TouchableOpacity 
-            style={[styles.iconButton, hasActiveFilters && styles.activeIconButton]} 
-            onPress={() => setShowFilterModal(true)}
-          >
-            <Filter size={16} color={hasActiveFilters ? "#FFFFFF" : "#64748B"} strokeWidth={2} />
-            {hasActiveFilters && <View style={styles.activeDot} />}
+          <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+            {hasActiveFilters ? (
+              <LinearGradient
+                colors={['#F59E0B', '#D97706']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconButton}
+              >
+                <Filter size={18} color="#FFFFFF" strokeWidth={2} />
+                <View style={styles.activeDot} />
+              </LinearGradient>
+            ) : (
+              <View style={styles.iconButton}>
+                <Filter size={18} color="#94A3B8" strokeWidth={2} />
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Sort Button */}
-          <TouchableOpacity 
-            style={styles.iconButton} 
-            onPress={() => setShowSortModal(true)}
-          >
-            <ArrowUpDown size={16} color="#64748B" strokeWidth={2} />
+          <TouchableOpacity onPress={() => setShowSortModal(true)}>
+            <View style={styles.iconButton}>
+              <ArrowUpDown size={18} color="#94A3B8" strokeWidth={2} />
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* Clear Filters - Only show when filters are active */}
         {hasActiveFilters && (
           <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-            <X size={12} color="#EF4444" strokeWidth={2} />
+            <X size={14} color="#EF4444" strokeWidth={2} />
             <Text style={styles.clearFiltersText}>Clear filters</Text>
           </TouchableOpacity>
         )}
 
-<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12, gap: 8 }}>
-        {uniqueTags.map(tag => (
-          <TouchableOpacity
-            key={tag}
-            style={{
-              backgroundColor: getTagColor(tag),
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              marginRight: 8,
-              opacity: tag === tagFilter ? 1 : 0.6,
-              borderWidth: tag === tagFilter ? 2 : 0,
-              borderColor: tag === tagFilter ? '#222B45' : 'transparent',
-            }}
-            onPress={() => setTagFilter(tag === tagFilter ? null : tag)}
-          >
-            <Text style={{ color: '#222B45', fontWeight: '600' }}>{tag}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop:12,marginBottom:0, gap: 8}}>
+  {uniqueTags.map(tag => (
+    <TouchableOpacity
+      key={tag}
+      style={[
+        styles.tag,
+        {
+          backgroundColor: getTagColor(tag),
+          marginTop: 0,
+          marginBottom: 0,
+        }
+      ]}
+      onPress={() => setTagFilter(tag === tagFilter ? null : tag)}
+    >
+      <Tag size={14} color="#fff" />
+      <Text style={[styles.tagText, { color: '#fff' }]}>{tag}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
       {tagFilter && (
-        <Text style={{ fontSize: 16, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
-          Total for "{tagFilter}": ${tagTotal?.toFixed(2)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop:18,marginBottom: 2}}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.filterTotalText}>Total for </Text>
+            <View style={[
+              styles.tag,
+              { backgroundColor: getTagColor(tagFilter), marginTop: 0, marginBottom: 0,marginLeft:3 }
+            ]}>
+              <Tag size={14} color="#fff" />
+              <Text style={[styles.tagText, { color: '#fff' }]}>{tagFilter}</Text>
+            </View>
+            <Text style={[styles.filterTotalText,{marginLeft:6}]}>:</Text>
+          </View>
+          <Text style={styles.filterTotalAmount}>{tagTotal?.toFixed(2)}</Text>
+        </View>
       )}
       </View>
 
@@ -673,7 +702,8 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 20,
+    backgroundColor: '#0F172A',
   },
   headerContent: {
     flexDirection: 'row',
@@ -684,35 +714,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#F8FAFC',
-    marginBottom: 4,
-    letterSpacing: -0.5,
+    marginBottom: 6,
+    letterSpacing: -0.8,
+    textShadowColor: 'rgba(245, 158, 11, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#94A3B8',
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   createButton: {
-    backgroundColor: '#F59E0B',
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
   },
   searchFilterSection: {
     paddingHorizontal: 20,
+    paddingBottom:8,
   },
   searchFilterRow: {
     flexDirection: 'row',
@@ -723,30 +757,47 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 8,
+    backgroundColor: '#1E293B',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: '#475569',
+    gap: 10,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     color: '#F8FAFC',
     fontWeight: '500',
+    letterSpacing: -0.2,
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#334155',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#1E293B',
+    borderWidth: 1.5,
+    borderColor: '#475569',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   activeIconButton: {
     backgroundColor: '#F59E0B',
@@ -754,30 +805,123 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#F59E0B',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
   },
   clearFiltersButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginTop: 8,
-    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 12,
+    backgroundColor: '#1E293B',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    gap: 6,
+    shadowColor: '#EF4444',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   clearFiltersText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#EF4444',
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+ 
+  tagButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 2,
+    opacity: 1,
+  },
+  selectedTagButton: {
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+    transform: [{ scale: 1.05 }],
+  },
+    tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+  paddingHorizontal: 8,
+    paddingVertical: 2,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  tagText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 4,
     fontWeight: '500',
+  },
+  filterTotalContainer: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#475569',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  },
+  filterTotalText: {
+    fontSize: 16,
+    color: '#CBD5E1',
+    fontWeight: '500',
+  },
+  filterTotalAmount: {
+    color: '#F59E0B',
+    fontWeight: '700',
   },
   scrollView: {
     flex: 1,
-    paddingTop: 8,
   },
   emptyState: {
     flex: 1,
