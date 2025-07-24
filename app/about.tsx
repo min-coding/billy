@@ -99,19 +99,6 @@ export default function AboutScreen() {
           <Text style={styles.version}>Version 1.0.0</Text>
         </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          <Text style={styles.statsTitle}>Trusted by Users Worldwide</Text>
-          <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
-                <Text style={styles.statNumber}>{stat.number}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
         {/* Features Section */}
         <View style={styles.featuresSection}>
           <Text style={styles.sectionTitle}>Key Features</Text>

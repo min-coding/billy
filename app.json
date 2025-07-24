@@ -14,7 +14,10 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Billy uses your camera to let you take photos of receipts and payment slips for bill verification.",
-        "NSPhotoLibraryUsageDescription": "Billy needs access to your photo library so you can upload receipts, payment slips, and profile pictures."
+        "NSPhotoLibraryUsageDescription": "Billy needs access to your photo library so you can upload receipts, payment slips, and profile pictures.",
+        "UIBackgroundModes": [
+      "remote-notification"
+    ]
       },
       "icon": {
         "light": "./assets/images/ios-light.png",
