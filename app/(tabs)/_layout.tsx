@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
-import { Receipt, Plus, User, Users, ChartBar as BarChart, Bell } from 'lucide-react-native';
-import { View, Text, StyleSheet } from 'react-native';
+import { Receipt, User, Users} from 'lucide-react-native';
+import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function TabLayout() {
@@ -13,9 +13,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#0F172A',
           borderTopWidth: 0,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 80,
+          paddingBottom: 12,
+          paddingTop: 12,
+          height: 95,
           shadowColor: '#000000',
           shadowOffset: {
             width: 0,
@@ -34,9 +34,10 @@ export default function TabLayout() {
           />
         ),
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: '600',
           letterSpacing: 0.5,
+          marginTop: 12,
         },
       }}>
       <Tabs.Screen
@@ -52,7 +53,7 @@ export default function TabLayout() {
                   end={{ x: 1, y: 1 }}
                   style={styles.activeIconBackground}
                 >
-                  <Receipt size={size} color="#FFFFFF" strokeWidth={2} />
+                  <Receipt size={22} color="#FFFFFF" strokeWidth={2} />
                 </LinearGradient>
               ) : (
                 <Receipt size={size} color={color} strokeWidth={2} />
@@ -66,18 +67,20 @@ export default function TabLayout() {
         options={{
           title: 'Friends',
           tabBarIcon: ({ size, color, focused }) => (
-            focused ? (
-              <LinearGradient
-                colors={['#F59E0B', '#EAB308']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.activeIconBackground}
-              >
-                <Users size={size} color="#FFFFFF" strokeWidth={2} />
-              </LinearGradient>
-            ) : (
-              <Users size={size} color={color} strokeWidth={2} />
-            )
+            <View style={styles.tabIconContainer}>
+              {focused ? (
+                <LinearGradient
+                  colors={['#F59E0B', '#EAB308']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.activeIconBackground}
+                >
+                  <Users size={22} color="#FFFFFF" strokeWidth={2} />
+                </LinearGradient>
+              ) : (
+                <Users size={size} color={color} strokeWidth={2} />
+              )}
+            </View>
           ),
         }}
       />
@@ -86,18 +89,20 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ size, color, focused }) => (
-            focused ? (
-              <LinearGradient
-                colors={['#F59E0B', '#EAB308']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.activeIconBackground}
-              >
-                <User size={size} color="#FFFFFF" strokeWidth={2} />
-              </LinearGradient>
-            ) : (
-              <User size={size} color={color} strokeWidth={2} />
-            )
+            <View style={styles.tabIconContainer}>
+              {focused ? (
+                <LinearGradient
+                  colors={['#F59E0B', '#EAB308']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.activeIconBackground}
+                >
+                  <User size={22} color="#FFFFFF" strokeWidth={2} />
+                </LinearGradient>
+              ) : (
+                <User size={size} color={color} strokeWidth={2} />
+              )}
+            </View>
           ),
         }}
       />
@@ -108,11 +113,14 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabIconContainer: {
     position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   activeIconBackground: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#F59E0B',
@@ -120,9 +128,9 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 10,
   },
   badge: {
     position: 'absolute',
