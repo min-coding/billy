@@ -263,7 +263,9 @@ export default function HomeScreen() {
     });
 
     return () => {
-      if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
     };
   }, [user?.id]);
 
