@@ -40,7 +40,11 @@ export default function DateRangePicker({
     
     if (date) {
       setSelectedStartDate(date);
-      const formattedDate = date.toISOString().split('T')[0];
+      // ✅ Fix: Use local date formatting instead of UTC conversion
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
       onStartDateChange(formattedDate);
     }
   };
@@ -52,7 +56,11 @@ export default function DateRangePicker({
     
     if (date) {
       setSelectedEndDate(date);
-      const formattedDate = date.toISOString().split('T')[0];
+      // ✅ Fix: Use local date formatting instead of UTC conversion
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
       onEndDateChange(formattedDate);
     }
   };

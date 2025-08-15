@@ -223,6 +223,7 @@ export default function HomeScreen() {
   useEffect(() => {
     registerForPushNotificationsAsync()
       .then(async (token) => {
+        console.log('Push roken try')
         if (token) {
           // Always get the authenticated user's ID from Supabase Auth
           const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -256,6 +257,8 @@ export default function HomeScreen() {
             setExpoPushToken(token ?? '');
           }
         } else {
+          console.log('token is what')
+          console.log(token)
           setExpoPushToken(token ?? '');
         }
       })
@@ -264,8 +267,6 @@ export default function HomeScreen() {
     notificationListener.current = Notifications.addNotificationReceivedListener(() => {
       // Handle notification received
     });
-
-    // Removed responseListener for notification taps; now handled globally
 
     return () => {
       if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
