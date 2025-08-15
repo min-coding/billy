@@ -223,7 +223,6 @@ export default function HomeScreen() {
   useEffect(() => {
     registerForPushNotificationsAsync()
       .then(async (token) => {
-        console.log('Push roken try')
         if (token) {
           // Always get the authenticated user's ID from Supabase Auth
           const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -231,7 +230,6 @@ export default function HomeScreen() {
             setExpoPushToken(token);
             // Save push token to database
             try {
-              console.log('Attempting to save push token for user:', authUser.id);
               console.log('Token to save:', token);
               const { error } = await supabase
                 .from('user_push_tokens')
@@ -243,8 +241,6 @@ export default function HomeScreen() {
                 });
               if (error) {
                 console.error('Failed to save push token:', error);
-                console.error('User ID:', authUser.id);
-                console.error('Auth session check...');
                 const { data: { session } } = await supabase.auth.getSession();
                 console.error('Current session:', session?.user?.id);
               } else {
@@ -257,8 +253,6 @@ export default function HomeScreen() {
             setExpoPushToken(token ?? '');
           }
         } else {
-          console.log('token is what')
-          console.log(token)
           setExpoPushToken(token ?? '');
         }
       })
