@@ -202,9 +202,11 @@ export default function PrivacyPolicyScreen() {
             please contact us at:
           </Text>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactDetail}>Email: privacy@billy-app.com</Text>
-            <Text style={styles.contactDetail}>Address: 123 Privacy Street, Data City, DC 12345</Text>
+            <Text style={styles.contactDetail}>Email: nichapha.trai@gmail.com</Text>
           </View>
+          <Text style={styles.relatedLinksText}>
+            Related: <Text style={styles.linkText} onPress={() => router.push('/terms')}>Terms of Service</Text>
+          </Text>
         </View>
 
         <View style={styles.changesSection}>
@@ -398,5 +400,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
     fontStyle: 'italic',
+  },
+  relatedLinksText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 16,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  linkText: {
+    color: '#3B82F6',
+    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });

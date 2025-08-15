@@ -49,24 +49,16 @@ export default function AboutScreen() {
       description: "Manage bills through selection, payment, and completion phases with clear status tracking for all participants."
     }
   ];
-
-  const stats = [
-    { number: "1000+", label: "Active Users" },
-    { number: "5000+", label: "Bills Split" },
-    { number: "$50K+", label: "Money Managed" },
-    { number: "99.9%", label: "Uptime" }
-  ];
-
   const handlePrivacyPress = () => {
     router.push('/privacy');
   };
 
-  const handleContactPress = () => {
-    Linking.openURL('mailto:support@billy-app.com');
+  const handleTermsPress = () => {
+    router.push('/terms');
   };
 
-  const handleWebsitePress = () => {
-    Linking.openURL('https://billy-app.com');
+  const handleContactPress = () => {
+    Linking.openURL('mailto:nichapha.trai@gmail.com');
   };
 
   return (
@@ -205,23 +197,10 @@ export default function AboutScreen() {
             <Text style={styles.privacyButtonText}>Read Privacy Policy</Text>
             <ExternalLink size={16} color="#3B82F6" strokeWidth={2} />
           </TouchableOpacity>
-        </View>
-
-        {/* Platform Section */}
-        <View style={styles.platformSection}>
-          <Text style={styles.sectionTitle}>Available Everywhere</Text>
-          <View style={styles.platformGrid}>
-            <View style={styles.platformCard}>
-              <Smartphone size={32} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.platformTitle}>Mobile Apps</Text>
-              <Text style={styles.platformDescription}>iOS and Android native apps</Text>
-            </View>
-            <View style={styles.platformCard}>
-              <Globe size={32} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.platformTitle}>Web App</Text>
-              <Text style={styles.platformDescription}>Access from any browser</Text>
-            </View>
-          </View>
+          <TouchableOpacity style={styles.privacyButton} onPress={handleTermsPress}>
+            <Text style={styles.privacyButtonText}>Read Terms of Service</Text>
+            <ExternalLink size={16} color="#3B82F6" strokeWidth={2} />
+          </TouchableOpacity>
         </View>
 
         {/* Contact Section */}
@@ -234,11 +213,6 @@ export default function AboutScreen() {
           <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
             <Text style={styles.contactButtonText}>Contact Support</Text>
             <ExternalLink size={16} color="#FFFFFF" strokeWidth={2} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.websiteButton} onPress={handleWebsitePress}>
-            <Text style={styles.websiteButtonText}>Visit Our Website</Text>
-            <ExternalLink size={16} color="#3B82F6" strokeWidth={2} />
           </TouchableOpacity>
         </View>
 

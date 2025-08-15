@@ -354,11 +354,18 @@ export default function SignupScreen() {
             </View>
 
             {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                By creating an account, you agree to our Terms of Service and Privacy Policy
-              </Text>
-            </View>
+                    <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            By creating an account, you agree to our{' '}
+            <Text style={styles.linkText} onPress={() => router.push('/terms')}>
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text style={styles.linkText} onPress={() => router.push('/privacy')}>
+              Privacy Policy
+            </Text>
+          </Text>
+        </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -586,5 +593,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     fontWeight: '500',
+  },
+  linkText: {
+    color: '#3B82F6',
+    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });
