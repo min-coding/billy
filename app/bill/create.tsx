@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator, Button } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, X, Users, ArrowLeft, CreditCard, Building2, Check, Search, Tag, TestTube, Camera, ShoppingCart, Receipt } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -17,7 +17,7 @@ import DatePicker from '@/components/DatePicker';
 
 export default function CreateBillScreen() {
   const router = useRouter();
-  const { friends } = useFriends();
+  const { friends, loading } = useFriends();
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -29,11 +29,12 @@ export default function CreateBillScreen() {
   const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [participants, setParticipants] = useState<User[]>([]);
   const [bankDetails, setBankDetails] = useState<BankDetails>({
-    bankName: 'SCB',
-    accountName: 'Winner Hackathon',
-    accountNumber: '1234567890'
+    bankName: '',
+    accountName: '',
+    accountNumber: ''
   });
   const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [showNoFriendsModal, setShowNoFriendsModal] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const { refetch } = useBills();
@@ -46,57 +47,12 @@ export default function CreateBillScreen() {
     friend.email.toLowerCase().includes(friendSearchQuery.toLowerCase())
   );
 
-  // Test bill data for quick testing
-  const fillTestBill = () => {
-    setTitle('Test Bill');
-    setDescription('Quick test bill for app testing');
-    setDueDate('2026-02-15');
-    setTag('Test');
-    
-    // Add test items
-    const testItems: BillItem[] = [
-      {
-        id: 'item1',
-        name: 'Item 1',
-        price: 10,
-        quantity: 1,
-        selectedBy: [],
-      },
-      {
-        id: 'item2',
-        name: 'Item 2',
-        price: 20,
-        quantity: 1,
-        selectedBy: [],
-      },
-      {
-        id: 'item3',
-        name: 'Item 3',
-        price: 50,
-        quantity: 1,
-        selectedBy: [],
-      },
-      {
-        id: 'item4',
-        name: 'Item user1&2 share',
-        price: 40,
-        quantity: 1,
-        selectedBy: [],
-      },
-      {
-        id: 'item5',
-        name: 'ItemAllUser',
-        price: 300,
-        quantity: 1,
-        selectedBy: [],
-      },
-    ];
-    setItems(testItems);
-    
-    // Do not set participants here; add them manually from real data
-
-    Alert.alert('Test Data Loaded', 'Bill has been prefilled with test data for quick testing!');
-  };
+  // Show modal automatically if user has no friends (only after loading is complete)
+  useEffect(() => {
+    if (!loading && friends.length === 0) {
+      setShowNoFriendsModal(true);
+    }
+  }, [friends.length, loading]);
 
   // Helper function to validate due date
   const validateDueDate = (dateString: string) => {
@@ -377,17 +333,13 @@ export default function CreateBillScreen() {
           <Text style={styles.title}>Create Bill</Text>
           <Text style={styles.subtitle}>Split expenses with friends</Text>
         </View>
-        
-        {/* Test Bill Button */}
-        <TouchableOpacity style={styles.testButton} onPress={fillTestBill}>
-          <TestTube size={18} color="#F59E0B" strokeWidth={2} />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Bill Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Bill Details</Text>
+          <Text style={styles.sectionSubtitle}>Fill out your bill details</Text>
           
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Bill Title *</Text>
@@ -533,7 +485,13 @@ export default function CreateBillScreen() {
             <Text style={styles.sectionTitle}>Members</Text>
             <TouchableOpacity 
               style={styles.addFromFriendsButton}
-              onPress={() => setShowFriendsModal(true)}
+              onPress={() => {
+                if (friends.length === 0) {
+                  setShowNoFriendsModal(true);
+                } else {
+                  setShowFriendsModal(true);
+                }
+              }}
             >
               <Users size={16} color="#F59E0B" strokeWidth={2} />
               <Text style={styles.addFromFriendsText}>Invite Members</Text>
@@ -776,6 +734,63 @@ export default function CreateBillScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* No Friends Modal */}
+      <Modal
+        visible={showNoFriendsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNoFriendsModal(false)}
+      >
+        <View style={styles.friendsModalOverlay}>
+          <View style={styles.noFriendsModal}>
+            <View style={styles.friendsModalHeader}>
+              <Text style={styles.friendsModalTitle}>No Friends Yet</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowNoFriendsModal(false)}
+              >
+                <X size={20} color="#64748B" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.noFriendsModalContent}>
+              <View style={styles.noFriendsIconContainer}>
+                <Users size={48} color="#F59E0B" strokeWidth={2} />
+              </View>
+              
+              <Text style={styles.noFriendsModalMainTitle}>Welcome to Billy! 👋</Text>
+              <Text style={styles.noFriendsModalSubtitle}>
+                To get started with bill splitting, you'll need to add some friends first. 
+                You can invite them by username or email address, or continue without friends for now.
+              </Text>
+              
+              <View style={styles.noFriendsModalButtons}>
+                <TouchableOpacity 
+                  style={styles.addFriendsButton}
+                  onPress={() => {
+                    setShowNoFriendsModal(false);
+                    router.push('/friends');
+                  }}
+                >
+                  <Users size={18} color="#FFFFFF" strokeWidth={2} />
+                  <Text style={styles.addFriendsButtonText}>Get Started</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.continueAnywayButton}
+                  onPress={() => {
+                    setShowNoFriendsModal(false);
+                    // Allow them to continue creating the bill
+                  }}
+                >
+                  <Text style={styles.continueAnywayText}>Continue Anyway</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -816,16 +831,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
     marginTop: 2,
-  },
-  testButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F59E0B',
   },
   scrollView: {
     flex: 1,
@@ -1399,5 +1404,115 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 2,
     zIndex: 2,
+  },
+  // No Friends Modal Styles
+  noFriendsModal: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    margin: 20,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 20,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  noFriendsModalContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  noFriendsIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  noFriendsModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  noFriendsModalMainTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  noFriendsModalSubtitle: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+    fontWeight: '500',
+  },
+  noFriendsModalButtons: {
+    gap: 16,
+    width: '100%',
+  },
+  addFriendsButton: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#F59E0B',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  addFriendsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  continueAnywayButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#475569',
+  },
+  continueAnywayText: {
+    color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  // Friend Tip Styles
+  friendTipContainer: {
+    marginBottom: 8,
+  },
+  addFriendsTipButton: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  addFriendsTipText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
