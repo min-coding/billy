@@ -803,9 +803,9 @@ const handleSaveEditItems = async () => {
             <View style={styles.infoRow}>
               <Calendar size={16} color="#64748B" strokeWidth={2} />
               <Text style={styles.infoText}>
-                {bill.dueDate 
-                  ? `Due ${new Date(bill.dueDate).toLocaleDateString()}`
-                  : `Created ${new Date(bill.createdAt).toLocaleDateString()}`
+                {bill.due_date 
+                  ? `Due ${new Date(bill.due_date).toLocaleDateString()}`
+                  : `Created ${new Date(bill.created_at).toLocaleDateString()}`
                 }
               </Text>
             </View>

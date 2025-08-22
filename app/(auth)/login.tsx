@@ -374,7 +374,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     fontWeight: '600',
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
     paddingHorizontal: 8,
   },
   signupButtonGradient: {
