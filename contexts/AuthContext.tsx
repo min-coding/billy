@@ -228,34 +228,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // First, verify the user's password
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: authState.user.email,
-        password: password,
+      // Call the Edge Function to delete account
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        body: {
+          userId: authState.user.id,
+          password: password
+        }
       });
 
-      if (authError) {
-        throw new Error('Incorrect password. Please try again.');
+      if (error) {
+        throw new Error(error.message);
       }
 
-      // Delete the user's profile data (this will trigger the cleanup trigger)
-      const { error: profileError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', authState.user.id);
-
-      if (profileError) {
-        throw new Error(profileError.message);
-      }
-
-      // Delete the auth user account
-      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(
-        authState.user.id
-      );
-
-      if (authDeleteError) {
-        // If admin delete fails, try to delete the user profile and sign out
-        console.warn('Could not delete auth account, but profile was deleted:', authDeleteError);
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       // Sign out the user
@@ -270,6 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Navigate to login
       router.replace('/(auth)/login');
+
     } catch (error) {
       console.error('Delete account error:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
