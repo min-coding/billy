@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink } from 'lucide-react-native';
+import { User, CircleHelp as HelpCircle, LogOut, UserPen, Camera, ExternalLink, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,7 @@ import { decode } from 'base64-arraybuffer';
 import { useBills } from '@/hooks/useBills';
 import { useFriends } from '@/hooks/useFriends';
 import { useRouter } from 'expo-router';
+import DeleteAccountModal from '@/components/DeleteAccountModal';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile, isLoading } = useAuth();
@@ -24,6 +25,7 @@ export default function ProfileScreen() {
   const { bills, loading: billsLoading, refetch: refetchBills } = useBills();
   const { friends, refetch: refetchFriends } = useFriends();
   const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
   // Calculate total spent (sum of totalAmount for all bills where user is a participant)
   const totalSpent = bills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
@@ -446,11 +448,35 @@ export default function ProfileScreen() {
             </View>
           </LinearGradient>
 
+          {/* Delete Account Section */}
+          <LinearGradient
+            colors={['#1E293B', '#334155']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.deleteAccountSectionGradient}
+          >
+            <View style={styles.deleteAccountSection}>
+              <TouchableOpacity 
+                style={styles.deleteAccountButton} 
+                onPress={() => setShowDeleteAccountModal(true)}
+              >
+                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                <Text style={styles.deleteAccountText}>Delete Account</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
           {/* App Version */}
           <View style={styles.versionSection}>
             <Text style={styles.versionText}>Version 1.0.0</Text>
           </View>
         </ScrollView>
+
+        {/* Delete Account Modal */}
+        <DeleteAccountModal
+          visible={showDeleteAccountModal}
+          onClose={() => setShowDeleteAccountModal(false)}
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -783,6 +809,38 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: {
+    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  // Delete Account Styles
+  deleteAccountSectionGradient: {
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  deleteAccountSection: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    borderRadius: 16,
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  deleteAccountText: {
     color: '#EF4444',
     fontSize: 16,
     fontWeight: '600',

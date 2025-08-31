@@ -50,7 +50,7 @@ export default function TermsScreen() {
         },
         {
           subtitle: "Account Termination",
-          text: "You may terminate your account at any time. We may terminate or suspend your account if you violate these terms or for any other reason at our discretion."
+          text: "You may terminate your account at any time through the app's profile settings. When you delete your account, all your data will be permanently removed and cannot be recovered. We may terminate or suspend your account if you violate these terms or for any other reason at our discretion."
         }
       ]
     },

@@ -110,7 +110,7 @@ export default function PrivacyPolicyScreen() {
         },
         {
           subtitle: "Data Deletion",
-          text: "You can request deletion of your account and associated data. Note that some information may be retained for legal or legitimate business purposes."
+          text: "You can delete your account and associated data at any time through the app's profile settings. When you delete your account, all your data including bills, friends, chat messages, and notifications will be permanently removed. This action cannot be undone."
         },
         {
           subtitle: "Communication Preferences",
