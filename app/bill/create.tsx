@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator, Button } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, Users, ArrowLeft, CreditCard, Building2, Check, Search, Tag, TestTube, Camera, ShoppingCart, Receipt } from 'lucide-react-native';
+import { Plus, X, Users, ArrowLeft, CreditCard, Building2, Check, Search, Tag, Camera, Receipt } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BillItem, User, BankDetails } from '@/types';
 import { formatCurrency } from '@/utils/billUtils';
@@ -41,6 +41,7 @@ export default function CreateBillScreen() {
   const [receiptImageUris, setReceiptImageUris] = useState<string[]>([]);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [dueDateError, setDueDateError] = useState('');
+  const newItemRef = useRef<TextInput>(null);
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(friendSearchQuery.toLowerCase()) ||
@@ -396,6 +397,7 @@ export default function CreateBillScreen() {
           <View style={styles.addItemContainer}>
             <View style={styles.addItemRow}>
               <TextInput
+                ref={newItemRef}
                 style={[styles.input, styles.itemNameInput]}
                 value={newItemName}
                 onChangeText={setNewItemName}
@@ -433,9 +435,6 @@ export default function CreateBillScreen() {
           {/* Items List or Empty State */}
           {items.length === 0 ? (
             <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <ShoppingCart size={32} color="#64748B" strokeWidth={2} />
-              </View>
               <Text style={styles.emptyTitle}>No items added yet</Text>
               <Text style={styles.emptyDescription}>
                 Add items to your bill using the form above. Each item can have a name, price, and quantity.
@@ -443,9 +442,9 @@ export default function CreateBillScreen() {
               <TouchableOpacity 
                 style={styles.emptyButton} 
                 onPress={() => {
-                  // Focus on the first input field
-                  setNewItemName('Sample Item');
-                  setNewItemTotalPrice('10.00');
+                  if (newItemRef.current) {
+                    newItemRef.current.focus();
+                  }
                 }}
               >
                 <Plus size={16} color="#F59E0B" strokeWidth={2.5} />
