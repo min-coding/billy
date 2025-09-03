@@ -299,7 +299,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.titleSection}>
-            <Text style={styles.title}>Bills</Text>
+            <Text style={styles.title}>{user?.name ? `Hi, ${user.name} !` : 'Bills'}</Text>
             <Text style={styles.subtitle}>
               {filteredAndSortedBills.length} of {bills.length} bills
             </Text>

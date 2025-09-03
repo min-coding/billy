@@ -276,6 +276,9 @@ export default function ProfileScreen() {
 
               {isEditing ? (
                 <View style={styles.editForm}>
+                   <Text style={styles.username}>
+                  @{user.username}
+                </Text>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Name</Text>
                     <LinearGradient
@@ -360,6 +363,9 @@ export default function ProfileScreen() {
               ) : (
                 <View style={styles.profileInfo}>
                   <Text style={styles.profileName}>{user.name}</Text>
+                  {!!user.username && (
+                    <Text style={styles.profileEmail}>@{user.username}</Text>
+                  )}
                   <Text style={styles.profileEmail}>{user.email}</Text>
                   <Text style={styles.joinDate}>
                     Joined {new Date(user.createdAt).toLocaleDateString('en-US', { 
@@ -548,6 +554,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 16,
   },
+  username:{
+    color:'#94A3B8',
+    fontWeight:'500',
+    fontSize:18,
+    textAlign:'center',
+  },
   avatarContainer: {
     marginBottom: 20,
   },
@@ -641,7 +653,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#F8FAFC',
-    backgroundColor: '#0F172A',
+    // backgroundColor: '#0F172A',
+    backgroundColor:'transparent',
     fontWeight: '500',
   },
   buttonRow: {
