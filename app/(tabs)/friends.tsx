@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,10 @@ export default function FriendsScreen() {
   const [isSending, setIsSending] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Optimized real-time search with request cancellation and proper debouncing
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Auto-refresh when screen comes into focus - but only once per focus
   useFocusEffect(
@@ -45,14 +49,31 @@ export default function FriendsScreen() {
     friend.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Debounced search for users by username
+  // Optimized real-time search with request cancellation and proper debouncing
   const handleUsernameSearch = useCallback(async (text: string) => {
+    // Clear any existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Reset results for short queries
     if (text.length < 3) {
       setUsernameResults([]);
+      setSelectedUser(null);
       return;
     }
-    if (isSearching) return;
+
+    // Set loading state
     setIsSearching(true);
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       const { data, error } = await supabase
         .from('users')
@@ -60,33 +81,56 @@ export default function FriendsScreen() {
         .ilike('username', `%${text}%`)
         .neq('id', user?.id)
         .limit(10);
-      if (!error && data) {
-        setUsernameResults(data);
-      } else {
+
+      // Only update results if this request wasn't cancelled
+      if (!abortControllerRef.current.signal.aborted) {
+        if (!error && data) {
+          setUsernameResults(data);
+        } else {
+          setUsernameResults([]);
+        }
+      }
+    } catch (err: any) {
+      // Only handle errors if request wasn't cancelled
+      if (!abortControllerRef.current?.signal.aborted) {
+        console.error('Search error:', err);
         setUsernameResults([]);
       }
-    } catch (err) {
-      console.error('Search error:', err);
-      setUsernameResults([]);
     } finally {
-      setIsSearching(false);
+      // Only update loading state if request wasn't cancelled
+      if (!abortControllerRef.current?.signal.aborted) {
+        setIsSearching(false);
+      }
     }
-  }, [user?.id, isSearching]);
+  }, [user?.id]);
 
-  // Handler for input change, stable reference
+  // Optimized input handler with proper debouncing
   const onUsernameInputChange = useCallback((text: string) => {
     setUsernameSearch(text);
     setSelectedUser(null);
-  }, []);
 
-  // Debounce the search function
-  React.useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      handleUsernameSearch(usernameSearch);
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      handleUsernameSearch(text);
     }, 300);
+  }, [handleUsernameSearch]);
 
-    return () => clearTimeout(timeoutId);
-  }, [usernameSearch, handleUsernameSearch]);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleSendFriendRequest = async (username: string) => {
     if (isSending) return;
@@ -411,6 +455,25 @@ export default function FriendsScreen() {
                 </View>
               </LinearGradient>
               
+              {/* Loading indicator */}
+              {isSearching && usernameSearch.length >= 3 && (
+                <LinearGradient
+                  colors={['#1E293B', '#334155']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ 
+                    borderRadius: 8, 
+                    marginTop: 12, 
+                    padding: 16,
+                    alignItems: 'center'
+                  }}
+                >
+                  <Text style={{ color: '#F59E0B', fontSize: 14, fontWeight: '500' }}>
+                    Searching...
+                  </Text>
+                </LinearGradient>
+              )}
+
               {/* Dropdown of matching usernames */}
               <View style={{ maxHeight: 300, marginTop: 12 }}>
                 <FlatList
