@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Send, Camera, Image as ImageIcon, Check, X, Clock, Shield, MessageCircle, Upload } from 'lucide-react-native';
+import { ArrowLeft, Send, Camera, Image as Check, X, Clock, Shield, MessageCircle, Upload } from 'lucide-react-native';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/billUtils';
@@ -396,6 +396,11 @@ export default function BillChatScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView 
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -714,6 +719,7 @@ export default function BillChatScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      </KeyboardAvoidingView>
 
       {/* Image Modal */}
       <Modal
@@ -1175,5 +1181,8 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: '100%',
     height: '100%',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
 });
