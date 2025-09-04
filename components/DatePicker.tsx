@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar } from 'lucide-react-native';
 
@@ -29,20 +29,36 @@ export default function DatePicker({
   required = false
 }: DatePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(
+  const [tempDate, setTempDate] = useState<Date>(
     value ? parseLocalDate(value) : new Date()
   );
 
   const handleDateChange = (event: any, date?: Date) => {
-    // Always hide the picker after a selection (for both iOS and Android)
-    setShowPicker(false);
-
-    if (date) {
-      setSelectedDate(date);
-      // Format date as YYYY-MM-DD for consistency with existing code
-      const formattedDate = date.toISOString().split('T')[0];
-      onDateChange(formattedDate);
+    if (Platform.OS === 'android') {
+      // Android: Close immediately on selection
+      setShowPicker(false);
+      if (date) {
+        const formattedDate = date.toISOString().split('T')[0];
+        onDateChange(formattedDate);
+      }
+    } else {
+      // iOS: Just update temp date, don't close yet
+      if (date) {
+        setTempDate(date);
+      }
     }
+  };
+
+  const handleDone = () => {
+    setShowPicker(false);
+    const formattedDate = tempDate.toISOString().split('T')[0];
+    onDateChange(formattedDate);
+  };
+
+  const handleCancel = () => {
+    setShowPicker(false);
+    // Reset temp date to original value
+    setTempDate(value ? parseLocalDate(value) : new Date());
   };
 
   const formatDisplayDate = (dateString: string) => {
@@ -74,6 +90,8 @@ export default function DatePicker({
       
       input.click();
     } else {
+      // Set temp date to current value when opening
+      setTempDate(value ? parseLocalDate(value) : new Date());
       setShowPicker(true);
     }
   };
@@ -96,15 +114,36 @@ export default function DatePicker({
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {showPicker && Platform.OS !== 'web' && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          minimumDate={minimumDate}
-          style={styles.picker}
-          locale="en"
-        />
+        <Modal
+          visible={showPicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={handleCancel}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Select Date</Text>
+                <TouchableOpacity onPress={handleDone} style={styles.headerButton}>
+                  <Text style={styles.doneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+                minimumDate={minimumDate}
+                style={styles.picker}
+                locale="en"
+              />
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );
@@ -149,5 +188,48 @@ const styles = StyleSheet.create({
   },
   picker: {
     backgroundColor: '#1E293B',
+  },
+  // New modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#334155',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  headerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  cancelText: {
+    color: '#64748B',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  doneText: {
+    color: '#F59E0B',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerTitle: {
+    color: '#F8FAFC',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
