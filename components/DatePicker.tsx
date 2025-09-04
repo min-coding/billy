@@ -186,33 +186,46 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
-  picker: {
-    backgroundColor: '#1E293B',
-  },
-  // New modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  pickerContainer: {
-    backgroundColor: '#1E293B',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: '#334155',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-  },
+  
+    // New modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingBottom: 50,
+    },
+    pickerContainer: {
+      backgroundColor: '#1E293B',
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#334155',
+      width: '100%',
+      maxWidth: 400,
+      shadowColor: '#000000',
+      shadowOffset: {
+        width: 0,
+        height: 8,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 16,
+    },
+    pickerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#334155',
+    },
+    picker: {
+      backgroundColor: '#1E293B',
+      alignSelf: 'center',
+      width: '100%',
+    },
   headerButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
