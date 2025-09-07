@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag, Receipt } from 'lucide-react-native';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
@@ -122,9 +122,15 @@ export default function BillDetailScreen() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (id) fetchBill(id);
-  }, [id]);
+  // Initial load is handled by focus refetch below to avoid duplicate calls
+
+  // Refetch bill whenever this screen gains focus (e.g., returning from chat)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (id) fetchBill(id as string);
+      return () => {};
+    }, [id])
+  );
 
   useEffect(() => {
     if (showEditBillInfoModal && bill) {

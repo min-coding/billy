@@ -43,3 +43,4 @@ yarn-error.*
 build-*.ipa
 
 supabase/.temp/
+TODO.md
