@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
-import type { Database } from '@/types/database';
 
 type ChatMessage = {
   id: string;
@@ -46,7 +45,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const currentBillIdRef = useRef<string | null>(null);
   const [subscribedBillId, setSubscribedBillId] = useState<string | null>(null);
 
-  const fetchMessages = async (billId: string) => {
+  const fetchMessages = useCallback(async (billId: string) => {
     if (!user) return [];
 
     try {
@@ -96,7 +95,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching messages:', err);
       return [];
     }
-  };
+  }, [user]);
 
   const sendMessage = async (
     billId: string, 
@@ -255,8 +254,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // Real-time subscription for chat messages
   useEffect(() => {
     if (!user || !subscribedBillId) return;
+    
+    console.log('Setting up real-time subscription for bill:', subscribedBillId);
+    
     const channel = supabase
-      .channel('realtime:chat_messages')
+      .channel(`realtime:chat_messages:${subscribedBillId}`)
       .on(
         'postgres_changes',
         {
@@ -265,7 +267,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           table: 'chat_messages',
           filter: `bill_id=eq.${subscribedBillId}`,
         },
-        async () => {
+        async (payload) => {
+          console.log('Real-time message update received:', payload);
           // Refetch messages for this bill
           const updatedMessages = await fetchMessages(subscribedBillId);
           setChatState(prev => ({
@@ -274,11 +277,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           }));
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+      
     return () => {
+      console.log('Cleaning up subscription for bill:', subscribedBillId);
       supabase.removeChannel(channel);
     };
-  }, [user, subscribedBillId]);
+  }, [user, subscribedBillId, fetchMessages]);
 
   return (
     <ChatContext.Provider
