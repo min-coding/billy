@@ -349,7 +349,6 @@ export default function FriendsScreen() {
                         />
                         <View style={styles.friendInfo}>
                           <Text style={styles.friendName}>{friend.name}</Text>
-                          <Text style={styles.friendEmail}>{friend.email}</Text>
                           <Text style={styles.friendDate}>
                             Added {new Date(friend.addedAt).toLocaleDateString()}
                           </Text>
