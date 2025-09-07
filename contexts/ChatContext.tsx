@@ -251,39 +251,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  // Real-time subscription for chat messages
+  // Polling-based chat messages (reliable fallback)
   useEffect(() => {
     if (!user || !subscribedBillId) return;
     
-    console.log('Setting up real-time subscription for bill:', subscribedBillId);
+    console.log(' Setting up polling for bill:', subscribedBillId);
     
-    const channel = supabase
-      .channel(`realtime:chat_messages:${subscribedBillId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `bill_id=eq.${subscribedBillId}`,
-        },
-        async (payload) => {
-          console.log('Real-time message update received:', payload);
-          // Refetch messages for this bill
-          const updatedMessages = await fetchMessages(subscribedBillId);
-          setChatState(prev => ({
+    // Poll every 5 seconds for new messages
+    const pollInterval = setInterval(async () => {
+      console.log('⏰ Polling for new messages...');
+      const updatedMessages = await fetchMessages(subscribedBillId);
+      setChatState(prev => {
+        const currentMessages = prev.messages.filter(m => m.billId === subscribedBillId);
+        if (currentMessages.length !== updatedMessages.length) {
+          console.log('🔄 Polling detected new messages!');
+          return {
             ...prev,
             messages: prev.messages.filter(m => m.billId !== subscribedBillId).concat(updatedMessages),
-          }));
+          };
         }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
+        return prev;
       });
+    }, 3000); // 5 seconds is a good balance between responsiveness and efficiency
       
     return () => {
-      console.log('Cleaning up subscription for bill:', subscribedBillId);
-      supabase.removeChannel(channel);
+      console.log('🧹 Cleaning up polling for bill:', subscribedBillId);
+      clearInterval(pollInterval);
     };
   }, [user, subscribedBillId, fetchMessages]);
 

@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Send, Camera, Image as Check, X, Clock, Shield, MessageCircle, Upload } from 'lucide-react-native';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -94,6 +94,22 @@ export default function BillChatScreen() {
       fetchMessagesForBill(bill.id);
     }
   }, [bill?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Chat page is focused - start polling
+      console.log('💬 Chat page focused - polling will start');
+      if (bill?.id) {
+        setBillSubscription(bill.id);
+      }
+      
+      return () => {
+        // Chat page loses focus - stop polling
+        console.log('💬 Chat page lost focus - polling will stop');
+        setBillSubscription(''); // Clear subscription to stop polling
+      };
+    }, [bill?.id, setBillSubscription])
+  );
 
   // Upload image to Supabase Storage
   const uploadImageToSupabase = async (imageUri: string): Promise<string | null> => {
