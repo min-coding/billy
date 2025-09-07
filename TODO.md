@@ -6,4 +6,4 @@
 - [x] **Add your first item -> auto cursor to item name field** - Auto-focus on item name field when click adding first item
 - [x] **Chat keyboard cannot see** - Fix chat keyboard visibility issue
 - [x] **Chat no auto refresh when new message is received** - Only show when sender sends (fix real-time updates)
-- [ ] **Verified in chat need to reflect real time on bill detail page** - Real-time verification status updates
+- [x] **Verified in chat need to reflect real time on bill detail page** - Real-time verification status updates

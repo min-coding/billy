@@ -17,7 +17,7 @@ export default function BillDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { getUnreadCount } = useChat();
+  const { getUnreadCount, fetchMessagesForBill, setBillSubscription } = useChat();
   const { friends } = useFriends();
 
   const [bill, setBill] = useState<any>(null);
@@ -127,7 +127,13 @@ export default function BillDetailScreen() {
   // Refetch bill whenever this screen gains focus (e.g., returning from chat)
   useFocusEffect(
     React.useCallback(() => {
-      if (id) fetchBill(id as string);
+      if (id) {
+        fetchBill(id as string);
+        // Ensure unread count is fresh for the chat badge
+        fetchMessagesForBill(id as string);
+        // Optional: set current bill for chat context while focused
+        setBillSubscription(id as string);
+      }
       return () => {};
     }, [id])
   );
