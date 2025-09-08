@@ -4,6 +4,7 @@ import { Users, Calendar, DollarSign, User, Tag } from 'lucide-react-native';
 import { formatCurrency } from '@/utils/billUtils';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatDate } from '@/utils/dateUtils';
 
 interface BillCardProps {
   bill: {
@@ -39,8 +40,6 @@ function getTagColor(tag: string) {
 }
 
 // Add status color function
-
-
 export default function BillCard({ bill, onPress }: BillCardProps) {
   const router = useRouter();
   
@@ -118,8 +117,8 @@ export default function BillCard({ bill, onPress }: BillCardProps) {
               <Calendar size={14} color="#64748B" strokeWidth={2} />
               <Text style={styles.infoText}>
                 {bill.due_date 
-                  ? new Date(bill.due_date).toLocaleDateString()
-                  : new Date(bill.created_at).toLocaleDateString()
+    ? formatDate(bill.due_date)
+    : formatDate(bill.created_at)
                 }
               </Text>
             </View>

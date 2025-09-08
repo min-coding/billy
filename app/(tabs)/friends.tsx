@@ -7,6 +7,7 @@ import { Search, UserPlus, Users, Check, X, Plus, Bell } from 'lucide-react-nati
 import { supabase } from '@/lib/supabase';
 import { useFriends } from '@/hooks/useFriends';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDate } from '@/utils/dateUtils';
 
 export default function FriendsScreen() {
   const { user } = useAuth();
@@ -350,7 +351,7 @@ export default function FriendsScreen() {
                         <View style={styles.friendInfo}>
                           <Text style={styles.friendName}>{friend.name}</Text>
                           <Text style={styles.friendDate}>
-                            Added {new Date(friend.addedAt).toLocaleDateString()}
+                            Added {formatDate(friend.addedAt)}
                           </Text>
                         </View>
                       </View>
