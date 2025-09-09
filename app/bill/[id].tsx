@@ -868,13 +868,14 @@ const handleSaveEditItems = async () => {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Members</Text>
+
             {isHost && bill.status === 'select' && (
               <TouchableOpacity style={styles.addFromFriendsButton} onPress={() => setShowEditMembersModal(true)}>
                 <Text style={styles.addFromFriendsText}>Edit members</Text>
               </TouchableOpacity>
             )}
           </View>
-          
+        
           {bill.participants.map((participant: any) => {
             const participantCost = userCosts.find(uc => uc.userId === participant.id);
             const status = getParticipantStatus(participant.id);
@@ -884,19 +885,10 @@ const handleSaveEditItems = async () => {
             return (
               <View key={participant.id} style={styles.participantCard}>
                 <View style={styles.participantLeft}>
-                  {participant.id === bill.created_by && (
-                    <View style={styles.hostBadge}>
-                      <Text style={styles.hostBadgeText}>HOST</Text>
-                    </View>
-                  )}
-                  {participant.avatar && (
-                    <Image 
-                      source={{ uri: participant.avatar }} 
-                      style={styles.participantAvatar}
-                    />
-                  )}
                   <View style={styles.participantInfo}>
-                    <Text style={styles.participantName}>{participant.name}</Text>
+                    <Text style={styles.participantName}>
+                    {participant.id === bill.created_by && (`👑 `)}
+                      {participant.name}</Text>
                   </View>
                 </View>
               
