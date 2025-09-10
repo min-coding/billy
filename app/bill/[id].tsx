@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Platform, Modal, TextInput,KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, Share2, MessageCircle, Bell, SquarePen, Trash2, X, Search, Plus, Tag, Receipt } from 'lucide-react-native';
+import { ArrowLeft, Users, Calendar, DollarSign, Check, Clock, Share2, MessageCircle, Trash2, X, Search, Plus, Tag } from 'lucide-react-native';
 import { calculateUserCosts, formatCurrency } from '@/utils/billUtils';
 import ItemCard from '@/components/ItemCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -1106,6 +1106,11 @@ const handleSaveEditItems = async () => {
         animationType="slide"
         onRequestClose={() => setShowEditBillInfoModal(false)}
       >
+         <KeyboardAvoidingView 
+          style={styles.friendsModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
         <View style={styles.friendsModalOverlay}>
           <View style={[styles.friendsModal, { maxHeight: '80%' }]}>
             <View style={styles.friendsModalHeader}>
@@ -1178,6 +1183,7 @@ const handleSaveEditItems = async () => {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Edit Members Modal */}
@@ -1187,7 +1193,11 @@ const handleSaveEditItems = async () => {
         animationType="slide"
         onRequestClose={() => setShowEditMembersModal(false)}
       >
-        <View style={styles.friendsModalOverlay}>
+        <KeyboardAvoidingView 
+          style={styles.friendsModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
           <View style={styles.friendsModal}>
             <View style={styles.friendsModalHeader}>
               <Text style={styles.friendsModalTitle}>Edit Members</Text>
@@ -1259,7 +1269,7 @@ const handleSaveEditItems = async () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </KeyboardAvoidingView>
       </Modal>
 
       {/* Edit Items Modal */}
@@ -1269,7 +1279,11 @@ const handleSaveEditItems = async () => {
         animationType="slide"
         onRequestClose={() => setShowEditItemsModal(false)}
       >
-        <View style={styles.friendsModalOverlay}>
+        <KeyboardAvoidingView 
+          style={styles.friendsModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
           <View style={styles.friendsModal}>
             <View style={styles.friendsModalHeader}>
               <Text style={styles.friendsModalTitle}>Edit Items</Text>
@@ -1349,7 +1363,7 @@ const handleSaveEditItems = async () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
